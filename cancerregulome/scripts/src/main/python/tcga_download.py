@@ -15,9 +15,9 @@ import Queue
 queue = Queue.Queue()
 
 dir_skip_patterns = [
-        '^minbio',
-        '^bio$',
-        '^tracerel$',
+        #'^minbio',
+        #'^bio$',
+        #'^tracerel$',
         'tissue_images',
         #'.*Level_2.*',
         #'.*Level_3.*',
@@ -25,8 +25,8 @@ dir_skip_patterns = [
         #'archive',
         #'hg-cgh-415k_g4124a',
         #'mskcc.org',
-        '^gsc$',
-        'humanhap',
+        #'^gsc$',
+        #'humanhap',
 
         # These are redundant old-style archives whose contents are also available
         # in unified Level_1 archives.
@@ -54,11 +54,11 @@ file_skip_patterns = [
         '.*\.md5$',
         '.*\.tif$',
         '.*\.TIF$',
-        '.*\.tsv$',
+        #'.*\.tsv$',
         '.*\.gif$',
-        '.*_genes\.txt$',
-        '.*_tags\.txt$',
-        '.*_frequency\.txt$',
+        #'.*_genes\.txt$',
+        #'.*_tags\.txt$',
+        #'.*_frequency\.txt$',
         'nohup.out',
 ]
 
@@ -103,7 +103,7 @@ class DownloadThread(threading.Thread):
                     files.append(filename)
 
             for ffile in filter_files(files):
-                ftp_size = file_size(self.conn, dwninfo.url + '/' + ffile)
+                ftp_size = file_size(self.conn, dwninfo.url + ffile)
                 ffile_path = dwninfo.path + '/' + ffile
 
                 local_size = 0
@@ -116,21 +116,29 @@ class DownloadThread(threading.Thread):
                     local_size = os.path.getsize(ffile_path)
 
                 if local_size != 0 and local_size == ftp_size:
-                    print '= %s/%s' % (dwninfo.path, ffile)
+                    print 'file exists %s' % (dwninfo.path + '/' + ffile)
                     sys.stdout.flush()
+		    time.sleep(1)
                     continue
 
-                print '+ %s/%s' % (dwninfo.path, ffile)
+                print '+ url %s time[%s]' % (dwninfo.url + ffile, time.strftime("%c"))
                 sys.stdout.flush()
+		time.sleep(1)
+		resp, content = self.conn.request(dwninfo.url + '/' +  ffile, 'GET')
+            	if resp['status'] != '200':
+                	print resp
+                	print 'HTTP GET failed for ' + dwninfo.url + ffile
+                	return
 
                 localFile = open('%s/%s' % (dwninfo.path, ffile), 'w')
                 localFile.write(content)
                 localFile.close()
-
+		print 'wrote %s at time[%s]' % (dwninfo.path + ffile, time.strftime("%c"))
             for fsub in filter_subdirs(subdirs):
                 handle_subdir(dwninfo.url + '/' + fsub, dwninfo.path + '/' + fsub)
 
             self.queue.task_done()
+	    #return
 
 def filter_files(files):
     filtered = []
@@ -190,8 +198,12 @@ def filter_subdirs(dirs):
     return filtered
 
 def file_size(conn, url):
-    resp, content = conn.request(url, 'HEAD', headers={'Accept-Encoding': 'plain'})
-    return int(resp['content-length'])
+    try:
+    	resp, content = conn.request(url, 'HEAD', headers={'Accept-Encoding': 'plain'})
+    	return int(resp['content-length'])
+    except KeyError:
+	#return some random number if content length not found
+    	return 9999
 
 def handle_subdir(targethost, localpath):
     targethost.rstrip('/')
