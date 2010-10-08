@@ -12,7 +12,7 @@ import ConfigParser
 import threading
 import Queue
 
-queue = Queue.Queue()
+queue = Queue.Queue(0)
 
 dir_skip_patterns = [
         #'^minbio',
@@ -62,12 +62,47 @@ file_skip_patterns = [
         'nohup.out',
 ]
 
-class DownloadInfo(object):
+fileQueue = Queue.Queue(1)
+
+class DownloadFile(object):
+    def __init__(self, url, file):
+       self.url = url
+       self.file = file
+
+class DownloadFileThread(threading.Thread):
+    def __init__(self, **kwargs):
+        #print 'Init DownloadFile Thread'
+        threading.Thread.__init__(self)
+
+        #self.queue = queue
+        self.conn = httplib2.Http()
+
+        if 'username' in kwargs and 'password' in kwargs:
+           # print 'username pw %s %s' % (kwargs["username"], kwargs["password"])
+            self.conn.add_credentials(kwargs["username"], kwargs["password"])
+    def run(self):
+       while True:
+           fileinfo = fileQueue.get()
+           if fileinfo != None: 
+           	#print "GET file from url %s\n" % (fileinfo.url)
+           	time.sleep(1)
+           	resp, content = self.conn.request(fileinfo.url)
+           	if resp['status'] == '200':
+               		localFile = open('%s' % (fileinfo.file), 'w')
+               		localFile.write(content)
+               		localFile.close()
+               		print 'DownloadFileThread: Wrote %s at time[%s]' % (fileinfo.file, time.strftime("%c"))
+           	else:
+               		print 'DownloadFileThread: error GET %s  resp \n' % (fileinfo.url, resp)
+           fileQueue.task_done()
+  
+
+class DownloadDir(object):
     def __init__(self, url, path):
         self.url = url
         self.path = path
 
-class DownloadThread(threading.Thread):
+class DownloadDirThread(threading.Thread):
     def __init__(self, **kwargs):
         threading.Thread.__init__(self)
 
@@ -75,6 +110,7 @@ class DownloadThread(threading.Thread):
         self.conn = httplib2.Http()
 
         if 'username' in kwargs and 'password' in kwargs:
+	    #print 'username pw %s %s' % (kwargs["username"], kwargs["password"])		
             self.conn.add_credentials(kwargs["username"], kwargs["password"])
 
     def run(self):
@@ -118,27 +154,29 @@ class DownloadThread(threading.Thread):
                 if local_size != 0 and local_size == ftp_size:
                     print 'file exists %s' % (dwninfo.path + '/' + ffile)
                     sys.stdout.flush()
-		    time.sleep(1)
+		    time.sleep(1)	
                     continue
 
-                print '+ url %s time[%s]' % (dwninfo.url + ffile, time.strftime("%c"))
+                #print 'DownloadDir: + url %s time[%s]' % (dwninfo.url + ffile, time.strftime("%c"))
                 sys.stdout.flush()
-		time.sleep(1)
-		resp, content = self.conn.request(dwninfo.url + '/' +  ffile, 'GET')
-            	if resp['status'] != '200':
-                	print resp
-                	print 'HTTP GET failed for ' + dwninfo.url + ffile
-                	return
+                fileQueue.put(DownloadFile(dwninfo.url + '/' + ffile, dwninfo.path + ffile))
+		
+                #time.sleep(1)
+		#resp, content = self.conn.request(dwninfo.url + '/' +  ffile, 'GET')
+            	#if resp['status'] != '200':
+                #	print resp
+                #	print 'HTTP GET failed for ' + dwninfo.url + ffile
+                #	return
 
-                localFile = open('%s/%s' % (dwninfo.path, ffile), 'w')
-                localFile.write(content)
-                localFile.close()
-		print 'wrote %s at time[%s]' % (dwninfo.path + ffile, time.strftime("%c"))
+                #localFile = open('%s/%s' % (dwninfo.path, ffile), 'w')
+                #localFile.write(content)
+                #localFile.close()
+		print 'DownloadDirThread: +File in queue %s at time[%s]' % (dwninfo.path + ffile, time.strftime("%c"))
             for fsub in filter_subdirs(subdirs):
                 handle_subdir(dwninfo.url + '/' + fsub, dwninfo.path + '/' + fsub)
 
             self.queue.task_done()
-	    #return
+	    #return	
 
 def filter_files(files):
     filtered = []
@@ -153,7 +191,6 @@ def filter_files(files):
 
 def filter_subdirs(dirs):
     pre_filtered = []
-    filtered = []
 
     for dir in dirs:
         skip = False
@@ -163,42 +200,11 @@ def filter_subdirs(dirs):
                 break
         if not skip: pre_filtered.append(dir)
 
-    versioned = []
-    prefix = []
-    minor = []
+    return pre_filtered
 
-    for dir in pre_filtered:
-        m = re.match('(.+)\.Level_(1|2|3)\.(\d+)\.(\d+)\.\d+$', dir)
-        if m:
-            versioned.append(dir)
-            prefix.append(m.group(1) + '.' + m.group(2))
-            minor.append(int(m.group(3)))
-            continue
-
-        m = re.match('(.+\.\d+)\.(\d+)\.\d+$', dir)
-        if m:
-            versioned.append(dir)
-            prefix.append(m.group(1))
-            minor.append(int(m.group(2)))
-            continue
-
-        filtered.append(dir)
-
-    for m in set(prefix):
-        highest_minor = -1
-        highest_minor_idx = -1
-        for n in range(len(prefix)):
-            if prefix[n] != m: continue
-            if minor[n] > highest_minor:
-                highest_minor = minor[n]
-                highest_minor_idx = n
-
-        filtered.append(versioned[highest_minor_idx])
-
-    return filtered
 
 def file_size(conn, url):
-    try:
+    try:	
     	resp, content = conn.request(url, 'HEAD', headers={'Accept-Encoding': 'plain'})
     	return int(resp['content-length'])
     except KeyError:
@@ -218,8 +224,9 @@ def handle_subdir(targethost, localpath):
         if exc.errno == errno.EEXIST: pass
         else: raise
 
-    queue.put(DownloadInfo(targethost, localpath))
-
+    fileQueue.join()
+    queue.put(DownloadDir(targethost, localpath))
+    
     return
 
 def main(argv):
@@ -241,22 +248,32 @@ def main(argv):
     localPath = config.get("Local", "localPath")
     localPath.rstrip('/')
 
-    numberOfThreads = config.getint("Local", "numberOfThreads")
+    numberOfDirThreads = config.getint("Local", "numberOfDirThreads")
+    numberOfFileThreads = config.getint("Local", "numberOfFileThreads")
 
     print 'Mirroring data for tumor type %s start [%s]' % (subFilePath, time.strftime("%c"))
     print ('  from %s' % host)
     print ('    to %s' % localPath)
 
-    print 'Starting Thread Pool with %s threads' % numberOfThreads
-    for i in range(numberOfThreads):
-        ts = DownloadThread(username=username, password=password)
+    print 'Starting Dir Thread Pool with %s dir threads' % (numberOfDirThreads)
+    for i in range(numberOfDirThreads):
+        ts = DownloadDirThread(username=username, password=password)
+        ts.setName("Dir" + str(i))
         ts.setDaemon(True)
         ts.start()
-
+ 
+    print 'Starting File Thread Pool with %s threads' % (numberOfFileThreads)
+    for i in range(numberOfFileThreads):
+        fs = DownloadFileThread(username=username, password=password)
+        fs.setName("File" + str(i))
+        fs.setDaemon(True)
+        fs.start()
+        
     handle_subdir(host + '/' + subFilePath, localPath + '/' + subFilePath)
-    print 'Mirroring data for tumor type %s completed [%s]' % (subFilePath, time.strftime("%c"))
+    #print 'Mirroring data for tumor type %s completed [%s]' % (subFilePath, time.strftime("%c"))
 
     queue.join()
+    #fileQueue.join()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
