@@ -42,6 +42,8 @@ dir_skip_patterns = [
         #'hudsonalpha.org',
 ]
 
+dir_include_patterns = ['.*Level_*', '.*aux*', '.*mage-tab*']
+
 file_skip_patterns = [
         #'.*level2.*',
         #'.*level3.*',
@@ -81,8 +83,10 @@ class DownloadFileThread(threading.Thread):
            # print 'username pw %s %s' % (kwargs["username"], kwargs["password"])
             self.conn.add_credentials(kwargs["username"], kwargs["password"])
     def run(self):
-       while True:
-           fileinfo = fileQueue.get()
+       #check is isEmpty
+       #while True and (not fileQueue.empty()):
+       while True:    
+	   fileinfo = fileQueue.get()
            if fileinfo != None: 
            	#print "GET file from url %s\n" % (fileinfo.url)
            	time.sleep(1)
@@ -91,9 +95,12 @@ class DownloadFileThread(threading.Thread):
                		localFile = open('%s' % (fileinfo.file), 'w')
                		localFile.write(content)
                		localFile.close()
-               		print 'DownloadFileThread: Wrote %s at time[%s]' % (fileinfo.file, time.strftime("%c"))
+               		print 'Downloaded %s: \n%s' % (time.strftime("%c"), fileinfo.file)
            	else:
                		print 'DownloadFileThread: error GET %s  resp \n' % (fileinfo.url, resp)
+           #for i in range(2):
+           #    threadName = 'Dir' + str(i)
+           #    if thread.Thread(threadName).isAlive():	       	         
            fileQueue.task_done()
   
 
@@ -159,7 +166,7 @@ class DownloadDirThread(threading.Thread):
 
                 #print 'DownloadDir: + url %s time[%s]' % (dwninfo.url + ffile, time.strftime("%c"))
                 sys.stdout.flush()
-                fileQueue.put(DownloadFile(dwninfo.url + '/' + ffile, dwninfo.path + ffile))
+                fileQueue.put(DownloadFile(dwninfo.url + '/' + ffile, dwninfo.path + '/' + ffile))
 		
                 #time.sleep(1)
 		#resp, content = self.conn.request(dwninfo.url + '/' +  ffile, 'GET')
@@ -171,7 +178,7 @@ class DownloadDirThread(threading.Thread):
                 #localFile = open('%s/%s' % (dwninfo.path, ffile), 'w')
                 #localFile.write(content)
                 #localFile.close()
-		print 'DownloadDirThread: +File in queue %s at time[%s]' % (dwninfo.path + ffile, time.strftime("%c"))
+		print 'DownloadDirThread: +File in queue %s' % (dwninfo.url + '/' + ffile)
             for fsub in filter_subdirs(subdirs):
                 handle_subdir(dwninfo.url + '/' + fsub, dwninfo.path + '/' + fsub)
 
@@ -211,23 +218,41 @@ def file_size(conn, url):
 	#return some random number if content length not found
     	return 9999
 
+def make_path(localpath):
+	try:
+		os.makedirs(localpath)
+	except OSError, exc:
+		if exc.errno == errno.EEXIST: pass
+		else: raise
+
+
 def handle_subdir(targethost, localpath):
-    targethost.rstrip('/')
-    localpath.rstrip('/')
+	targetUrlLevel = targethost.split('/')
+	level = len(targetUrlLevel)
+	targethost.rstrip('/')
+	localpath.rstrip('/')
 
-    time.sleep(1)
-    print 'Processing dir: %s' % (localpath)
+	time.sleep(1)
+	#print 'Processing dir: %s level %s' % (targethost, str(level))
 
-    try:
-        os.makedirs(localpath)
-    except OSError, exc:
-        if exc.errno == errno.EEXIST: pass
-        else: raise
-
-    fileQueue.join()
-    queue.put(DownloadDir(targethost, localpath))
+	fileQueue.join()
+	#download files from only directories with Level_*, aux and mage-tab
+	if level == 15:
+		#for pat in dir_include_patterns:
+		auxSplit = targethost.split('aux')
+		levelSplit = targethost.split('Level_')
+		mageSplit = targethost.split('mage-tab')
+		#matched = re.match('.*Level*', targethost) or re.match('.*aux*', targethost) or re.match('.*mage-tab*', targethost)
+		if len(auxSplit) > 1 or len(levelSplit) > 1 or len(mageSplit) > 1:
+			print 'Matched Make dir: %s level %s' % (targethost, str(level))
+			make_path(localpath)    	    	  		
+			queue.put(DownloadDir(targethost, localpath))
+	else:
+		print 'Make dir: %s level %s' % (targethost, str(level))
+		make_path(localpath)	
+		queue.put(DownloadDir(targethost, localpath))
     
-    return
+	return
 
 def main(argv):
     if len(sys.argv) != 3:
