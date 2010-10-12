@@ -97,7 +97,7 @@ class DownloadFileThread(threading.Thread):
                		localFile.close()
                		print 'Downloaded %s: \n%s' % (time.strftime("%c"), fileinfo.file)
            	else:
-               		print 'DownloadFileThread: error GET %s  resp \n' % (fileinfo.url, resp)
+               		print 'DownloadFileThread: Error Getting %s  \n Resp: %s' % (fileinfo.url, resp)
            #for i in range(2):
            #    threadName = 'Dir' + str(i)
            #    if thread.Thread(threadName).isAlive():	       	         
@@ -166,8 +166,12 @@ class DownloadDirThread(threading.Thread):
 
                 #print 'DownloadDir: + url %s time[%s]' % (dwninfo.url + ffile, time.strftime("%c"))
                 sys.stdout.flush()
-                fileQueue.put(DownloadFile(dwninfo.url + '/' + ffile, dwninfo.path + '/' + ffile))
-		
+		if not os.path.exists(dwninfo.path + '/' + ffile):
+                	fileQueue.put(DownloadFile(dwninfo.url + '/' + ffile, dwninfo.path + '/' + ffile))
+			print 'DownloadDirThread: +File in queue %s' % (dwninfo.url + '/' + ffile)
+		else:
+			print 'Bypass_Q file exists %s' % (dwninfo.path + '/' + ffile)
+
                 #time.sleep(1)
 		#resp, content = self.conn.request(dwninfo.url + '/' +  ffile, 'GET')
             	#if resp['status'] != '200':
@@ -178,7 +182,7 @@ class DownloadDirThread(threading.Thread):
                 #localFile = open('%s/%s' % (dwninfo.path, ffile), 'w')
                 #localFile.write(content)
                 #localFile.close()
-		print 'DownloadDirThread: +File in queue %s' % (dwninfo.url + '/' + ffile)
+		#print 'DownloadDirThread: +File in queue %s' % (dwninfo.url + '/' + ffile)
             for fsub in filter_subdirs(subdirs):
                 handle_subdir(dwninfo.url + '/' + fsub, dwninfo.path + '/' + fsub)
 
@@ -298,7 +302,6 @@ def main(argv):
     #print 'Mirroring data for tumor type %s completed [%s]' % (subFilePath, time.strftime("%c"))
 
     queue.join()
-    #fileQueue.join()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
