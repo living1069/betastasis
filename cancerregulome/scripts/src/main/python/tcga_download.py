@@ -12,8 +12,11 @@ import ConfigParser
 import threading
 import Queue
 
-queue = Queue.Queue(0)
+dirQueue = Queue.Queue(0)
+fileQueue = Queue.Queue(1)
 
+numberOfDirThreads = 0
+numberOfFileThreads = 0
 dir_skip_patterns = [
         #'^minbio',
         #'^bio$',
@@ -64,7 +67,6 @@ file_skip_patterns = [
         'nohup.out',
 ]
 
-fileQueue = Queue.Queue(1)
 
 class DownloadFile(object):
     def __init__(self, url, file):
@@ -72,36 +74,36 @@ class DownloadFile(object):
        self.file = file
 
 class DownloadFileThread(threading.Thread):
-    def __init__(self, **kwargs):
-        #print 'Init DownloadFile Thread'
-        threading.Thread.__init__(self)
 
-        #self.queue = queue
-        self.conn = httplib2.Http()
+	def __init__(self, **kwargs):
+		threading.Thread.__init__(self)
+		self.conn = httplib2.Http()
 
-        if 'username' in kwargs and 'password' in kwargs:
-           # print 'username pw %s %s' % (kwargs["username"], kwargs["password"])
-            self.conn.add_credentials(kwargs["username"], kwargs["password"])
-    def run(self):
-       #check is isEmpty
-       #while True and (not fileQueue.empty()):
-       while True:    
-	   fileinfo = fileQueue.get()
-           if fileinfo != None: 
-           	#print "GET file from url %s\n" % (fileinfo.url)
-           	time.sleep(1)
-           	resp, content = self.conn.request(fileinfo.url)
-           	if resp['status'] == '200':
-               		localFile = open('%s' % (fileinfo.file), 'w')
-               		localFile.write(content)
-               		localFile.close()
-               		print 'Downloaded %s: \n%s' % (time.strftime("%c"), fileinfo.file)
-           	else:
-               		print 'DownloadFileThread: Error Getting %s  \n Resp: %s' % (fileinfo.url, resp)
-           #for i in range(2):
-           #    threadName = 'Dir' + str(i)
-           #    if thread.Thread(threadName).isAlive():	       	         
-           fileQueue.task_done()
+		if 'username' in kwargs and 'password' in kwargs:
+			self.conn.add_credentials(kwargs["username"], kwargs["password"])
+
+	def run(self):
+		#check is isEmpty
+		#while True and (not fileQueue.empty()):
+		while True:    
+			fileinfo = fileQueue.get()
+			if fileinfo != None: 
+				time.sleep(1)
+				resp, content = self.conn.request(fileinfo.url)
+				if resp['status'] == '200':
+					localFile = open('%s' % (fileinfo.file), 'w')
+					localFile.write(content)
+					localFile.close()
+					print 'Downloaded %s: \n%s' % (time.strftime("%c"), fileinfo.file)
+				else:
+					print 'DownloadFileThread: Error Getting %s  \n Resp: %s' % (fileinfo.url, resp)
+			#for i in range(2):
+			#    threadName = 'Dir' + str(i)
+			#    if thread.Thread(threadName).isAlive():	       	         
+			fileQueue.task_done()
+			#if fileQueue.empty() and dirQueue.empty():
+			#	print 'Queues are empty, downloading job completed %s' % (time.strftime("%c")) 
+     			
   
 
 class DownloadDir(object):
@@ -113,7 +115,7 @@ class DownloadDirThread(threading.Thread):
     def __init__(self, **kwargs):
         threading.Thread.__init__(self)
 
-        self.queue = queue
+        self.queue = dirQueue
         self.conn = httplib2.Http()
 
         if 'username' in kwargs and 'password' in kwargs:
@@ -149,7 +151,7 @@ class DownloadDirThread(threading.Thread):
                 #if file is not in local path, add to queue
 		if not os.path.exists(ffile_path):
 		    fileQueue.put(DownloadFile(dwninfo.url + '/' + ffile, ffile_path))
-		    print '++New File in queue %s' % (dwninfo.url + '/' + ffile)
+		    print '++ new resource to fileQueue %s' % (dwninfo.url + '/' + ffile)
 		    continue		
                     #if os.path.exists(ffile_path + '.bz2'):
                     #    local_size = ftp_size
@@ -161,21 +163,25 @@ class DownloadDirThread(threading.Thread):
 		ftp_size = file_size(self.conn, dwninfo.url + '/' + ffile)
                 #ffile_path = dwninfo.path + '/' + ffile
                 #local_size = 0
-
                 if local_size != 0 and local_size == ftp_size:
-                	print 'Skip file %s since it the has same file size' % (ffile_path)
+                	print 'Skip file %s since it the has same file size %s' % (ffile_path, str(local_size))
                 	sys.stdout.flush()
 			#time.sleep(1)			
                 	#continue
 		else:
 			fileQueue.put(DownloadFile(dwninfo.url + '/' + ffile, ffile_path))
-                        print '++Updated File in queue %s' % (dwninfo.url + '/' + ffile)
+                        print '++ update to fileQueue %s' % (dwninfo.url + '/' + ffile)
 
             for fsub in filter_subdirs(subdirs):
                 handle_subdir(dwninfo.url + '/' + fsub, dwninfo.path + '/' + fsub)
 
             self.queue.task_done()
-	    #return	
+	    #return
+	    time.sleep(1)	
+	    if fileQueue.empty() and self.queue.empty():
+            	print 'Queues are empty, downloading job completed %s' % (time.strftime("%c"))
+
+	
 
 def filter_files(files):
     filtered = []
@@ -238,15 +244,16 @@ def handle_subdir(targethost, localpath):
 		if len(auxSplit) > 1 or len(levelSplit) > 1 or len(mageSplit) > 1:
 			print 'Matched Make dir: %s level %s' % (targethost, str(level))
 			make_path(localpath)    	    	  		
-			queue.put(DownloadDir(targethost, localpath))
+			dirQueue.put(DownloadDir(targethost, localpath))
 	else:
 		print 'Make dir: %s level %s' % (targethost, str(level))
 		make_path(localpath)	
-		queue.put(DownloadDir(targethost, localpath))
+		dirQueue.put(DownloadDir(targethost, localpath))
     
 	return
 
 def main(argv):
+    global numberOfDirThreads, numberOfFileThreads	
     if len(sys.argv) != 3:
         print 'Illegal arguments. Example of proper usage: tcga_download.py <config file> <tumor type>'
         sys.exit(-1)
@@ -268,7 +275,7 @@ def main(argv):
     numberOfDirThreads = config.getint("Local", "numberOfDirThreads")
     numberOfFileThreads = config.getint("Local", "numberOfFileThreads")
 
-    print 'Mirroring data for tumor type %s start [%s]' % (subFilePath, time.strftime("%c"))
+    print 'Mirroring data on host %s for tumor type %s start [%s]' % (host, subFilePath, time.strftime("%c"))
     print ('  from %s' % host)
     print ('    to %s' % localPath)
 
@@ -289,7 +296,7 @@ def main(argv):
     handle_subdir(host + '/' + subFilePath, localPath + '/' + subFilePath)
     #print 'Mirroring data for tumor type %s completed [%s]' % (subFilePath, time.strftime("%c"))
 
-    queue.join()
+    dirQueue.join()
     #fileQueue.join()
 
 if __name__ == "__main__":
