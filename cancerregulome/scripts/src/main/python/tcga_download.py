@@ -123,13 +123,11 @@ class DownloadDirThread(threading.Thread):
     def run(self):
         while True:
             dwninfo = self.queue.get()
-
             resp, content = self.conn.request(dwninfo.url, 'GET')
             if resp['status'] != '200':
                 print resp
                 print 'HTTP request failed for ' + dwninfo.url
                 return
-
             listing = []
             for line in content.splitlines():
                 m = re.match('^\s*<a href=.+?>(.+)</a>.*', line)
@@ -146,43 +144,33 @@ class DownloadDirThread(threading.Thread):
                     files.append(filename)
 
             for ffile in filter_files(files):
-                ftp_size = file_size(self.conn, dwninfo.url + ffile)
                 ffile_path = dwninfo.path + '/' + ffile
-
                 local_size = 0
-                if not os.path.exists(ffile_path):
-                    if os.path.exists(ffile_path + '.bz2'):
-                        local_size = ftp_size
-                    elif os.path.exists(ffile_path + '.gz'):
-                        local_size = ftp_size
+                #if file is not in local path, add to queue
+		if not os.path.exists(ffile_path):
+		    fileQueue.put(DownloadFile(dwninfo.url + '/' + ffile, ffile_path))
+		    print '++New File in queue %s' % (dwninfo.url + '/' + ffile)
+		    continue		
+                    #if os.path.exists(ffile_path + '.bz2'):
+                    #    local_size = ftp_size
+                    #elif os.path.exists(ffile_path + '.gz'):
+                    #    local_size = ftp_size
                 else:
                     local_size = os.path.getsize(ffile_path)
 
+		ftp_size = file_size(self.conn, dwninfo.url + '/' + ffile)
+                #ffile_path = dwninfo.path + '/' + ffile
+                #local_size = 0
+
                 if local_size != 0 and local_size == ftp_size:
-                    print 'file exists %s' % (dwninfo.path + '/' + ffile)
-                    sys.stdout.flush()
-		    time.sleep(1)	
-                    continue
-
-                #print 'DownloadDir: + url %s time[%s]' % (dwninfo.url + ffile, time.strftime("%c"))
-                sys.stdout.flush()
-		if not os.path.exists(dwninfo.path + '/' + ffile):
-                	fileQueue.put(DownloadFile(dwninfo.url + '/' + ffile, dwninfo.path + '/' + ffile))
-			print 'DownloadDirThread: +File in queue %s' % (dwninfo.url + '/' + ffile)
+                	print 'Skip file %s since it the has same file size' % (ffile_path)
+                	sys.stdout.flush()
+			#time.sleep(1)			
+                	#continue
 		else:
-			print 'Bypass_Q file exists %s' % (dwninfo.path + '/' + ffile)
+			fileQueue.put(DownloadFile(dwninfo.url + '/' + ffile, ffile_path))
+                        print '++Updated File in queue %s' % (dwninfo.url + '/' + ffile)
 
-                #time.sleep(1)
-		#resp, content = self.conn.request(dwninfo.url + '/' +  ffile, 'GET')
-            	#if resp['status'] != '200':
-                #	print resp
-                #	print 'HTTP GET failed for ' + dwninfo.url + ffile
-                #	return
-
-                #localFile = open('%s/%s' % (dwninfo.path, ffile), 'w')
-                #localFile.write(content)
-                #localFile.close()
-		#print 'DownloadDirThread: +File in queue %s' % (dwninfo.url + '/' + ffile)
             for fsub in filter_subdirs(subdirs):
                 handle_subdir(dwninfo.url + '/' + fsub, dwninfo.path + '/' + fsub)
 
@@ -215,12 +203,12 @@ def filter_subdirs(dirs):
 
 
 def file_size(conn, url):
-    try:	
-    	resp, content = conn.request(url, 'HEAD', headers={'Accept-Encoding': 'plain'})
-    	return int(resp['content-length'])
-    except KeyError:
-	#return some random number if content length not found
-    	return 9999
+	try:	
+		resp, content = conn.request(url, 'HEAD', headers={'Accept-Encoding': 'plain'})
+		return int(resp['content-length'])
+	except KeyError:
+		print "Key error on checking remote file content-length " + resp
+		return -1
 
 def make_path(localpath):
 	try:
@@ -302,6 +290,7 @@ def main(argv):
     #print 'Mirroring data for tumor type %s completed [%s]' % (subFilePath, time.strftime("%c"))
 
     queue.join()
+    #fileQueue.join()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
