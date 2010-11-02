@@ -12,9 +12,9 @@ import ConfigParser
 import threading
 import Queue
 
-dirQueue = Queue.Queue(0)
+queue = Queue.Queue(0)
 fileQueue = Queue.Queue(1)
-
+errorLogFile = None
 numberOfDirThreads = 0
 numberOfFileThreads = 0
 dir_skip_patterns = [
@@ -97,6 +97,7 @@ class DownloadFileThread(threading.Thread):
 					print 'Downloaded %s: \n%s' % (time.strftime("%c"), fileinfo.file)
 				else:
 					print 'DownloadFileThread: Error Getting %s  \n Resp: %s' % (fileinfo.url, resp)
+					errorLogFile.write("Error Downloading url " + fileinfo.url + '\n')
 			#for i in range(2):
 			#    threadName = 'Dir' + str(i)
 			#    if thread.Thread(threadName).isAlive():	       	         
@@ -111,11 +112,12 @@ class DownloadDir(object):
         self.url = url
         self.path = path
 
+
 class DownloadDirThread(threading.Thread):
     def __init__(self, **kwargs):
         threading.Thread.__init__(self)
 
-        self.queue = dirQueue
+        self.queue = queue
         self.conn = httplib2.Http()
 
         if 'username' in kwargs and 'password' in kwargs:
@@ -150,6 +152,7 @@ class DownloadDirThread(threading.Thread):
                 local_size = 0
                 #if file is not in local path, add to queue
 		if not os.path.exists(ffile_path):
+		    fileQueue.join()	
 		    fileQueue.put(DownloadFile(dwninfo.url + '/' + ffile, ffile_path))
 		    print '++ new resource to fileQueue %s' % (dwninfo.url + '/' + ffile)
 		    continue		
@@ -164,11 +167,12 @@ class DownloadDirThread(threading.Thread):
                 #ffile_path = dwninfo.path + '/' + ffile
                 #local_size = 0
                 if local_size != 0 and local_size == ftp_size:
-                	print 'Skip file %s since it the has same file size %s' % (ffile_path, str(local_size))
+                	print 'Skip file %s local version has same file size %s' % (ffile_path, str(local_size))
                 	sys.stdout.flush()
 			#time.sleep(1)			
                 	#continue
 		else:
+			fileQueue.join()
 			fileQueue.put(DownloadFile(dwninfo.url + '/' + ffile, ffile_path))
                         print '++ update to fileQueue %s' % (dwninfo.url + '/' + ffile)
 
@@ -177,12 +181,10 @@ class DownloadDirThread(threading.Thread):
 
             self.queue.task_done()
 	    #return
-	    time.sleep(1)	
-	    if fileQueue.empty() and self.queue.empty():
-            	print 'Queues are empty, downloading job completed %s' % (time.strftime("%c"))
-
+	    #time.sleep(1)	
+	    #if fileQueue.empty() and self.queue.empty():
+            #	print 'Queues are empty, downloading job completed %s' % (time.strftime("%c"))
 	
-
 def filter_files(files):
     filtered = []
     for file in files:
@@ -214,6 +216,7 @@ def file_size(conn, url):
 		return int(resp['content-length'])
 	except KeyError:
 		print "Key error on checking remote file content-length " + resp
+		errorLogFile.write("Error getting file size for " + url + '\n')
 		return -1
 
 def make_path(localpath):
@@ -230,9 +233,8 @@ def handle_subdir(targethost, localpath):
 	targethost.rstrip('/')
 	localpath.rstrip('/')
 
-	time.sleep(1)
-	#print 'Processing dir: %s level %s' % (targethost, str(level))
-
+	#time.sleep(1)
+	print 'Process dir: %s level %s' % (targethost, str(level))
 	fileQueue.join()
 	#download files from only directories with Level_*, aux and mage-tab
 	if level == 15:
@@ -242,26 +244,26 @@ def handle_subdir(targethost, localpath):
 		mageSplit = targethost.split('mage-tab')
 		#matched = re.match('.*Level*', targethost) or re.match('.*aux*', targethost) or re.match('.*mage-tab*', targethost)
 		if len(auxSplit) > 1 or len(levelSplit) > 1 or len(mageSplit) > 1:
-			print 'Matched Make dir: %s level %s' % (targethost, str(level))
+			print 'Processing matched - Make dir: %s level %s' % (targethost, str(level))
 			make_path(localpath)    	    	  		
-			dirQueue.put(DownloadDir(targethost, localpath))
+			queue.put(DownloadDir(targethost, localpath))
 	else:
-		print 'Make dir: %s level %s' % (targethost, str(level))
+		print 'Processing  dir: %s level %s' % (targethost, str(level))
 		make_path(localpath)	
-		dirQueue.put(DownloadDir(targethost, localpath))
-    
+		queue.put(DownloadDir(targethost, localpath))
 	return
 
 def main(argv):
-    global numberOfDirThreads, numberOfFileThreads	
-    if len(sys.argv) != 3:
-        print 'Illegal arguments. Example of proper usage: tcga_download.py <config file> <tumor type>'
+    global numberOfDirThreads, numberOfFileThreads, errorLogFile	
+    if len(sys.argv) != 4:
+        print 'Illegal arguments. Example of proper usage: tcga_download.py <config file> <tumor type> <errorLog>'
         sys.exit(-1)
 
     config = ConfigParser.RawConfigParser()
     config.read(sys.argv[1])
 
     subFilePath = sys.argv[2]
+    errorLogFile = open(sys.argv[3], 'w')
 
     host = config.get("Connection", "host")
     host.rstrip('/')
@@ -296,8 +298,8 @@ def main(argv):
     handle_subdir(host + '/' + subFilePath, localPath + '/' + subFilePath)
     #print 'Mirroring data for tumor type %s completed [%s]' % (subFilePath, time.strftime("%c"))
 
-    dirQueue.join()
-    #fileQueue.join()
+    queue.join()
+    fileQueue.join()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
