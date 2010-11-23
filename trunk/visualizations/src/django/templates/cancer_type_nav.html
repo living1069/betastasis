@@ -1,0 +1,13 @@
+	  <li><a href="/{{current_cancer.id}}/">{{current_cancer.name}}</a>
+	    <ul>
+	      {% for ds in cancer_data_sets %}
+	        {% ifchanged ds.cancer_type.id %}
+	          {% if current_cancer.id == ds.cancer_type.id %}
+	            <li><a href="#">{{ds.cancer_type.description}}</a></li>
+		  {% else %}
+	            <li><a href="/{{ds.cancer_type.id}}/">{{ds.cancer_type.description}}</a></li>
+		  {% endif %}
+		{% endifchanged %}
+	      {% endfor %}
+	    </ul>
+	  </li>

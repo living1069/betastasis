@@ -1,0 +1,13 @@
+	    {% for ds in cancer_data_sets %}
+              {% if current_cancer.id == ds.cancer_type.id %}
+                {% if current_data_set.id == ds.data_source.id %}
+                  {% ifchanged ds.platform %}
+                    {% ifchanged ds.transcriptome %}
+                      {% if ds.platform.probeset_exists %}
+                      <a href="/platforms/{{ds.platform.id}}/{{ds.transcriptome.id}}/probeset_design/">{{ds.platform.name}} ({{ds.transcriptome.name}})</a>
+		      {% endif %}
+                    {% endifchanged %}
+                  {% endifchanged %}
+	        {% endif %}
+	      {% endif %}
+	    {% endfor %}

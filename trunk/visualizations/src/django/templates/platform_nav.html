@@ -1,0 +1,7 @@
+	  <li><a href="/{{data_set_menu.default.url}}/">{{data_set_menu.default.text}}</a>
+	    <ul>
+	      {% for item in data_set_menu.nav_items %}
+	      <li><a href="/{{cancer_type_menu.default.url}}/{{item.url}}/">{{item.text}}</a></li>
+	      {% endfor %}
+	    </ul>
+	  </li>

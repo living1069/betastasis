@@ -1,0 +1,95 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html>
+  <head>
+    {% if debug %}
+        <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.4.2.js"></script>
+	<script type="text/javascript" src="{{ MEDIA_URL }}js/protovis-d3.2.js"></script>
+    {% else %}
+	<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.4.2.min.js"></script>
+	<script type="text/javascript" src="{{ MEDIA_URL }}js/protovis-r3.2.js"></script>
+    {% endif %}
+
+	<script type="text/javascript" src="{{ MEDIA_URL }}js/xbreadcrumbs.js"></script>
+	<script type="text/javascript" src="{{ MEDIA_URL }}js/quickselect.js"></script>
+	<script type="text/javascript" src="{{ MEDIA_URL }}js/quicksilver.js"></script>
+	<script type="text/javascript" src="{{ MEDIA_URL }}js/probeset_vis.js"></script>
+	
+	<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}style/quickselect.css">
+	<link rel="stylesheet" href="{{ MEDIA_URL }}style/xbreadcrumbs.css">
+	<link rel="stylesheet" href="{{ MEDIA_URL }}style/style.css" type="text/css">
+	
+	<title>Project Betastasis</title>
+  </head>
+  <body>
+	
+    <div id="header">
+      <h1 id="logo"><a href="/betastasis">Project Betastasis</a></h1>
+    </div>
+    <ul class="xbreadcrumbs" id="breadcrumbs">
+      <li><a href="/">Home</a></li>
+      {% include 'platforms_nav.html' %}
+      {% include 'probeset_nav.html' %}
+    </ul>
+
+    <div id="main">
+      <h2>{{current_platform.name}} microarray</h2>
+      
+      <h3>Probeset design</h3>
+      <div id="fig"></div>
+    </div>
+
+    <div id="side">
+      <p><b>Visualization</b><br>
+	Platform: {{ current_platform.name }}<br>
+	Transcriptome: {{ transcriptome.name }}<br><br>
+	Gene: <input type="text" id="GeneSelect" value="TP53" />
+      </p>
+    </div>
+
+    <div id="footer"></div>
+  </body>
+
+<script type="text/javascript">
+var genelist;
+var genelist_downloaded = function(d) {
+	genelist = d['genes'];
+	$('#GeneSelect').quickselect({
+		maxVisibleItems: 10, minChars: 1, matchMethod: 'quicksilver',
+		autoSelectFirst: false, selectSingleMatch: false,
+		data: genelist});
+}
+
+var data_root = '/platforms/{{current_platform.id}}/';
+	
+$(document).ready(function() {
+	$('#breadcrumbs').xBreadcrumbs();
+	var vis = new ProbesetVis('fig');
+	$.getJSON(data_root + '{{transcriptome.id}}/TP53/gene_json/',
+		function(d) { vis.setGene(d); });
+	
+        $.getJSON(data_root + '{{transcriptome.id}}/gene_list_json/', genelist_downloaded);
+
+	$('#GeneSelect').change(function() {
+		gs = $(this);
+		// For some reason the $(this).val() hasn't yet updated when we get
+		// to this function if the user selects a gene with the mouse. So we use
+		// a tiny timeout here.
+		setTimeout(function() {
+			gene = gs.val();
+			if (genelist.indexOf(gene) == -1) {
+				gs.css('background-color', '#f66');
+				return;
+			}
+		
+			gs.css('background-color', 'white');
+			//$.getJSON(data_root + '/' + gene[0].toLowerCase() + '/'
+			//	+ gene + '.json', function(d) { vis.setGene(d); });
+                        $.getJSON(data_root + '{{transcriptome.id}}/' + gene + 'gene_json/', function(d){
+                          vis.setGene(d); });
+		}, 10);
+	});
+
+});
+</script>
+</html>

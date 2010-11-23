@@ -1,0 +1,15 @@
+	  <li><a href="/{{current_cancer.id}}/{{current_data_set.id}}/">{{current_data_set.meta.menu_text}}</a>
+	    <ul>
+	      {% for ds in cancer_data_sets %}
+	        {% ifchanged ds.data_source.id %}
+	          {% if current_cancer.id == ds.cancer_type.id %}
+	            {% if current_data_set.id == ds.data_source.id %}
+	              <li><a href="#">{{ds.data_source.meta.menu_text}}</a></li>
+	            {% else %}
+	              <li><a href="/{{ds.cancer_type.id}}/{{ds.data_source.id}}/">{{ds.data_source.meta.menu_text}}</a></li>
+	            {% endif %}
+	          {% endif %}
+	        {% endifchanged %}
+	      {% endfor %}
+	    </ul>
+	  </li>
