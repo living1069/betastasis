@@ -1,0 +1,101 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html>
+  <head>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+	  {% if debug %}
+		<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.4.2.js"></script>
+		<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-ui.js"></script>
+		<script type="text/javascript" src="{{ MEDIA_URL }}js/protovis-d3.2.js"></script>
+	  {% else %}
+		<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.4.2.min.js"></script>
+		<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-ui.min.js"></script>
+		<script type="text/javascript" src="{{ MEDIA_URL }}js/protovis-r3.2.js"></script>
+	  {% endif %}
+	<script type="text/javascript" src="{{ MEDIA_URL }}js/xbreadcrumbs.js"></script>
+	<script type="text/javascript" src="{{ MEDIA_URL }}js/quickselect.js"></script>
+	<script type="text/javascript" src="{{ MEDIA_URL }}js/quicksilver.js"></script>
+	<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.slider.js"></script>
+	<script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.dependClass.js"></script>
+	<script type="text/javascript" src="{{ MEDIA_URL }}js/feature_matrix.js"></script>
+	
+	<link rel="stylesheet" type="text/css" href="{{ MEDIA_URL }}style/quickselect.css">
+	<link rel="stylesheet" href="{{ MEDIA_URL }}style/xbreadcrumbs.css">
+	<link rel="stylesheet" href="{{ MEDIA_URL }}style/jslider.css">
+	<link rel="stylesheet" href="{{ MEDIA_URL }}style/style.css" type="text/css">
+	
+	<title>Project Betastasis</title>
+  </head>
+  <body>
+    
+	  <div id="header">
+	    <h1 id="logo"><a href="../">Project Betastasis</a></h1>
+	  </div>
+	  
+	  <ul class="xbreadcrumbs" id="breadcrumbs">
+	    <li><a href="/">Home</a></li>
+	    {% include 'cancer_type_nav.html' %}
+	    {% include 'data_set_nav.html' %}	  
+	    <li><a href="#">Aberration matrix</a>
+	      <ul>
+		{% include 'platform_vis_nav.html' %}
+	      </ul>
+	    </li>
+	  </ul>
+
+	  <div id="main">
+	    <h2>{{current_data_set.meta.name}}</h2>
+	    
+	    <h3>Aberration matrix</h3>
+	    <div id="fig"></div>
+	  </div>
+
+	  <div id="side">
+	    <p><b>Visualization</b><br>
+	      Platform: {{current_platform.name}}<br><br>
+	      
+	      Row height: <span style="padding-left:10px; display:inline-block; width:100px;"><input type="slider" id="HeightSelect" value="13" /></span>
+	    </p>
+	    
+	    <input id="sample_export_button" class="button medium gray" type="button" value="Export samples" />
+	    <br><br>
+	    Hierarchical clustering (not available):<br>
+	    <input id="cluster_samples" class="button medium gray" type="button" value="Rows only" />
+	    <input id="cluster_both" class="button medium gray" type="button" value="Rows & Columns" />
+	  </div>
+	  
+	  <div id="footer"></div>
+  </body>
+
+<script type="text/javascript">
+var data_root = '/{{current_cancer.id}}/{{current_data_set.id}}/{{current_platform.id}}';
+	
+$(document).ready(function() {
+	$('#breadcrumbs').xBreadcrumbs();
+	var vis = new FeatureMatrix('fig');
+	vis.setColumnWidth(20);
+	vis.cellColor = function(d) {
+		if (d < 0) {
+			return 'hsl(240,' + (100 * Math.min(-d, 1.0)) + '%,70%)';
+		} else {
+			return 'hsl(0,' + (100 * Math.min(d, 1.0)) + '%,70%)';
+		}
+	};
+	
+	$('#HeightSelect').slider({ from: 8, to: 20, step: 1,
+		dimension: '&nbsp;px', limits: false, onstatechange: function(h) {
+			vis.setRowHeight(h);
+		}
+	});
+	
+	$('#sample_export_button').click(function() {
+		alert(vis.selectedRows());
+	});
+	
+	$.getJSON(data_root + '/features_json/', function(d) {
+		vis.setData(pv.transpose(d['cna']), d['features'], d['samples']);
+	});
+});
+</script>
+
+</html>

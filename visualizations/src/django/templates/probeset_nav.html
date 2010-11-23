@@ -1,0 +1,7 @@
+	  <li><a href="#">{{current_platform.name}} ({{transcriptome.name}})</a>
+	    <ul>
+	      {% for ps in probesets %}
+	            <li><a href="/platforms/{{ps.platform.id}}/{{ps.transcriptome.id}}/probeset_design/">{{ps.platform.name}}({{ps.transcriptome.name}})</a></li>
+	      {% endfor %}
+	    </ul>
+	  </li>
