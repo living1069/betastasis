@@ -18,6 +18,8 @@ function chrnum = sym2num(symbol)
 
 global organism;
 
+symbol = strrep(symbol, ' ', '');
+
 idx = find(strcmp(symbol, organism.Chromosomes.Name));
 if length(idx) > 0
 	chrnum = idx(1);
