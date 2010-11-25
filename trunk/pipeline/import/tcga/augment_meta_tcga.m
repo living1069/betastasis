@@ -31,9 +31,31 @@ if length(fieldnames(tcga_patients)) == 0
 	return;
 end
 
+metadata = tcga_metadata(metadata, tcga_patients, tcga_samples, tcga_misc);
+if isfield(metadata, 'Ref')
+	metadata.Ref = tcga_metadata(metadata.Ref, tcga_patients, tcga_samples, ...
+		tcga_misc);
+end
+save_metadata(metadata);
+
+
+
+
+
+
+
+
+
+
+
+function metadata = tcga_metadata(metadata, tcga_patients, tcga_samples, ...
+	tcga_misc)
+
+global pipeline_config;
+
 id_to_index = containers.Map(tcga_patients.ID, ...
 	num2cell(1:length(tcga_patients.ID)));
-	
+
 patient_ids = metadata.Sample.ID;
 for k = 1:length(patient_ids)
 	if length(patient_ids{k}) < 12 || ~strcmp(patient_ids{k}(1:4), 'TCGA')
@@ -91,7 +113,6 @@ for k = 1:length(fields)
 	eval(['metadata.Misc.' fields{k} ' = misc.' fields{k} ';']);
 end
 
-save_metadata(metadata);
 
 
 
