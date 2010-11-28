@@ -517,7 +517,7 @@ Given a probe definition data structure for a microarray platform, you can gener
 
 For most commonly used CGH microarray platforms, these CGH probesets have been pre-generated and made available under pipeline/platforms, so you only need to do this step for new and exotic CGH arrays.
 
-Many CGH microarrays have been designed so that each probe has a distinct sequence and is complementary to a distinct genomic position. In such CGH microarrays the "ProbeCount" field will always have a value of 1. Conversely, this field will have values greater than 1 if multiple probes have an identical sequence and interrogate the same genomic position.
+Many CGH microarrays have been designed so that each probe has a distinct sequence and is complementary to a distinct genomic position. In such CGH microarrays the "!ProbeCount" field will always have a value of 1. Conversely, this field will have values greater than 1 if multiple probes have an identical sequence and interrogate the same genomic position.
 
 With CGH probesets at hand, raw probe level CGH data can be visualized in a genomics viewer software such as IGV by exporting it as a track:
 {{{
@@ -755,7 +755,7 @@ A list of sequencing platform names is again provided in the internal ontologies
 
 If you call import_uarray_data() or import_seq_reads() as shown above, no metadata will be associated with the samples. The only populated metadata columns will be Meta.Sample.Filename, Meta.Platform and Meta.Type.
 
-If you have the metadata available in spreadsheet format, you can automatically associate metadata with samples either based on the sample ID or filename. This is done by using the optional 'MetaFile' parameter of import_uarray_data() and import_seq_data():
+If you have the metadata available in spreadsheet format, you can automatically associate metadata with samples either based on the sample ID or filename. This is done by using the optional '!MetaFile' parameter of import_uarray_data() and import_seq_data():
 {{{
     >> import_uarray_data('dataset name', 'Affymetrix Human Exon 1.0 ST', ...
 	       'MetaFile', 'dataset_clinical_data.txt');
