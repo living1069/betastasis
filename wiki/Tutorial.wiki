@@ -541,7 +541,7 @@ If you wish to run segmentation on the CGH samples, you can use the function cgh
     >> cn_seg_to_track(segs, 'gbm_copy_number.seg')
 }}}
 
-In the above example, we first split the dataset into two query sets, one containing all tumor samples, and one containing all adjacent normal samples. We then use the function paired_samples() to draw sample pairs from these two groups so that both samples in every pair share the same patient ID. So essentially we generated a list of tumor <-> adjacent normal sample pairs. We then load the CGH probesets from the disk and run a segmentation algorithm on the raw CGH probe intensity data. Finally we export the calculated segments as a .seg copy number track onto the disk. This track can then be visualized with IGV or some other genomic visualization tool.
+In the above example, we first split the dataset into two query sets, one containing all tumor samples, and one containing all adjacent normal samples. We then use the function paired_samples() to draw sample pairs from these two groups so that both samples in every pair share the same patient ID. So essentially we generated a list of tumor - adjacent normal sample pairs. We then load the CGH probesets from the disk and run a segmentation algorithm on the raw CGH probe intensity data. Finally we export the calculated segments as a .seg copy number track onto the disk. This track can then be visualized with IGV or some other genomic visualization tool.
 
 You can also tune the segmentation algorithm using a number of optional parameters that are documented under HELP CGH_SEGMENT_FAST.
 
