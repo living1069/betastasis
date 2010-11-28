@@ -798,4 +798,4 @@ Limited support is provided for importing data from the Gene Expression Omnibus 
              SampleID: {185x1 cell}
 }}}
 
-For GEO datasets, you can often use the SampleAccession and SampleID fields to build a mapping from filenames to sample IDs. This mapping can then be given to the function import_uarray_data() as the optional parameter 'SampleMapping'. This allows you to create a spreadsheet that only contains clinical metadata associated with sample IDs, and the association with filenames then happens automatically via the mapping.
+For GEO datasets, you can often use the !SampleAccession and !SampleID fields to build a mapping from filenames to sample IDs. This mapping can then be given to the function import_uarray_data() as the optional parameter '!SampleMapping'. This allows you to create a spreadsheet that only contains clinical metadata associated with sample IDs, and the association with filenames then happens automatically via the mapping.
