@@ -1,0 +1,801 @@
+= Pipeline startup and basics =
+
+You can start the pipeline by running Matlab, and then executing the script "sources/pipeline.m", stored in the pipeline root. You might also want to see the installation tutorial for a way to create a quick shortcut for starting the pipeline.
+
+On startup, the pipeline automatically loads into memory some genetic information for Homo sapiens. This species specific information is necessary for running computational analyses. If you're interested in running analyses for some other organism, you can change the currently selected organism by typing:
+{{{
+    >> select_organism('mus musculus')
+    Reading organism data into memory...
+}}}
+
+A list of available organisms can be viewed with the command:
+{{{
+    >> list_organisms
+    List of available organisms:
+    - Homo sapiens
+    - Mus musculus
+}}}
+	
+You should now select Homo sapiens again before proceeding with the tutorial:
+{{{
+    >> select_organism('homo sapiens')
+}}}
+
+You can see genetic information about the currently selected organism by accessing the global variable "organism":
+{{{
+    >> organism
+    organism =
+                 Name: 'Homo sapiens'
+        GenomeVersion: 'RefSeq 38'
+         miRNAVersion: 'miRBase 14'
+          Chromosomes: [1x1 struct]
+                Genes: [1x1 struct]
+          Transcripts: [1x1 struct]
+                Exons: [1x1 struct]
+                miRNA: [1x1 struct]
+            pre_miRNA: [1x1 struct]
+}}}
+
+This global variable is also used by many of the pipeline's internal components. This is why it is important to make sure that you have the correct organism selected when performing data analysis. Having said that, the pipeline does perform some sanity checks and will try to notify the user if the current organism does not seem to match with the data.
+
+Once an organism has been selected, you can start loading biological measurements into the environment. First, you can get a list of available datasets by using the following command:
+{{{
+    >> query
+    Available data sets for the selected organism:
+    - lukk/
+    - prostate helicos/
+    - rembrandt/
+    - saarikettu rnaip/
+    - taylor prostate/
+    - tcga/
+    ...
+}}}
+
+Most datasets in the pipeline are grouped into folders. Running query() like this without any arguments shows you the top level folders. Listing all datasets within a folder is done like this:
+{{{
+    >> query('tcga')
+    Ambiguous query. Possible matches include:
+    - tcga/
+    - tcga/gbm affy ht hg u133a gene expression
+    - tcga/gbm affy ht hg u133a gene expression, tcga level 3
+    ...
+}}}
+
+You can differentiate between folders and datasets by noting that folder names are terminated with a slash character, whereas dataset names aren't.
+
+In this tutorial we're interested in ovarian cancer, so let's try retrieving some raw microarray data first. Here's an example of loading one of the TCGA ovarian cancer microarray data sets (dataset names are case insensitive):
+{{{
+    >> qset = query('TCGA/OV Affy HT HG U133A raw')
+    qset =
+          Type: 'Microarray probe intensities'
+        Sample: [1x1 struct]
+      Resource: {527x1 cell}
+      Platform: {527x1 cell}
+       Patient: [1x1 struct]
+          Misc: [1x1 struct]
+}}} 
+
+From the command output, you can see that this data set includes 527 microarray samples produced with the Affymetrix HT HG U133A gene expression microarray. The data structure you're seeing on the screen is known as a "query set". Query sets are used for filtering data sets down to the desired components, and for studying the metadata associated with data sets. Query sets notably do not contain the actual data, but instead only act as handles to the data. This is useful, because it allows you to perform preliminary filtering on huge data sets without loading gigabytes of data from the disk.
+
+Now, let's have a look at what the query set contains. The "Sample.ID" vector contains a list of IDs for the samples that were hybridized to the microarray in the 527 experiments. For this TCGA data set, the sample IDs match with the original TCGA sample IDs. Here are the first three:
+{{{
+    >> qset.Sample.ID(1:3)
+    ans =
+      'TCGA-13-0807-01'
+      'TCGA-13-0891-01'
+      'TCGA-13-0912-01'
+}}}
+
+The "Sample" substructure contains sample specific information, such as whether the sample comes from cancerous or normal tissue, or which organ the sample was extracted from.
+
+The "Patient" substructure contains clinical patient information associated with the microarray samples. This substructure only contains those well-defined pieces of clinical information that are specified in the pipeline data model:
+{{{
+    >> qset.Patient
+    ans =
+           Gender: [527x1 char]
+               ID: {527x1 cell}
+           Status: {527x1 cell}
+     SurvivalTime: [527x1 double]
+	          ...
+}}}
+
+The "Misc" substructure contains miscellaneous pieces of clinical information that are not supported by the pipeline data model:
+{{{
+    >> qset.Misc
+    ans =
+          ADDITIONALCHEMOTHERAPY: {527x1 cell}
+           ADDITIONALDRUGTHERAPY: {527x1 cell}
+        ADDITIONALHORMONETHERAPY: {527x1 cell}
+	                 ...
+}}}
+
+These fields can still be used for filtering samples, but the pipeline predicate query language does not support them. Thus, filtering based on these fields must be performed manually.
+
+The "Resource" vector contains resource identifiers that specify where the actual data is situated:
+{{{
+    >> qset.Resource(1:3)
+    ans =
+      'local:tcga/ov_affy_ht_hg_u133a_raw/5B17E71425596275CD84034F62A27F89'
+      'local:tcga/ov_affy_ht_hg_u133a_raw/86CFF9CEB2E0EE0E6B850C55EFB5A8DA'
+      'local:tcga/ov_affy_ht_hg_u133a_raw/7FFB1ADDA27490E8B64CAFDF744BDC50'
+}}}
+
+The 128-bit resource ID hashes are automatically generated, so that samples never have name collisions. The hash is prefixed with the dataset name and, before the colon, the repository name.
+
+A repository is a local or remote collection of datasets. In this example, the TCGA dataset is stored locally on the machine where the pipeline is running. If your pipeline installation is accessing the CSB TUT repository remotely, you will see a different repository name. You can view the configured repositories in the following way:
+{{{
+    >> global pipeline_config
+	>> pipeline_config.Repositories
+    ans =
+      [1x1 LocalRepository]
+    >> pipeline_config.Repositories{1}
+    ans =
+      LocalRepository handle
+      Properties:
+        Name: 'local'
+         URL: '/worktmp/pipeline/datasets'
+}}}
+
+Now that we know what a query set consists of, we can try filtering our query set by using the predicate query language:
+{{{
+    >> female_qset = filter_query(qset, 'gender = female')
+    female_qset =
+          Type: 'Microarray probe intensities'
+      Platform: {509x1 cell}
+        Sample: [1x1 struct]
+      Resource: {509x1 cell}
+       Patient: [1x1 struct]
+          Misc: [1x1 struct]
+}}}
+
+Here we narrowed our query set down to those samples that came from female patients. Now it should be noted that this data set is for ovarian cancer, so what's going on with the 18 samples that aren't from female patients? Well, let's find out by using the helpful function meta_summary():
+{{{
+    >> meta_summary(qset)
+	...
+    Patient.Gender:
+    - Female (509 items)
+    - N/A (18 items)
+	...
+}}}
+
+From the output of the function, you can see that the dataset contains 509 samples from female patients (as we saw earlier), and 18 samples from patients of unknown gender. You can see the same result by querying for all samples with unknown gender:
+{{{
+    >> qset = query('TCGA/OV Affy HT HG U133A raw', 'gender = unknown')
+    qset =
+          Type: 'Microarray probe intensities'
+      Platform: {18x1 cell}
+        Sample: [1x1 struct]
+      Resource: {18x1 cell}
+       Patient: [1x1 struct]
+          Misc: [1x1 struct]
+}}}
+
+As you can see, the dataset contains 18 samples for which the patient gender is not reported in the clinical data. Nonetheless, it is probably a safe bet that these patients are female as well. We're talking about ovarian cancer, after all :)
+
+In order to gain access to the data a query set refers to, the query set must be "realized" with the following command:
+{{{
+    >> data = realize(qset)
+    Progress: 100%
+    data =
+        Mean: [247899x18 double]
+        Meta: [1x1 struct]
+}}}
+	
+A progress indicator will show up on the screen while the data is being retrieved from the storage. For this query set of 18 samples, the retrieval will happen very fast. Retrieving hundreds of microarray samples from the disk will take a couple of seconds, though. You can see this for yourself by realizing the entire microarray data set:
+{{{
+    >> data = realize(query('TCGA/OV Affy HT HG U133A'))
+    Progress: 100%
+    data =
+        Mean: [247899x527 double]
+        Meta: [1x1 struct]
+}}}
+
+And there you have it. You can now view the raw probe intensity data in the following fashion:
+{{{
+    >> data.Mean(1:3, 1:5)
+    ans =
+     1.0e+03 *
+      0.5315    0.3180    0.3050    0.6150    0.2380
+      3.2888    1.6508    1.8145    2.8865    1.3953
+      6.3203    3.8602    3.8381    5.7050    3.9452
+}}}
+	
+By looking at the realized data structure, you can also see that all of the original metadata from the query set is still available behind the attribute "Meta":
+{{{
+    >> data.Meta
+    ans =
+          Type: 'Microarray probe intensities'
+      Platform: {527x1 cell}
+        Sample: [1x1 struct]
+       Patient: [1x1 struct]
+          Misc: [1x1 struct]
+}}}
+
+Now, let's have a look at some gene expression data and see how query sets can be merged together. First we need two query sets of gene expression data, both from the TCGA project. One of the query sets will be for the glioblastoma gene expression profiles, one for the ovarian cancer profiles:
+{{{
+    >> qset_gbm = query('TCGA/GBM Affy HT HG U133A gene expression');
+    >> qset_ov = query('TCGA/OV Affy HT HG U133A gene expression');
+}}}
+
+Since both query sets refer to gene expression data and were generated for the same organism and using the same annotations, the query sets can be merged together in the following fashion:
+{{{
+    >> merged = query_union(qset_gbm, qset_ov);
+}}}
+
+This function can take an arbitrary amount of query sets to merge, but in this example we called it with just two query sets. As the name of the function implies, a union of the two query sets is taken. Strictly speaking, the union is taken over the "Resource" field of the two query sets, since resource names uniquely identify pieces of data in the pipeline.
+
+But let's now have a look at the merged query set:
+{{{
+    >> merged
+    merged =
+                     Misc: [1x1 struct]
+                 Organism: 'Homo sapiens'
+                  Patient: [1x1 struct]
+                 Platform: {922x1 cell}
+                 Resource: {922x1 cell}
+                   Sample: [1x1 struct]
+      SummarizationMethod: {922x1 cell}
+                     Type: 'Gene expression'
+}}}
+
+The new query set contains both the 395 glioblastoma profiles and the 527 ovarian cancer profiles, for a total of 922 samples. The merged query set can be realized in the normal fashion, and the data resources will be automatically loaded from the two datasets:
+{{{
+    >> data = realize(merged)
+    Progress: 100%
+    data =
+      Mean: [29595x922 double]
+      Meta: [1x1 struct]
+}}}
+
+When analyzing the merged data set, you can use metadata to differentiate between tumor types:
+{{{
+    >> unique(data.Meta.Patient.TumorType)
+    ans =
+      '-'
+      'Serous Cystadenocarcinoma'
+      'Treated primary GBM'
+      'Untreated primary (De Nova) GBM'
+}}}
+
+The symbol '-' always stands for "unknown" in the metadata.
+
+After filtering and working on datasets, you can store it in the pipeline data store as a fresh copy:
+{{{
+    >> expr = realize(query('TCGA/GBM Affy HT HG U133A gene expression', 1:10));
+	>> expr.Mean = quantilenorm(expr.Mean);
+	>> create_dataset('quantile normalized example data', expr)
+}}}
+	
+You can also remove existing datasets:
+{{{
+    >> remove_dataset('quantile normalized example data')
+}}}
+
+Note that all new datasets are fully self-contained and include all of the raw data. This means that if you only want to store the result of a filter query, it is a better idea to simply save() the query set object, since you don't want to make an extra copy of the raw data.
+
+Each dataset is also fully self-contained in terms of metadata. This means that if you wish to share data with another group of researchers, you can simply save the data object, and all metadata will be automatically included:
+{{{
+    >> expr = realize(query('TCGA/GBM Affy HT HG U133A gene expression', 1:10));
+	>> save ~/my_expr_data.mat expr
+	>> clear expr
+	>> load ~/my_expr_data.mat
+	>> expr.Meta
+    ans =
+                   Type: 'Gene expression'
+               Platform: {10x1 cell}
+                 Sample: [1x1 struct]
+                Patient: [1x1 struct]
+                   Misc: [1x1 struct]
+    SummarizationMethod: {10x1 cell}
+               Organism: 'Homo sapiens'
+                Version: 'RefSeq 38'
+}}}
+
+If the other research group is also using Matlab, they can then immediately use the data, and have access to the full metadata. When sharing gene expression data, it is of course also a good idea to provide the other group with the list of gene names for identifying the rows in your gene expression data matrix.
+
+
+
+
+
+= DATA QUERY LANGUAGE =
+
+Now we can have a deeper look at the query language that can be used for filtering data sets in the pipeline. As was shown in the first tutorial on data retrieval, query sets can be filtered in two alternative ways. The first way is to first retrieve a full query set, and then subsequently filter it in the following way:
+{{{
+    >> qset = query('TCGA/GBM Affy HT HG U133A raw')
+    qset =
+          Type: 'Microarray probe intensities'
+      Platform: {395x1 cell}
+        Sample: [1x1 struct]
+      Resource: {395x1 cell}
+       Patient: [1x1 struct]
+          Misc: [1x1 struct]
+    >> qset = filter_query(qset, 'status = deceased')
+	qset =
+          Type: 'Microarray probe intensities'
+      Platform: {312x1 cell}
+        Sample: [1x1 struct]
+      Resource: {312x1 cell}
+       Patient: [1x1 struct]
+          Misc: [1x1 struct]
+}}}
+
+Alternatively, filtering can be done via the optional second argument of the query() function:
+{{{
+    >> qset = query('TCGA/GBM Affy HT HG U133A raw', 'status = deceased')
+	qset =
+          Type: 'Microarray probe intensities'
+      Platform: {312x1 cell}
+        Sample: [1x1 struct]
+      Resource: {312x1 cell}
+       Patient: [1x1 struct]
+          Misc: [1x1 struct]
+}}}
+
+The metadata that is associated with datasets in the pipeline is usually either strings or numbers. The query language allows string metadata to be filtered either by using a full string comparison or a regular expression based comparison. We can take the sample type metadata as an example:
+{{{
+    >> qset = query('TCGA/GBM Affy HT HG U133A raw');
+    >> unique(qset.Sample.Type)
+    ans =
+      'Adjacent normal tissue'
+      'Normal cell line'
+      'Solid tumor'
+      'Treated primary GBM, solid tumor'
+      'Untreated primary GBM, solid tumor'
+}}}
+
+Using full string comparison on this attribute, our queries will look like this:
+{{{
+    >> qset = query('TCGA/GBM Affy HT HG U133A raw', ...
+	       'sample type = solid tumor')
+    qset =
+          Type: 'Microarray probe intensities'
+      Platform: {27x1 cell}
+        Sample: [1x1 struct]
+      Resource: {27x1 cell}
+       Patient: [1x1 struct]
+          Misc: [1x1 struct]
+}}}
+
+The query is case insensitive, but the string must otherwise be an exact match. You can see that the 27 samples that matched the query only include solid tumor samples for which the tumor type is not specified:
+{{{
+    >> unique(qset.Sample.Type)
+	ans =
+	  'Solid tumor'
+}}}
+	
+Also note that you are free to use either = or == for string comparisons, whichever feels more natural:
+{{{
+    >> query('TCGA/GBM Affy HT HG U133A raw', 'sample type == solid tumor')
+}}}
+
+If we want to include all solid tumor samples, regardless of whether the tumor type is or is not known, we can run a regular expression query by using operator ~:
+{{{
+    >> qset = query('TCGA/GBM Affy HT HG U133A raw', ...
+	       'sample type ~ solid tumor')
+    qset =
+          Type: 'Microarray probe intensities'
+      Platform: {384x1 cell}
+        Sample: [1x1 struct]
+      Resource: {384x1 cell}
+       Patient: [1x1 struct]
+          Misc: [1x1 struct]
+}}}
+
+This time, fewer samples matched the query, and you can see that we got the desired result:
+{{{
+    >> unique(qset.Sample.Type)
+	ans =
+	  'Solid tumor'
+      'Treated primary GBM, solid tumor'
+      'Untreated primary GBM, solid tumor'
+}}}
+
+For numerical metadata, you can use the normal equality and inequality operators. Here are some examples of valid queries:
+{{{
+    >> qset = query('GBM Affy HT HG U133A raw', 'survival time == 100')
+    >> qset = query('GBM Affy HT HG U133A raw', 'survival time ~= 100')
+    >> qset = query('GBM Affy HT HG U133A raw', 'survival time < 100')
+    >> qset = query('GBM Affy HT HG U133A raw', 'survival time >= 100')
+}}}
+
+The equality operator for numerical data can be written as either = or ==. The "not equal" operator can be written as either ~= or !=. Survival times in the previous example were measured in days.
+
+For dates, you can also use the normal equality and inequality operators. Many different date formats are accepted:
+{{{
+    >> qset = query('GBM Affy HT HG U133A raw', 'date of birth == 1943-02-14')
+	>> qset = query('GBM Affy HT HG U133A raw', 'born ~= 14-Feb-1943')
+	>> qset = query('GBM Affy HT HG U133A raw', 'birth date < 02/14/1943')
+	>> qset = query('GBM Affy HT HG U133A raw', 'birth >= 1943-02-14')
+}}}
+
+The function filter_query() also allows you to select samples based on their indices in the query set. So to pick the first 10 samples, you would write:
+{{{
+    >> qset = query('TCGA/GBM Affy HT HG U133A raw', 1:10);
+}}}
+
+You can also use a logical vector for filtering samples. This mechanism easily allows you to do filtering using custom predicates and Matlab's own functions:
+{{{
+    >> qset = query('TCGA/GBM Affy HT HG U133A raw');
+	>> qset = filter_query(qset, ...
+	       qset.Patient.SurvivalTime >= 50 & qset.Patient.SurvivalTime <= 100)
+}}}
+	
+Note that you cannot use filter_query() on realized query sets.
+	
+The query language will be extended with Boolean operators and other new features in the future.
+
+
+
+
+
+= MICROARRAY ANALYSIS - TRANSCRIPTOMIC EXPRESSION =
+
+Now, let's go through an example of calculating a gene expression profile for a set of microarray samples. First you need to retrieve a set of raw microarray data:
+{{{
+    >> data = realize(query('TCGA/GBM Affy HT HG U133A raw'), 'gender = male')
+    data =
+        Mean: [247899x191 double]
+        Meta: [1x1 struct]
+}}}
+
+Okay, we now have 191 microarray samples from male patients with glioblastoma. As we could have guessed from the data set name, these microarray samples were hybridized to an Affymetrix HT HG U133A gene expression microarray:
+{{{
+    >> unique(data.Meta.Platform)
+    ans =
+      'Affy HT HG U133A'
+}}}
+
+In order to calculate a gene expression profile for these samples, we first need to decide on the gene expression probeset definition that we wish to use. For this example, we will use the default gene expression probesets generated by the pipeline. These probesets are available in the following file:
+{{{
+    >> load /worktmp/pipeline/platforms/affy_ht_hg_u133a/gene_probesets
+}}}
+
+The probesets are loaded into the Matlab environment, and are stored in the variable "affy_ht_hg_u133a_gene_probesets". You can now use the selected  probesets to calculate the gene expression profiles (this operation will take a couple of minutes to run):
+{{{
+    >> expr = uarray_expression_rma(data, affy_ht_hg_u133a_gene_probesets)
+    expr =
+        Mean: [29595x191 double]
+        Meta: [1x1 struct]
+}}}
+
+From the resulting data structure, you can see that the raw probe intensities were transformed into gene expression levels for the ~30000 different genes named in the RefSeq annotations (these gene names include non-coding, hypothetical and pseudogenes). The rows of the gene expression matrix correspond to the known genes of the currently selected organism:
+{{{
+    >> organism.Genes
+    ans =
+                 Name: {29595x1 cell}
+      TranscriptCount: [29595x1 double]
+          Transcripts: [29595x31 double]
+  		     EntrezID: [29595x1 double]
+}}}
+
+In this example, we used RMA summarization to calculate the gene expression levels from the raw probe intensities. The used summarization method and other details are automatically documented in the metadata:
+{{{
+    >> expr.Meta
+    ans = 
+                     Type: 'Gene expression'
+                 Platform: {191x1 cell}
+                   Sample: {191x1 cell}
+                  Patient: [1x1 struct]
+                     Misc: [1x1 struct]
+      SummarizationMethod: 'RMA'
+                 Organism: 'Homo sapiens'
+                  Version: 'RefSeq 38'
+}}}
+
+If a suitable probeset is not available for the genome build that you have selected, you can always build a new probeset. To do this, first load the microarray's probe information into the pipeline:
+{{{
+    >> load /worktmp/pipeline/platforms/affy_ht_hg_u133a/probes
+}}}
+
+Then you can create either gene, transcript or exon probesets by using one of the following commands:
+{{{
+    >> probesets = create_gene_probesets(affy_ht_hg_u133a_probes);
+    >> probesets = create_transcript_probesets(affy_ht_hg_u133a_probes);
+    >> probesets = create_exon_probesets(affy_ht_hg_u133a_probes);
+}}}
+
+The microarray probes will be mapped against the organism's currently selected transcriptome build, and new probesets will be constructed based on the mappings. All three probesets can be used with the uarray_expression_rma() and related functions.
+
+
+
+
+= MICROARRAY ANALYSIS - ARRAY CGH =
+
+Given a probe definition data structure for a microarray platform, you can generate CGH probesets against a given genome version in the following way:
+{{{
+    >> load /worktmp/pipeline/platforms/agilent_hg_cgh_244a/probes
+	>> cgh_probesets = create_cgh_probesets(agilent_hg_cgh_244a_probes)
+    cgh_probesets =
+            Type: 'Copy number'
+        Organism: 'Homo sapiens'
+         Version: 'RefSeq 38'
+      Chromosome: [235893x1 double]
+          Offset: [235893x1 double]
+      ProbeCount: [235893x1 double]
+          Probes: [235893x3 double]
+}}}
+
+For most commonly used CGH microarray platforms, these CGH probesets have been pre-generated and made available under pipeline/platforms, so you only need to do this step for new and exotic CGH arrays.
+
+Many CGH microarrays have been designed so that each probe has a distinct sequence and is complementary to a distinct genomic position. In such CGH microarrays the "ProbeCount" field will always have a value of 1. Conversely, this field will have values greater than 1 if multiple probes have an identical sequence and interrogate the same genomic position.
+
+With CGH probesets at hand, raw probe level CGH data can be visualized in a genomics viewer software such as IGV by exporting it as a track:
+{{{
+    >> tumor = query('gbm agilent cgh 244a hms', 'sample type ~ tumor');
+	>> normal = query('gbm agilent cgh 244a hms', 'sample type ~ normal');
+	>> [tumor, normal] = paired_samples(tumor, normal, 'Patient');
+	>> cgh_logratio_track(realize(tumor), realize(normal), cgh_probesets, ...
+	       '~/cgh_probe_tracks.igv');
+}}}
+
+This will generate a file that contains IGV scatterplot tracks for every paired CGH sample in the provided dataset. The zero level of the CGH logratios will be normalized, but no segmentation or quantization will be performed.
+
+If you wish to run segmentation on the CGH samples, you can use the function cgh_segment_fast() in the following manner:
+{{{
+    >> tumor = query('gbm agilent cgh 244a hms', 'sample type ~ tumor');
+	>> normal = query('gbm agilent cgh 244a hms', 'sample type ~ normal');
+	>> [tumor, normal] = paired_samples(tumor, normal, 'Patient');
+	>> tumor = realize(tumor);
+	>> normal = realize(normal);
+	>> segs = cgh_segment_fast(tumor, normal, cgh_probesets);
+    >> cn_seg_to_track(segs, 'gbm_copy_number.seg')
+}}}
+
+In the above example, we first split the dataset into two query sets, one containing all tumor samples, and one containing all adjacent normal samples. We then use the function paired_samples() to draw sample pairs from these two groups so that both samples in every pair share the same patient ID. So essentially we generated a list of tumor <-> adjacent normal sample pairs. We then load the CGH probesets from the disk and run a segmentation algorithm on the raw CGH probe intensity data. Finally we export the calculated segments as a .seg copy number track onto the disk. This track can then be visualized with IGV or some other genomic visualization tool.
+
+You can also tune the segmentation algorithm using a number of optional parameters that are documented under HELP CGH_SEGMENT_FAST.
+
+If you prefer to use the circular binary segmentation algorithm by Olshen et al, you can use the segmentation function cgh_segment_cbs().
+
+When using genomic visualization tools to display copy number tracks, make sure that you have selected the right genome build (usually hg19). The data will look bad if visualized against the wrong genome build.
+
+You can also search for statistically significant copy number alterations:
+{{{
+    >> significant_cnv(tumor, normal, ...
+           agilent_hg_cgh_244a_probesets, 'significant_cnv.igv')
+}}}
+
+This function will also export an IGV track, but this time the track will consist of p-values transformed as log10(1 / p). In other words, the track will contain high peaks where statistically significant copy number alterations are present.
+
+If you're more interested in the percentage-wise recurrence of copy number alterations, you can use another function:
+{{{
+    >> cna_recurrence_track(tumor.Mean, normal.Mean, ...
+	       agilent_hg_cgh_244a_probesets, 'cnv_recurrence.igv')
+}}}
+
+
+
+
+
+= MICROARRAY ANALYSIS - MISCELLANEOUS =
+
+You can visualize the spatial distribution of probe intensities on the microarray slide by using the function render_uarray_intensities():
+{{{
+    >> raw = realize(query('TCGA/GBM Affy HT HG U133A raw', 1:10));
+    >> render_uarray_intensities(raw, affy_ht_hg_u133a_probes, '~/fig_spatial');
+}}}
+
+If a visual inspection of the spatially rendered probe intensities indicates that the microarray samples contain significant spatial artifacts, you can apply spatial detrending in the following fashion:
+{{{
+    >> raw = realize(query('TCGA/GBM Affy HT HG U133A raw', 1:10));
+	>> load /worktmp/pipeline/platforms/affy_ht_hg_u133a/probes;
+	>> raw = spatial_detrend(raw, affy_ht_hg_u133a_probes);
+}}}
+
+You can also compare the probe composition of two microarray platforms:
+{{{
+    >> load agilent_human_mirna_8x15k/probes
+    >> load agilent_human_mirna_8x15k_v2/probes
+    >> compare_probes(agilent_human_mirna_8x15k_v2_probes, ...
+	       agilent_human_mirna_8x15k_probes);
+    Probe comparison results:
+    - 7120 probes added
+    - 4067 probes removed
+    - 7013 probes changed position
+}}}
+
+
+
+
+= TRANSCRIPTOME SEQUENCING ANALYSIS =
+
+Now, let's look at some of the pipeline's tools for sequence data analysis. First we need to need to retrieve a set of RNA-seq reads from the pipeline data store:
+{{{
+    >> reads = realize(query('Wei GBM/WT RNAseq reads', 'sample type ~ GBM'))
+    reads =
+      SequenceResource: {1x4 cell}
+                  Meta: [1x1 struct]
+}}}
+
+This example data set consists of whole transcriptome RNA-seq reads from the ABI SOLiD 3 platform. The reads are in colorspace, but the pipeline handles that transparently for you. We can now construct a gene expression profile based on the RNA-seq reads:
+{{{
+    >> expr = gene_expression_rnaseq(reads, 2, 'RPKM')
+    expr =
+      Mean: [29595x4 double]
+      Meta: [1x1 struct]
+}}}
+
+The second argument allows you to select the maximum amount of mismatches allowed while aligning reads to the transcriptome. The third argument lets you select the desired normalization method (the default is to use no normalization). As an optional fourth argument, you can specify a trim length to which all the RNA-seq reads will be trimmed, starting from their 5' end.
+
+If you want to see how the sequenced reads are distributed across transcripts, you can use the following function:
+{{{
+    >> analyze_seq_read_distribution(reads, '~/read_distribution.pdf');
+}}}
+
+The function will create a histogram image that shows the read alignment offsets, normalized by the length of the transcript to which they aligned. By running this function separately on reads sequenced using DGE and RNA-seq  clearly shows the difference between the two sequencing protocols.
+
+If you wish to visualize the density of reads aligning to different regions of the genome, you can generate IGV tracks and then import them into any genomics visualization tool. This is achieved in the following way:
+{{{
+    >> reads_to_igv(reads, 'alignment_track');
+}}}
+
+This will generate four IGV files from the four read files. The names of the generated IGV files are based on the filename prefix given as the second argument. See HELP READS_TO_IGV for more details.
+
+In addition to calculating gene expression values, we can use the RNA-seq reads to look for SNPs or RNA editing in the transcriptome:
+{{{
+    >> mutations = find_snps(reads)
+    mutations =
+          SNPs: {1x4 cell}
+          Meta: [1x1 struct]
+}}}
+
+The analysis will take hours to run, but once it's done, you can print the discovered SNPs for the first sample with the following function:
+{{{
+    >> print_snps(mutations.SNPs{1})
+}}}
+
+The function automatically orders the SNPs so that the SNPs with the highest prevalence and highest number of reads are placed at the head of the list. 
+
+Finally, we can use the RNA-seq reads to discover fusion genes and alternative splicing events:
+{{{
+    >> rearrangements = find_rearrangements(reads, 20)
+    rearrangements =
+          TagFusions: {1x4 cell}
+             Fusions: {1x4 cell}
+        AltSplicings: {1x4 cell}
+                Meta: [1x1 struct]
+}}}
+
+The second parameter specifies the size of the start and end tags which will be extracted from all reads and mapped against the exome to discover novel junctions. The resulting data structure contains fusion gene candidates obtained with different levels of validation, and alternative splicing events (only exon deletions for now). If you want to pool rearrangements from multiple samples to increase the resolution, you can do it in the following way:
+{{{
+    >> pooled_fusions = pool_rearrangements(rearrangements.Fusions(1:4));
+}}}
+
+You can then print the pooled set of fusions (this can lead to a lot of output, so use of the Matlab diary() function is adviced):
+{{{
+    >> print_fusions(pooled_fusions);
+}}}
+
+Similarly you can print the list of alternative splicing events:
+{{{
+    >> print_alt_splicings(rearrangements.AltSplicings{1});
+}}}
+
+These commands report the fused exons and show which transcript and gene they normally belong to. The output also shows the number of reads that supports a particular exon-exon junction, and the sequences of the supporting RNA-seq reads.
+
+
+
+
+
+
+= MICRORNA SEQUENCING ANALYSIS =
+
+In this chapter we will look at running some microRNA analyses using small RNA sequencing data. First, let's load up some data:
+{{{
+    >> reads = realize(query('Wei GBM/small RNAseq reads'));
+}}}
+
+Now we can calculate expression levels for both pre-miRNA and mature miRNA transcripts by using the following function:
+{{{
+    >> mirna_expr = mirna_expression_rnaseq(reads);
+    mirna_expr =
+          miRNA: [904x10 double]
+      pre_miRNA: [721x10 double]
+           Meta: [1x1 struct]
+}}}
+
+The function has a number of optional arguments, and you can see documentation for these arguments by typing "help mirna_expression_rnaseq". The second argument specifies the maximum number of allowed nucleotide mismatches when aligning the reads against miRNA and pre-miRNA sequences. The output data structure contains two matrices, one for mature miRNA and one for pre-miRNA expression levels. The matrix rows can be identified using the organism attributes "organism.miRNA.Name" and "organism.pre_miRNA.Name".
+
+Next, we can look for miRNA mutations and length polymorphisms using the following function:
+{{{
+    >> mutations = mirna_mutations(reads, 'ACGCTTCC');
+    mutations =
+          SNPs: {1x10 cell}
+      Isoforms: {904x10 cell}
+          Meta: [1x1 struct]
+}}}
+
+The function assumes that the small RNA sequencing was performed by first ligating a 3' adapter to all small RNA transcripts. The adapter sequence must be given as the second argument to the function. The presence of this adapter allows the function to computationally look for length polymorphisms in microRNA transcripts.
+
+Now, you can print a list of the discovered microRNA SNPs in the same way as with whole transcriptome sequencing:
+{{{
+    >> find_snps(mutations.SNPs{1});
+    SNPs ordered by significance score:
+    - hsa-miR-1274a:11:A>G: 274/304 (90.1%)
+    - hsa-miR-1260:9:T>G: 1792/2020 (88.7%)
+    - hsa-miR-376a:6:A>G: 942/1085 (86.8%)
+	              ...
+}}}
+
+
+
+
+
+= DATA IMPORT - GENERAL =
+
+In the previous chapters of this tutorial, we have retrieved all of our data directly from the pipeline data store, in a format that is immediately usable in Matlab. In real life, bioinformatics data is stored in a number of different formats and representations. In order to analyze real life data, the data must first be brought into the pipeline and represented in the unified data formats that the pipeline deals with.
+
+To import microarray data into the pipeline, you can use the following command:
+{{{
+    >> import_uarray_data('dataset name', 'Affymetrix Human Exon 1.0 ST')
+    Importing GSM526134_YX_Exon1_PCA0001.CEL...
+    Importing GSM526135_YX_Exon1_PCA0002.CEL...
+    Importing GSM526136_YX_Exon1_PCA0003.CEL...
+                   ...
+}}}
+
+This function checks the current working directory for microarray sample files, and reads them into the pipeline, creating a new dataset with the requested name. You also need to specify the microarray platform, since the function cannot yet autodetect all microarray platforms based on the sample file contents. The second argument will likely become optional in the future.
+
+You can get a list of supported microarray platform names from the pipeline's internal ontologies:
+{{{
+    >> ontologies.uarray_platforms
+}}}
+
+To import sequencing data into the pipeline, you can use the command:
+{{{
+    >> import_seq_reads('dataset name', 'ABI SOLiD V3')
+}}}
+
+Again, the command looks for FASTA, FASTQ and colorspace read files in the current working directory, and creates a new dataset out of them. This function will also move the read files into the pipeline data store, so be careful.
+
+A list of sequencing platform names is again provided in the internal ontologies:
+{{{
+    >> ontologies.sequencing_platforms
+}}}
+
+If you call import_uarray_data() or import_seq_reads() as shown above, no metadata will be associated with the samples. The only populated metadata columns will be Meta.Sample.Filename, Meta.Platform and Meta.Type.
+
+If you have the metadata available in spreadsheet format, you can automatically associate metadata with samples either based on the sample ID or filename. This is done by using the optional 'MetaFile' parameter of import_uarray_data() and import_seq_data():
+{{{
+    >> import_uarray_data('dataset name', 'Affymetrix Human Exon 1.0 ST', ...
+	       'MetaFile', 'dataset_clinical_data.txt');
+}}}
+
+The metadata file must be formatted as a tab-delimited text file. Excel spreadsheets, in particular, are not natively supported, and must be converted into a tab-delimited text format.
+
+
+
+
+
+
+= DATA IMPORT - TCGA =
+
+The pipeline supports automated importing of TCGA data, given that your TCGA data is stored in a directory structure similar or identical to that used by the TCGA FTP and HTTPS directories. All you need to do is to enter a directory that contains one or more TCGA archives, and run the function import_tcga_uarray_data(). Here's an example:
+{{{
+	>> cd /worktmp/TCGA/gbm/cgcc/mskcc.org/hg-cgh-244a/cna
+    >> import_tcga_uarray_data('tcga/gbm agilent cgh 244a mskcc test', ...
+	       'Agilent HG CGH 244A');
+}}}
+    
+The function will automatically scan the directory and any subdirectories for SDRF files, and will then look for raw data files for the samples described in the SDRF files. The function then calls import_uarray_data() to import the microarray data into the pipeline. As the final step, TCGA patient metadata is automatically associated with the microarray samples.
+
+
+
+
+
+= DATA IMPORT - GENE EXPRESSION OMNIBUS (GEO) =
+
+Limited support is provided for importing data from the Gene Expression Omnibus service. Raw microarray samples downloaded from GEO can be automatically imported using the generic import_uarray_data(). For metadata, you can download a series matrix file from GEO and then parse it:
+{{{
+    >> geo_meta = read_geo_series_matrix('GSE21032_series_matrix.txt')
+    geo_meta =
+                Title: 'Integrative genomic profiling of human prostate cancer'
+      SeriesAccession: 'GSE21032'
+       SubmissionDate: 'Mar 23 2010'
+       LastUpdateDate: 'Jul 06 2010'
+          SampleTitle: {185x1 cell}
+      SampleAccession: {185x1 cell}
+             SampleID: {185x1 cell}
+}}}
+
+For GEO datasets, you can often use the SampleAccession and SampleID fields to build a mapping from filenames to sample IDs. This mapping can then be given to the function import_uarray_data() as the optional parameter 'SampleMapping'. This allows you to create a spreadsheet that only contains clinical metadata associated with sample IDs, and the association with filenames then happens automatically via the mapping.
