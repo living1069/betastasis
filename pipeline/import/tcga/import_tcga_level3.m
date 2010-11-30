@@ -191,6 +191,7 @@ for k = 1:length(column_names)
 	%if strcmpi(col_name, 'End_Position'), end_pos_col = k; end
 	if strcmpi(col_name, 'Chrom'), chr_col = k; end
 	if strcmpi(col_name, 'Strand'), strand_col = k; end
+	if strcmpi(col_name, 'Center'), center_col = k; end
 	if strcmpi(col_name, 'Variant_Classification'), class_col = k; end
 	if strcmpi(col_name, 'Variant_Type'), type_col = k; end
 	if strcmpi(col_name, 'Tumor_Sample_Barcode'), sample_col = k; end
@@ -211,6 +212,7 @@ start_pos = str2double(data{start_pos_col});
 %end_pos = str2double(data{end_pos_col});
 chr = chromosome_sym2num(data{chr_col});
 strand = data{strand_col};
+source = data{center_col};
 variant_class = data{class_col};
 variant_type = data{type_col};
 sample = data{sample_col};
@@ -266,6 +268,7 @@ mutations = struct;
 mutations.Mutations = {};
 
 mutations.Meta = struct;
+mutations.Meta.Type = 'Mutations';
 mutations.Meta.Sample = struct;
 mutations.Meta.Sample.ID = {};
 
@@ -293,6 +296,7 @@ for k = 1:length(sample)
 		
 		mut.Offset = start_pos(idx);
 		mut.Validation = validation(idx);
+		mut.Source = source(idx);
 		
 		use_mut_col = strcmp(ref_allele(idx), mut_allele(idx, 1));
 		mut.MutAllele = mut_allele(idx + use_mut_col * size(mut_allele, 1));
