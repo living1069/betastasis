@@ -7,7 +7,7 @@ parse_format = '';
 
 fid = fopen(filepath);
 header = fgetl(fid);
-fseek(fid, 0, -1);
+%fseek(fid, 0, -1);
 
 column_names = textscan(header, '%s', -1, 'Delimiter', '\t');
 column_names = column_names{1};
@@ -46,7 +46,7 @@ for k = 1:length(column_names)
 end
 
 % Read probe information from the file once the file format has been determined.
-data = textscan(fid, parse_format, 'HeaderLines', 1);
+data = textscan(fid, parse_format);
 fclose(fid);
 
 probes = struct('XPos', data{2}, ...

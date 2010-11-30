@@ -111,6 +111,14 @@ elseif strcmpi(platform, 'Affymetrix GW SNP 6')
 	import_method = 'affy_cel';
 	probes = load([ppath '/platforms/affy_gw_snp_6/probes']);
 	probes = probes.affy_gw_snp_6_probes;
+elseif strcmpi(platform, 'Affymetrix Human Mapping 250K Sty')
+	import_method = 'affy_cel';
+	probes = load([ppath '/platforms/affy_mapping_250k_sty/probes']);
+	probes = probes.probes;
+elseif strcmpi(platform, 'Affymetrix Human Mapping 250K Nsp')
+	import_method = 'affy_cel';
+	probes = load([ppath '/platforms/affy_mapping_250k_nsp/probes']);
+	probes = probes.probes;
 else
 	error 'Unrecognized array platform specified.';
 end
