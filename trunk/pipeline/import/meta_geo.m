@@ -23,18 +23,30 @@ else
 	error 'Could not find a link between samples and the GEO series matrix.';
 end
 
-found = find(sample_to_row ~= 0);
+found = (sample_to_row ~= 0);
 found_rows = sample_to_row(found);
 
 if isfield(geo, 'SampleIDCh1')
+	if ~isfield(meta.Sample.ID)
+		meta.Sample.ID = repmat({'-'}, S, 1);
+	end
 	meta.Sample.ID(found) = geo.SampleIDCh1(found_rows);
 end
 
 if isfield(geo, 'TumorTypeCh1')
+	if ~isfield(meta.Sample.Type)
+		meta.Sample.Type = repmat({'-'}, S, 1);
+	end
 	meta.Sample.Type(found) = geo.TumorTypeCh1(found_rows);
 elseif isfield(geo, 'DiseaseStatusCh1')
+	if ~isfield(meta.Sample.Type)
+		meta.Sample.Type = repmat({'-'}, S, 1);
+	end
 	meta.Sample.Type(found) = geo.DiseaseStatusCh1(found_rows);
 elseif isfield(geo, 'TissueCh1')
+	if ~isfield(meta.Sample.Type)
+		meta.Sample.Type = repmat({'-'}, S, 1);
+	end
 	meta.Sample.Type(found) = geo.TissueCh1(found_rows);
 end
 
