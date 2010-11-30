@@ -22,6 +22,8 @@
 %        * Microarray probe intensities
 %        * Gene expression
 %        * miRNA expression
+%    - Union:
+%        * Mutations
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
@@ -44,12 +46,12 @@ if ~isfield(data, 'Meta') || ~isfield(data.Meta, 'Type') || ...
 	merged = data;
 end
 
-uniq_samples = unique(data.Meta.Sample.ID);
+[uniq_samples, ~, groups] = unique(data.Meta.Sample.ID);
 replicates = cell(length(uniq_samples), 1);
 sample_perm = zeros(length(uniq_samples), 1);
 
 for k = 1:length(uniq_samples)
-	rep = find(strcmp(uniq_samples{k}, data.Meta.Sample.ID));
+	rep = find(groups == k);
 	replicates{k, 1} = rep;
 	sample_perm(k) = rep(1);
 end
@@ -58,42 +60,46 @@ merged = struct;
 
 if collapse
 	merged.Meta = filter_struct(data.Meta, sample_perm);
-	
-	if strcmp(data.Meta.Type, 'Microarray probe intensities') || ...
-		strcmp(data.Meta.Type, 'Gene expression') || ...
-		strcmp(data.Meta.Type, 'miRNA expression')
-		
-		progress = Progress;
-	
-		merged.Mean = zeros(size(data.Mean, 1), length(uniq_samples));
-		for r = 1:length(replicates)
-			rep = replicates{r};
-			qnorm = quantilenorm(data.Mean(:, rep));
-			merged.Mean(:, r) = median(qnorm, 2);
-			progress.update(r / length(replicates));
-		end
-	else
-		error 'Dataset is of an unrecognized type. Cannot merge replicates.';
-	end
 else
 	merged.Meta = data.Meta;
+end
 	
-	if strcmp(data.Meta.Type, 'Microarray probe intensities') || ...
-		strcmp(data.Meta.Type, 'Gene expression') || ...
-		strcmp(data.Meta.Type, 'miRNA expression')
+if strcmp(data.Meta.Type, 'Microarray probe intensities') || ...
+	strcmp(data.Meta.Type, 'Gene expression') || ...
+	strcmp(data.Meta.Type, 'miRNA expression')
 	
-		progress = Progress;
+	progress = Progress;
 
+	for r = 1:length(replicates)
+		rep = replicates{r};
+		qnorm = quantilenorm(data.Mean(:, rep));
 		merged.Mean = zeros(size(data.Mean, 1), length(uniq_samples));
-		for r = 1:length(replicates)
-			rep = replicates{r};
-			qnorm = quantilenorm(data.Mean(:, rep));
-			merged.Mean(:, rep) = repmat(median(qnorm, 2), 1, length(rep));
-			progress.update(r / length(replicates));
-		end
-	else
-		error 'Dataset is of an unrecognized type. Cannot merge replicates.';
+		merged.Mean(:, r) = median(qnorm, 2);
+		progress.update(r / length(replicates));
 	end
+	
+	if ~collapse
+		merged.Mean = merged.Mean(:, groups);
+	end
+	
+elseif strcmp(data.Meta.Type, 'Mutations')
+	merged.Meta = rmfield(merged.Meta, 'Ref');
+	
+	for r = 1:length(replicates)
+		rep = replicates{r};
+		if length(rep) == 1
+			merged.Mutations{1, r} = data.Mutations{rep(1)};
+		else
+			merged.Mutations{1, r} = cat_structs(data.Mutations{rep});
+		end
+	end
+	
+	if ~collapse
+		merged.Mutations = merged.Mutations(:, groups);
+	end
+	
+else
+	error 'Dataset is of an unrecognized type. Cannot merge replicates.';
 end
 
 
