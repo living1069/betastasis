@@ -50,6 +50,20 @@ while 1
 		continue;
 	end
 	
+	tokens = regexpi(line, '!Sample_organism_ch(\d)', 'tokens');
+	if length(tokens) == 1
+		token = tokens{1};
+		org = token{1};
+		
+		tokens = regexpi(line, '"(.+?)"', 'tokens');
+		eval(['meta.OrganismCh' channel ' = cell(length(tokens), 1);']);
+		for k = 1:length(tokens)
+			token = tokens{k}; eval(['meta.OrganismCh' channel ...
+				'{k} = token{1};']);
+		end
+		continue;
+	end
+	
 	tokens = regexpi(line, '!Sample_characteristics_ch(\d)\s+"(.+?):', ...
 		'tokens');
 	if length(tokens) == 1
@@ -58,6 +72,8 @@ while 1
 		ch = token{2};
 		
 		if regexpi(ch, 'sample.*id'), field = 'SampleID';
+		elseif regexpi(ch, 'tissue'), field = 'Tissue';
+		elseif regexpi(ch, 'disease.*status'), field = 'DiseaseStatus';
 		elseif regexpi(ch, 'tumor.*type'), field = 'TumorType';
 		elseif regexpi(ch, 'pathological.*stage'), field = 'PathologicalStage';
 		elseif regexpi(ch, 'sample.*source'), field = 'SampleSource';
@@ -98,6 +114,10 @@ while 1
 				'{k} = token{1};']);
 		end
 		continue;
+	end
+	
+	if regexpi(line, '!series_matrix_table_begin')
+		break;
 	end
 
 end
