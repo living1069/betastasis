@@ -34,7 +34,7 @@ pipeline_config.Repositories = { ...
 	LocalRepository('local', [ppath '/datasets']) ...
 };
 
-select_organism('homo sapiens 2009');
+select_organism('Homo sapiens', '2009');
 global organism;
 
 clear pipeline_config src_root d pipeline_root;
