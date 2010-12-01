@@ -20,6 +20,10 @@ global organism;
 
 symbol = strrep(symbol, ' ', '');
 
+if strcmp(symbol, 'MT') || strcmp(symbol, 'chrMT')
+	symbol = 'M';
+end
+
 idx = find(strcmp(symbol, organism.Chromosomes.Name));
 if length(idx) > 0
 	chrnum = idx(1);
