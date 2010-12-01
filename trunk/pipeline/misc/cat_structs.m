@@ -39,7 +39,7 @@ for p = 1:length(varargin)
 				merged = setfield(merged, fields{k}, ...
 					cat(1, repmat({'-'}, rows, 1), f));
 				new_rows = max(new_rows, size(f, 1));
-			elseif isnumeric(f) && size(f, 2) == 1
+			elseif (isnumeric(f) || islogical(f)) && size(f, 2) == 1
 				merged = setfield(merged, fields{k}, cat(1, nan(rows, 1), f));
 				new_rows = max(new_rows, size(f, 1));
 			else
