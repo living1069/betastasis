@@ -1,7 +1,7 @@
 function meta = meta_geo(qset, geo_series_matrix)
 
 meta = qset;
-geo = read_geo_series_matrix(geo_series_matrix)
+geo = read_geo_series_matrix(geo_series_matrix);
 
 if isfield(meta.Sample, 'Filename')
 	S = length(meta.Sample.Filename);
@@ -17,7 +17,9 @@ if isfield(meta.Sample, 'Filename') && regexp(meta.Sample.Filename{1}, 'GSM\d+')
 		if length(tokens) ~= 1, continue, end
 		
 		token = tokens{1}; accession = token{1};
-		sample_to_row(s) = geo_to_row(accession);
+		if geo_to_row.isKey(accession)
+			sample_to_row(s) = geo_to_row(accession);
+		end
 	end
 else
 	error 'Could not find a link between samples and the GEO series matrix.';
@@ -27,24 +29,24 @@ found = (sample_to_row ~= 0);
 found_rows = sample_to_row(found);
 
 if isfield(geo, 'SampleIDCh1')
-	if ~isfield(meta.Sample.ID)
+	if ~isfield(meta.Sample, 'ID')
 		meta.Sample.ID = repmat({'-'}, S, 1);
 	end
 	meta.Sample.ID(found) = geo.SampleIDCh1(found_rows);
 end
 
 if isfield(geo, 'TumorTypeCh1')
-	if ~isfield(meta.Sample.Type)
+	if ~isfield(meta.Sample, 'Type')
 		meta.Sample.Type = repmat({'-'}, S, 1);
 	end
 	meta.Sample.Type(found) = geo.TumorTypeCh1(found_rows);
 elseif isfield(geo, 'DiseaseStatusCh1')
-	if ~isfield(meta.Sample.Type)
+	if ~isfield(meta.Sample, 'Type')
 		meta.Sample.Type = repmat({'-'}, S, 1);
 	end
 	meta.Sample.Type(found) = geo.DiseaseStatusCh1(found_rows);
 elseif isfield(geo, 'TissueCh1')
-	if ~isfield(meta.Sample.Type)
+	if ~isfield(meta.Sample, 'Type')
 		meta.Sample.Type = repmat({'-'}, S, 1);
 	end
 	meta.Sample.Type(found) = geo.TissueCh1(found_rows);
