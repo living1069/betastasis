@@ -78,12 +78,18 @@ while 1
 		elseif regexpi(ch, 'pathological.*stage'), field = 'PathologicalStage';
 		elseif regexpi(ch, 'sample.*source'), field = 'SampleSource';
 		else continue; end
-		
-		tokens = regexpi(line, '".+?:\s*(.+?)"', 'tokens');
+			
+		tokens = regexpi(line, '"(.*?)"', 'tokens');
 		eval(['meta.' field 'Ch' channel ' = cell(length(tokens), 1);']);
 		for k = 1:length(tokens)
-			token = tokens{k};
-			eval(['meta.' field 'Ch' channel '{k} = token{1};']);
+			token = tokens{k}; token = token{1};
+			t = regexpi(token, [ch ':\s*(.+)'], 'tokens');
+			if length(t) == 1
+				t = t{1}; t = t{1};
+				eval(['meta.' field 'Ch' channel '{k} = t;']);
+			else
+				eval(['meta.' field 'Ch' channel '{k} = ''-'';']);
+			end
 		end
 		continue;
 	end
