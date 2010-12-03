@@ -9,12 +9,5 @@ if exist(orgpath) ~= 7
 end
 
 global organism;
-organism = struct;
-organism.Name = name;
-organism.Version = version;
-organism.Chromosomes = Chromosomes;
-organism.Genes = Genes;
-organism.Transcripts = Transcripts;
-organism.miRNA = MiRNA;
-organism.pre_miRNA = Pre_miRNA;
+organism = Organism(name, version);
 
