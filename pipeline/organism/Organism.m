@@ -9,6 +9,7 @@ classdef Organism < dynamicprops
 		miRNA
 		pre_miRNA
 		SNPs
+		Cells
 		Ontologies
 	end
 	
@@ -33,6 +34,7 @@ classdef Organism < dynamicprops
 			obj.add_field('miRNA');
 			obj.add_field('pre_miRNA');
 			obj.add_field('SNPs');
+			obj.add_field('Cells');
 			obj.add_field('Ontologies.GO');
 		end
 		
