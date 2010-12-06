@@ -36,6 +36,7 @@ classdef Organism < dynamicprops
 			obj.add_field('SNPs');
 			obj.add_field('Cells');
 			obj.add_field('Ontologies.GO');
+			obj.add_field('Ontologies.OMIM');
 		end
 		
 		function ret = add_field(obj, field)
