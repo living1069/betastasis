@@ -125,7 +125,7 @@ The 128-bit resource ID hashes are automatically generated, so that samples neve
 A repository is a local or remote collection of datasets. In this example, the TCGA dataset is stored locally on the machine where the pipeline is running. If your pipeline installation is accessing the CSB TUT repository remotely, you will see a different repository name. You can view the configured repositories in the following way:
 {{{
     >> global pipeline_config
-	>> pipeline_config.Repositories
+    >> pipeline_config.Repositories
     ans =
       [1x1 LocalRepository]
     >> pipeline_config.Repositories{1}
@@ -262,8 +262,8 @@ The symbol '-' always stands for "unknown" in the metadata.
 After filtering and working on datasets, you can store it in the pipeline data store as a fresh copy:
 {{{
     >> expr = realize(query('TCGA/GBM Affy HT HG U133A gene expression', 1:10));
-	>> expr.Mean = quantilenorm(expr.Mean);
-	>> create_dataset('quantile normalized example data', expr)
+    >> expr.Mean = quantilenorm(expr.Mean);
+    >> create_dataset('quantile normalized example data', expr)
 }}}
 	
 You can also remove existing datasets:
@@ -276,10 +276,10 @@ Note that all new datasets are fully self-contained and include all of the raw d
 Each dataset is also fully self-contained in terms of metadata. This means that if you wish to share data with another group of researchers, you can simply save the data object, and all metadata will be automatically included:
 {{{
     >> expr = realize(query('TCGA/GBM Affy HT HG U133A gene expression', 1:10));
-	>> save ~/my_expr_data.mat expr
-	>> clear expr
-	>> load ~/my_expr_data.mat
-	>> expr.Meta
+    >> save ~/my_expr_data.mat expr
+    >> clear expr
+    >> load ~/my_expr_data.mat
+    >> expr.Meta
     ans =
                    Type: 'Gene expression'
                Platform: {10x1 cell}
@@ -310,7 +310,7 @@ Now we can have a deeper look at the query language that can be used for filteri
        Patient: [1x1 struct]
           Misc: [1x1 struct]
     >> qset = filter_query(qset, 'status = deceased')
-	qset =
+    qset =
           Type: 'Microarray probe intensities'
       Platform: {312x1 cell}
         Sample: [1x1 struct]
@@ -322,7 +322,7 @@ Now we can have a deeper look at the query language that can be used for filteri
 Alternatively, filtering can be done via the optional second argument of the query() function:
 {{{
     >> qset = query('TCGA/GBM Affy HT HG U133A raw', 'status = deceased')
-	qset =
+    qset =
           Type: 'Microarray probe intensities'
       Platform: {312x1 cell}
         Sample: [1x1 struct]
@@ -359,7 +359,7 @@ Using full string comparison on this attribute, our queries will look like this:
 The query is case insensitive, but the string must otherwise be an exact match. You can see that the 27 samples that matched the query only include solid tumor samples for which the tumor type is not specified:
 {{{
     >> unique(qset.Sample.Type)
-	ans =
+    ans =
 	  'Solid tumor'
 }}}
 	
@@ -504,7 +504,7 @@ The microarray probes will be mapped against the organism's currently selected t
 Given a probe definition data structure for a microarray platform, you can generate CGH probesets against a given genome version in the following way:
 {{{
     >> load /worktmp/pipeline/platforms/agilent_hg_cgh_244a/probes
-	>> cgh_probesets = create_cgh_probesets(agilent_hg_cgh_244a_probes)
+    >> cgh_probesets = create_cgh_probesets(agilent_hg_cgh_244a_probes)
     cgh_probesets =
             Type: 'Copy number'
         Organism: 'Homo sapiens'
@@ -522,10 +522,10 @@ Many CGH microarrays have been designed so that each probe has a distinct sequen
 With CGH probesets at hand, raw probe level CGH data can be visualized in a genomics viewer software such as IGV by exporting it as a track:
 {{{
     >> tumor = query('gbm agilent cgh 244a hms', 'sample type ~ tumor');
-	>> normal = query('gbm agilent cgh 244a hms', 'sample type ~ normal');
-	>> [tumor, normal] = paired_samples(tumor, normal, 'Patient');
-	>> cgh_logratio_track(realize(tumor), realize(normal), cgh_probesets, ...
-	       '~/cgh_probe_tracks.igv');
+    >> normal = query('gbm agilent cgh 244a hms', 'sample type ~ normal');
+    >> [tumor, normal] = paired_samples(tumor, normal, 'Patient');
+    >> cgh_logratio_track(realize(tumor), realize(normal), cgh_probesets, ...
+           '~/cgh_probe_tracks.igv');
 }}}
 
 This will generate a file that contains IGV scatterplot tracks for every paired CGH sample in the provided dataset. The zero level of the CGH logratios will be normalized, but no segmentation or quantization will be performed.
@@ -533,11 +533,11 @@ This will generate a file that contains IGV scatterplot tracks for every paired 
 If you wish to run segmentation on the CGH samples, you can use the function cgh_segment_fast() in the following manner:
 {{{
     >> tumor = query('gbm agilent cgh 244a hms', 'sample type ~ tumor');
-	>> normal = query('gbm agilent cgh 244a hms', 'sample type ~ normal');
-	>> [tumor, normal] = paired_samples(tumor, normal, 'Patient');
-	>> tumor = realize(tumor);
-	>> normal = realize(normal);
-	>> segs = cgh_segment_fast(tumor, normal, cgh_probesets);
+    >> normal = query('gbm agilent cgh 244a hms', 'sample type ~ normal');
+    >> [tumor, normal] = paired_samples(tumor, normal, 'Patient');
+    >> tumor = realize(tumor);
+    >> normal = realize(normal);
+    >> segs = cgh_segment_fast(tumor, normal, cgh_probesets);
     >> cn_seg_to_track(segs, 'gbm_copy_number.seg')
 }}}
 
@@ -560,7 +560,7 @@ This function will also export an IGV track, but this time the track will consis
 If you're more interested in the percentage-wise recurrence of copy number alterations, you can use another function:
 {{{
     >> cna_recurrence_track(tumor.Mean, normal.Mean, ...
-	       agilent_hg_cgh_244a_probesets, 'cnv_recurrence.igv')
+           agilent_hg_cgh_244a_probesets, 'cnv_recurrence.igv')
 }}}
 
 
@@ -578,8 +578,8 @@ You can visualize the spatial distribution of probe intensities on the microarra
 If a visual inspection of the spatially rendered probe intensities indicates that the microarray samples contain significant spatial artifacts, you can apply spatial detrending in the following fashion:
 {{{
     >> raw = realize(query('TCGA/GBM Affy HT HG U133A raw', 1:10));
-	>> load /worktmp/pipeline/platforms/affy_ht_hg_u133a/probes;
-	>> raw = spatial_detrend(raw, affy_ht_hg_u133a_probes);
+    >> load /worktmp/pipeline/platforms/affy_ht_hg_u133a/probes;
+    >> raw = spatial_detrend(raw, affy_ht_hg_u133a_probes);
 }}}
 
 You can also compare the probe composition of two microarray platforms:
@@ -587,7 +587,7 @@ You can also compare the probe composition of two microarray platforms:
     >> load agilent_human_mirna_8x15k/probes
     >> load agilent_human_mirna_8x15k_v2/probes
     >> compare_probes(agilent_human_mirna_8x15k_v2_probes, ...
-	       agilent_human_mirna_8x15k_probes);
+           agilent_human_mirna_8x15k_probes);
     Probe comparison results:
     - 7120 probes added
     - 4067 probes removed
@@ -758,7 +758,7 @@ If you call import_uarray_data() or import_seq_reads() as shown above, no metada
 If you have the metadata available in spreadsheet format, you can automatically associate metadata with samples either based on the sample ID or filename. This is done by using the optional '!MetaFile' parameter of import_uarray_data() and import_seq_data():
 {{{
     >> import_uarray_data('dataset name', 'Affymetrix Human Exon 1.0 ST', ...
-	       'MetaFile', 'dataset_clinical_data.txt');
+           'MetaFile', 'dataset_clinical_data.txt');
 }}}
 
 The metadata file must be formatted as a tab-delimited text file. Excel spreadsheets, in particular, are not natively supported, and must be converted into a tab-delimited text format.
@@ -772,9 +772,9 @@ The metadata file must be formatted as a tab-delimited text file. Excel spreadsh
 
 The pipeline supports automated importing of TCGA data, given that your TCGA data is stored in a directory structure similar or identical to that used by the TCGA FTP and HTTPS directories. All you need to do is to enter a directory that contains one or more TCGA archives, and run the function import_tcga_uarray_data(). Here's an example:
 {{{
-	>> cd /worktmp/TCGA/gbm/cgcc/mskcc.org/hg-cgh-244a/cna
+    >> cd /worktmp/TCGA/gbm/cgcc/mskcc.org/hg-cgh-244a/cna
     >> import_tcga_uarray_data('tcga/gbm agilent cgh 244a mskcc test', ...
-	       'Agilent HG CGH 244A');
+           'Agilent HG CGH 244A');
 }}}
     
 The function will automatically scan the directory and any subdirectories for SDRF files, and will then look for raw data files for the samples described in the SDRF files. The function then calls import_uarray_data() to import the microarray data into the pipeline. As the final step, TCGA patient metadata is automatically associated with the microarray samples.
