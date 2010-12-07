@@ -57,6 +57,12 @@ data = cell(1, size(raw, 2));
 for k = 1:size(raw, 2)
 	column_names{k} = raw{1, k};
 	data{k} = raw(2:end, k);
+	
+	for r = 1:length(data{k})
+		if isnumeric(data{k}{r})
+			data{k}{r} = num2str(data{k}{r});
+		end
+	end
 end
 
 
