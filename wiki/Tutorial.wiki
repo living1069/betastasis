@@ -403,9 +403,9 @@ The equality operator for numerical data can be written as either = or ==. The "
 For dates, you can also use the normal equality and inequality operators. Many different date formats are accepted:
 {{{
     >> qset = query('GBM Affy HT HG U133A raw', 'date of birth == 1943-02-14')
-	>> qset = query('GBM Affy HT HG U133A raw', 'born ~= 14-Feb-1943')
-	>> qset = query('GBM Affy HT HG U133A raw', 'birth date < 02/14/1943')
-	>> qset = query('GBM Affy HT HG U133A raw', 'birth >= 1943-02-14')
+    >> qset = query('GBM Affy HT HG U133A raw', 'born ~= 14-Feb-1943')
+    >> qset = query('GBM Affy HT HG U133A raw', 'birth date < 02/14/1943')
+    >> qset = query('GBM Affy HT HG U133A raw', 'birth >= 1943-02-14')
 }}}
 
 The function filter_query() also allows you to select samples based on their indices in the query set. So to pick the first 10 samples, you would write:
@@ -416,7 +416,7 @@ The function filter_query() also allows you to select samples based on their ind
 You can also use a logical vector for filtering samples. This mechanism easily allows you to do filtering using custom predicates and Matlab's own functions:
 {{{
     >> qset = query('TCGA/GBM Affy HT HG U133A raw');
-	>> qset = filter_query(qset, ...
+    >> qset = filter_query(qset, ...
 	       qset.Patient.SurvivalTime >= 50 & qset.Patient.SurvivalTime <= 100)
 }}}
 	
