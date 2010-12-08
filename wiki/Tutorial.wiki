@@ -575,6 +575,8 @@ You can visualize the spatial distribution of probe intensities on the microarra
     >> render_uarray_intensities(raw, affy_ht_hg_u133a_probes, '~/fig_spatial');
 }}}
 
+Many microarray platforms contain so called control probes whose intensity values are not always kept in the raw sample files. So if your microarray data contains !NaN values, you can choose to either visualize those probes as either black or red points. By default those probes will be shown as black, but you can use the optional argument 'RedMissing' to visualize the missing probes as red pixels.
+
 If a visual inspection of the spatially rendered probe intensities indicates that the microarray samples contain significant spatial artifacts, you can apply spatial detrending in the following fashion:
 {{{
     >> raw = realize(query('TCGA/GBM Affy HT HG U133A raw', 1:10));
@@ -582,7 +584,12 @@ If a visual inspection of the spatially rendered probe intensities indicates tha
     >> raw = spatial_detrend(raw, affy_ht_hg_u133a_probes);
 }}}
 
-You can also compare the probe composition of two microarray platforms:
+You can also visualize the probe intensity histogram for a microarray sample:
+{{{
+    >> uarray_intensity_hist(raw, '~/histogram');
+}}}
+
+Or you can compare the probe composition of two microarray platforms:
 {{{
     >> load agilent_human_mirna_8x15k/probes
     >> load agilent_human_mirna_8x15k_v2/probes
