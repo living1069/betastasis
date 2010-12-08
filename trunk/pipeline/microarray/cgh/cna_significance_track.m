@@ -1,11 +1,11 @@
 
-% SIGNIFICANT_CNV    Calculate statistically significant CNA regions
+% CNA_SIGNIFICANCE_TRACK    Calculate statistically significant CNA regions
 %
-%    SIGNIFICANT_CNV(TEST, REF, PROBESETS, TRACK_FILE) constructs an IGV track
-%    file TRACK_FILE containing information about how statistically signicantly
+%    CNA_SIGNIFICANCE_TRACK(SEGMENTS, PROBESETS, TRACK_FILE) constructs an IGV 
+%    track TRACK_FILE containing information about how statistically signicantly
 %    aberrated different genomic locations are. The significances are calculated
-%    based on the paired samples in TEST and REF, and the CGH probesets given
-%    in the argument PROBESETS.
+%    based on the segmented copy number data SEGMENTS generated from paired
+%    aCGH samples, and the CGH probesets given in the argument PROBESETS.
 %
 %    The function calculates a statistical significance for each probed location
 %    of the genome, based on how many test samples show copy number aberrations
@@ -23,13 +23,17 @@
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
-function significance = significant_cnv(samples, refs, cgh_probesets, ...
+function significance = cna_significance_track(segments, cgh_probesets, ...
 	track_file, varargin)
 
-if isstruct(samples), samples = samples.Mean; end
-if isstruct(refs), refs = refs.Mean; end
+global organism;
 
-cna = cna_from_cgh(samples, refs, cgh_probesets, varargin{:});
+if isempty(regexpi(track_file, '.+\.igv'))
+	fprintf(1, ['WARNING: A significance track should have a .igv suffix ' ...
+	            'for optimal visualization in IGV.\n']);
+end
+
+cna = cn_seg_expand(segments, cgh_probesets);
 g_score = sum(cna, 2);
 
 fprintf(1, 'Performing permutation tests to find significance thresholds...\n');
@@ -59,7 +63,7 @@ end
 
 fprintf(1, 'Calculating p-values...\n');
 
-% We use a different normal approximation for the duplicated and deleted
+% We use a different normal approximation for the amplified and deleted
 % chromosomal regions.
 mu = nanmean(pscores);
 N_up = sum(pscores >= mu);
@@ -99,7 +103,7 @@ logp(logp == -Inf) = min(logp .* (logp ~= -Inf));
 
 
 
-fprintf(1, 'Writing copy number variation p-values as an IGV track...\n');
+fprintf(1, 'Writing copy number aberration p-values as an IGV track...\n');
 
 fid = fopen(track_file, 'W');
 fprintf(fid, ...
