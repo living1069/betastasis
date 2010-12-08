@@ -762,11 +762,14 @@ To add metadata to any dataset, you must first create or otherwise acquire an Ex
 
 Note that the spreadsheet must be in the old `.xls` format. The newer `.xlsx` is not supported by Matlab. If you have any issues importing metadata from the `.xls` format, you can also opt to use the function `augment_meta_tab()`, which uses tab delimited text files rather than `.xls` files. Excel supports exporting your spreadsheet as a tab delimited text file.
 
-The metadata association process first looks at your spreadsheet and tries to find a column with the name "Filename". If such a column is found, clinical metadata is associated with samples based on the sample filenames stored in Meta.Sample.Filename. The association 
+The metadata association process first looks at your spreadsheet and tries to find a column with the name "Filename". If such a column is found, clinical metadata is associated with samples based on the sample filenames stored in Meta.Sample.Filename. The association can also happen through the field Meta.Sample.ID, if a filename-to-sample mapping is provided in the following manner:
+{{{
+    >> sample_map = containers.Map;
+    >> sample_map('filename') = 'sample ID';   % Construct the filename-sample mapping
+    >> ...
+    >> augment_meta_xls('dataset name', 'metadata.xls', 'SampleMap', sample_map)
+}}}
 
-Note that the metadata need not be as
-
-The metadata file must be formatted as a tab-delimited text file. Excel spreadsheets, in particular, are not natively supported, and must be converted into a tab-delimited text format.
 
 
 
@@ -803,4 +806,4 @@ Limited support is provided for importing data from the Gene Expression Omnibus 
              SampleID: {185x1 cell}
 }}}
 
-For GEO datasets, you can often use the !SampleAccession and SampleID fields to build a mapping from filenames to sample IDs. This mapping can then be given to the function import_uarray_data() as the optional parameter '!SampleMapping'. This allows you to create a spreadsheet that only contains clinical metadata associated with sample IDs, and the association with filenames then happens automatically via the mapping.
+For GEO datasets, you can often use the !SampleAccession and SampleID fields to build a mapping from filenames to sample IDs. This mapping can then be given to the function import_uarray_data() as the optional parameter '!SampleMap'. This allows you to create a spreadsheet that only contains clinical metadata associated with sample IDs, and the association with filenames then happens automatically via the mapping.
