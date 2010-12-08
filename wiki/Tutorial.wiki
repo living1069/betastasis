@@ -755,11 +755,16 @@ A list of sequencing platform names is again provided in the internal ontologies
 
 If you call import_uarray_data() or import_seq_reads() as shown above, no metadata will be associated with the samples. The only populated metadata columns will be Meta.Sample.Filename, Meta.Platform and Meta.Type.
 
-If you have the metadata available in spreadsheet format, you can automatically associate metadata with samples either based on the sample ID or filename. This is done by using the optional '!MetaFile' parameter of import_uarray_data() and import_seq_data():
+To add metadata to any dataset, you must first create or otherwise acquire an Excel spreadsheet containing the clinical metadata for your sample. Then, once you have an Excel spreadsheet, you can use the function `augment_meta_xls()` to associate metadata with your samples:
 {{{
-    >> import_uarray_data('dataset name', 'Affymetrix Human Exon 1.0 ST', ...
-           'MetaFile', 'dataset_clinical_data.txt');
+    >> augment_meta_xls('dataset name', 'spreadsheet.xls')
 }}}
+
+Note that the spreadsheet must be in the old `.xls` format. The newer `.xlsx` is not supported by Matlab. If you have any issues importing metadata from the `.xls` format, you can also opt to use the function `augment_meta_tab()`, which uses tab delimited text files rather than `.xls` files. Excel supports exporting your spreadsheet as a tab delimited text file.
+
+The metadata association process first looks at your spreadsheet and tries to find a column with the name "Filename". If such a column is found, clinical metadata is associated with samples based on the sample filenames stored in Meta.Sample.Filename. The association 
+
+Note that the metadata need not be as
 
 The metadata file must be formatted as a tab-delimited text file. Excel spreadsheets, in particular, are not natively supported, and must be converted into a tab-delimited text format.
 
