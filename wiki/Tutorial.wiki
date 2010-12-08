@@ -4,7 +4,7 @@ You can start the pipeline by running Matlab, and then executing the script "sou
 
 On startup, the pipeline automatically loads into memory some genetic information for Homo sapiens. This species specific information is necessary for running computational analyses. If you're interested in running analyses for some other organism, you can change the currently selected organism by typing:
 {{{
-    >> select_organism('mus musculus')
+    >> select_organism('mus musculus', '2009')
     Reading organism data into memory...
 }}}
 
@@ -18,7 +18,7 @@ A list of available organisms can be viewed with the command:
 	
 You should now select Homo sapiens again before proceeding with the tutorial:
 {{{
-    >> select_organism('homo sapiens')
+    >> select_organism('homo sapiens', '2009')
 }}}
 
 You can see genetic information about the currently selected organism by accessing the global variable "organism":
