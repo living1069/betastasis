@@ -13,14 +13,25 @@ for k = 1:2:length(varargin)
 	error('Unrecognized option "%s".', varargin{k});
 end
 
+S = size(samples, 2);
+
+for s = 1:S
+	if any(samples(:, s) <= 0)
+		fprintf(1, 'WARNING: Sample #%d contains %d non-positive values.\n', ...
+			s, sum(samples(:, s) <= 0));
+	end
+end
+
 if log_transform
 	samples = log2(samples);
 end
 
+ninf = (samples == -Inf);
+samples(ninf) = NaN;
 limits = [floor(min(min(samples))) ceil(max(max(samples)))];
-bins = limits(1):(limits(2) - limits(1))/500:limits(2);
+samples(ninf) = -Inf;
 
-S = size(samples, 2);
+bins = limits(1):(limits(2) - limits(1))/500:limits(2);
 
 for s = 1:S
 	figure; hist(samples(:, s), bins);
