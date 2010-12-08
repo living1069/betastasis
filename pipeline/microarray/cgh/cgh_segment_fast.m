@@ -1,24 +1,26 @@
 
 % CGH_SEGMENT_FAST   Segment array CGH data using multiscale difference of means
 %
-% SEGS = CGH_SEGMENT_FAST(TEST, REF, PROBESETS) calculates copy number segments
-% using the paired aCGH data in TEST and REF. The mappings from CGH probes to
-% chromosomal loci are provided in the argument PROBESETS. The algorithm
-% performs multiscale mean filtering on the CGH ratios, and then detects 
-% segment breakpoints by looking for edges in the filtered signal.
+%    SEGS = CGH_SEGMENT_FAST(TEST, REF, PROBESETS) calculates copy number 
+%    segments using the paired aCGH data in TEST and REF. The mappings from CGH
+%    probes to chromosomal loci are provided in the argument PROBESETS. The
+%    algorithm performs multiscale mean filtering on the CGH ratios, and then
+%    detects segment breakpoints by looking for edges in the filtered signal.
 % 
-% CGH_SEGMENT_FAST(..., 'Significance', ALPHA) specifies the significance
-% level ALPHA at which breakpoints will be called. A high significance 
-% threshold gives high sensitivity, a low threshold high specificity.
-% Default significance threshold is 1e-8.
+%    CGH_SEGMENT_FAST(..., 'Significance', ALPHA) specifies the significance
+%    level ALPHA at which breakpoints will be called. A high significance 
+%    threshold gives high sensitivity, a low threshold high specificity.
+%    Default significance threshold is 1e-8.
 %
-% CGH_SEGMENT_FAST(..., 'SamplePurity', PURITY) specifies the average sample
-% purity. All calculated copy number alterations will be scaled up by 1/PURITY.
-% Default sample purity is 0.7.
+%    CGH_SEGMENT_FAST(..., 'SamplePurity', PURITY) specifies the average sample
+%    purity. All calculated copy number alterations will be scaled up by
+%    1/PURITY. Default sample purity is 0.7.
 %
-% CGH_SEGMENT_FAST(..., 'NormalThreshold', NT) specifies a CNA threshold
-% for calling unaltered chromosomal segments. That is, if for any segment
-% |CNA| < NT, the segment will be marked as unaltered. Default is 0.2.
+%    CGH_SEGMENT_FAST(..., 'NormalThreshold', NT) specifies a CNA threshold
+%    for calling unaltered chromosomal segments. That is, if for any segment
+%    |CNA| < NT, the segment will be marked as unaltered. Default is 0.2.
+
+% Author: Matti Annala <matti.annala@tut.fi>
 
 function segments = cgh_segment_fast(test, ref, probesets, varargin)
 
@@ -28,6 +30,7 @@ normal_threshold = 0.2;
 sample_purity = 0.7;
 significance = 1e-8;
 detect_gender = false;
+smooth_window_size = 7;
 
 for k = 1:2:length(varargin)
 	if strcmpi(varargin{k}, 'NormalThreshold')
@@ -45,6 +48,11 @@ for k = 1:2:length(varargin)
 		continue;
 	end
 	
+	if strcmpi(varargin{k}, 'SmoothWindowSize')
+		smooth_window_size = varargin{k+1};
+		continue;
+	end
+	
 	%if strcmpi(varargin{k}, 'DetectGender')
 	%	detect_gender = varargin{k+1};
 	%	continue;
@@ -53,39 +61,13 @@ for k = 1:2:length(varargin)
 	error('Unrecognized option "%s".', varargin{k});
 end
 
-A = test.Mean;
-B = ref.Mean;
+% We apply a slight median filtering to the data before the multiscale
+% analysis that is based on mean filtering. The median filtering helps remove
+% artifacts.
+logratios = cgh_to_logratios(test, ref, probesets, ...
+	'Smooth', smooth_window_size);
 
-if any(size(A) ~= size(B))
-	error 'The sample and reference matrices must have equal dimensions.';
-end
-
-S = size(A, 2);
-
-fprintf(1, 'Calculating logratios from paired samples...\n');
-cnv = zeros(length(probesets.ProbeCount), S);
-for k = 1:length(probesets.ProbeCount)
-	probes = probesets.Probes(k, 1:probesets.ProbeCount(k));
-	cnv(k, :) = median(A(probes, :), 1) ./ median(B(probes, :), 1);
-end
-
-logratios = log2(cnv);
-
-% Normalize logratios by moving the highest peak to zero on the x-axis.
-for s = 1:S
-	smoothed = conv2(logratios, ones(15, 1) / 15, 'same');
-	
-	bins = -4:0.05:4;
-	n = hist(smoothed(:, s), bins);
-
-	bins = bins(2:end-1);
-	n = n(2:end-1);
-
-	[~, normal_idx] = max(n);
-	normal_level = bins(normal_idx);
-	
-	logratios(:, s) = logratios(:, s) - normal_level;
-end
+S = size(logratios, 2);
 
 chr_range = nan(length(organism.Chromosomes.Name), 2);
 for chr = 1:length(organism.Chromosomes.Name)
@@ -111,7 +93,8 @@ end
 
 if ~all(genders_match)
 	fprintf(1, ['WARNING: Skipping sex chromosomes in %d samples with ' ...
-	            'mismatched or missing gender information.\n']);
+	            'mismatched or missing gender information.\n'], ...
+				sum(~genders_match));
 end
 
 ploidy = nan(length(organism.Chromosomes.Name), S);
@@ -174,6 +157,7 @@ for k = 1:length(scales)
 		if isnan(a) || isnan(b), continue, end
 		
 		med(a:b, :) = conv2(cna(a:b, :), ones(scale, 1) / scale, 'same');
+		%med(a:b, :) = medfilt2(cna(a:b, :), [scale 1]);
 		
 		r = ceil(scale / 2); d = scale;
 		range = a+d-1:b-d;
@@ -281,7 +265,7 @@ segments.Meta.Ref = ref.Meta;
 segments.Meta.Organism = probesets.Organism;
 segments.Meta.Type = 'Copy number segments';
 segments.Meta.SegmentationMethod = ...
-	repmat({'Sliding difference of medians'}, S, 1);
+	repmat({'Multiscale difference of medians'}, S, 1);
 segments.Meta.Ref = rmfield(segments.Meta.Ref, 'Type');
 segments.Meta.Ref = rmfield(segments.Meta.Ref, 'Platform');
 

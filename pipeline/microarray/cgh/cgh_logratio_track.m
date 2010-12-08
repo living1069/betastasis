@@ -5,10 +5,10 @@
 %    track TRACK_FILE that contains CGH logratios between the paired samples
 %    in TEST and REF. CGH probesets must be provided as the PROBESETS argument.
 %
-%    CGH_LOGRATIO_TRACK(..., 'SmoothWindowSize', WS) tells the function to
+%    CGH_LOGRATIO_TRACK(..., 'Smooth', WS) tells the function to
 %    first median filter the logratios using a window of size WS. This reduces
 %    the noise level in the logratio track. Set to 0 for no smoothing.
-%    Default is to smooth using a window of size 7.
+%    Default is to smooth using a window of size 5.
 %
 %    CGH_LOGRATIO_TRACK(..., 'RenderHistograms', true) tells the function to
 %    render a probe logratio histogram for each sample. The histograms are
@@ -24,88 +24,15 @@
 %
 %    See also PAIRED_SAMPLES, CN_SEG_TO_TRACK.
 
+% Author: Matti Annala <matti.annala@tut.fi>
+
 function [] = cgh_logratio_track(samples, refs, probesets, track_file, varargin)
 
 global organism;
 
-A = samples.Mean;
-B = refs.Mean;
-S = size(A, 2);
+logratios = cgh_to_logratios(samples, refs, probesets, varargin{:});
 
-smooth_window_size = 7;
-render_histograms = false;
-normal_level = nan(S, 1);
-
-for k = 1:2:length(varargin)
-	if strcmpi(varargin{k}, 'SmoothWindowSize')
-		smooth_window_size = varargin{k+1};
-		continue;
-	end
-	
-	if strcmpi(varargin{k}, 'RenderHistograms')
-		render_histograms = varargin{k+1};
-		continue;
-	end
-	
-	if strcmpi(varargin{k}, 'NormalLevel')
-		normal_level = varargin{k+1};
-		continue;
-	end
-	
-	error('Unrecognized option "%s".', varargin{k});
-end
-
-
-if length(normal_level) ~= S
-	error 'Length of the zero level argument must equal the amount of samples.';
-end
-
-if isempty(regexpi(track_file, '.+\.igv'))
-	fprintf(1, 'WARNING: CGH logratio tracks should have a .igv suffix.\n');
-end
-
-cnv = zeros(length(probesets.ProbeCount), S);
-for k = 1:length(probesets.ProbeCount)
-	probes = probesets.Probes(k, 1:probesets.ProbeCount(k));
-	cnv(k, :) = median(A(probes, :), 1) ./ median(B(probes, :), 1);
-end
-
-logratios = log2(cnv);
-
-if smooth_window_size > 0
-	for chr = 1:24
-		idx = find(probesets.Chromosome == chr);
-		a = min(idx); b = max(idx);
-		
-		logratios(a:b, :) = medfilt2(logratios(a:b, :), [smooth_window_size 1]);
-	end
-end
-
-for s = 1:S
-	if ~isnan(normal_level(s))
-		logratios(:, s) = logratios(:, s) - normal_level(s);
-		continue;
-	end
-	
-	% Normalize logratios by moving the highest peak to zero on the x-axis.
-	bins = -4:0.05:4;
-	n = hist(logratios(:, s), bins);
-	
-	if render_histograms
-		figure; hist(logratios(:, s), bins);
-		xlabel('Probe logratio'); ylabel('Number of probes');
-		saveas(gcf, sprintf('%s_hist_%d.pdf', ...
-			regexprep(track_file, '\.igv', '', 'ignorecase'), s));
-	end
-
-	bins = bins(2:end-1);
-	n = n(2:end-1);
-
-	[~, normal_idx] = max(n);
-	normal_level(s) = bins(normal_idx);
-	
-	logratios(:, s) = logratios(:, s) - normal_level(s);
-end
+S = size(logratios, 2);
 
 fid = fopen(track_file, 'W');
 fprintf(fid, ...
@@ -137,14 +64,4 @@ for k = 1:size(logratios, 1)
 end
 
 fclose(fid);
-
-
-
-if 0
-	fprintf(1, 'Calculating Lomb periodogram...\n');
-	idx = find(probesets.Chromosome == 1);
-	a = min(idx); b = max(idx);
-	fastlomb(logratios(a:b, 1), probesets.Offset(a:b), gcf);
-	saveas(gcf, '~/lomb.pdf');
-end
 
