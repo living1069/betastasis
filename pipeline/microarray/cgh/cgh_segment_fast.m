@@ -19,6 +19,10 @@
 %    CGH_SEGMENT_FAST(..., 'NormalThreshold', NT) specifies a CNA threshold
 %    for calling unaltered chromosomal segments. That is, if for any segment
 %    |CNA| < NT, the segment will be marked as unaltered. Default is 0.2.
+%
+%    CGH_SEGMENT_FAST(..., 'Smooth', SWS) specifies that the function should
+%    preprocess the data using a median filter with a window size of SWS probes.
+%    Default is to use a median window of size 7.
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
@@ -48,7 +52,8 @@ for k = 1:2:length(varargin)
 		continue;
 	end
 	
-	if strcmpi(varargin{k}, 'SmoothWindowSize')
+	if strcmpi(varargin{k}, 'SmoothWindowSize') || ...
+		strcmpi(varargin{k}, 'Smooth')
 		smooth_window_size = varargin{k+1};
 		continue;
 	end
