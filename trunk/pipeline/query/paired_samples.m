@@ -32,7 +32,7 @@
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
-function [qset_a, qset_b] = paired_samples(qset_a, qset_b, key)
+function [A, B] = paired_samples(A, B, key)
 
 if nargin > 2
 	if regexpi(key, 'patient.?id|patient') 
@@ -48,8 +48,19 @@ else
 	key = 'Patient.ID';
 end
 
-eval(['keys_a = qset_a.' key ';']);
-eval(['keys_b = qset_b.' key ';']);
+if isfield(A, 'Meta') ~= isfield(B, 'Meta')
+	error 'A and B must either both be query sets or both be realized.';
+end
+
+meta_A = A;
+meta_B = B;
+if isfield(A, 'Meta')
+	meta_A = A.Meta;
+	meta_B = B.Meta;
+end
+
+eval(['keys_a = meta_A.' key ';']);
+eval(['keys_b = meta_B.' key ';']);
 
 paired_a = true(length(keys_a), 1);
 paired_b = [];
@@ -81,11 +92,35 @@ end
 
 if isempty(paired_b)
 	fprintf(1, 'WARNING: No paired samples found.\n');
-	qset_a = [];
-	qset_b = [];
+	A = [];
+	B = [];
 	return;
 end
 
-qset_a = filter_query(qset_a, paired_a);
-qset_b = filter_query(qset_b, paired_b);
+if isfield(A, 'Meta')
+	A = filter_realized(A, paired_a);
+	B = filter_realized(B, paired_b);
+else
+	A = filter_query(A, paired_a);
+	B = filter_query(B, paired_b);
+end
+
+
+
+
+
+
+function ds = filter_realized(ds, selected)
+
+fields = fieldnames(ds);
+for k = 1:length(fields)
+	if strcmp(fields{k}, 'Meta'), continue, end
+	
+	f = getfield(ds, fields{k});
+	if isstruct(f), continue, end
+	
+	ds = setfield(ds, fields{k}, f(:, selected));
+end
+
+ds.Meta = filter_query(ds.Meta, selected);
 
