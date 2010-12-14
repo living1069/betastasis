@@ -13,42 +13,42 @@ classdef DiseaseOntology
 	
 	methods
 	
-	function idx = term_idx(obj, id)
-		if ischar(id)
-			tokens = regexpi(id, '^DOID:\s*(\d+)$', 'tokens');
+	function idx = term_idx(obj, q)
+		if ischar(q)
+			tokens = regexpi(q, '^DOID:\s*(\d+)$', 'tokens');
 			if length(tokens) == 1
 				tokens = tokens{1};
-				idx = str2double(tokens{1});
-				return;
+				id = str2double(tokens{1});
+				idx = find(strcmp(id, obj.ID));
+				if length(idx) == 1, return, end
 			end
 			
-			idx = str2double(id);
-			if ~isnan(idx), return, end
+			id = str2double(q);
+			if ~isnan(id)
+				idx = find(strcmp(id, obj.ID));
+				if length(idx) == 1, return, end
+			end
 			
-			idx = find(strcmpi(id, obj.Name));
+			idx = find(strcmpi(q, obj.Name));
 			if length(idx) == 1, return, end
-		elseif isnumeric(id)
-			idx = id;
-			return;
+		elseif isnumeric(q)
+			idx = find(strcmp(q, obj.ID));
+			if length(idx) == 1, return, end
 		end
 		error 'Invalid term identifier.';
 	end
 	
-	%function genes = genes(obj, term)
-	%	genes = [];
-	%	term_stack = [obj.term_idx(term)];
-	%	while ~isempty(term_stack)
-	%		idx = term_stack(1);
-	%		term_stack = term_stack(2:end);
-	%		genes = [genes obj.TermGenes{idx}];
-	%		
-	%		term_stack = [term_stack obj.IsA(obj.IsA(:, 2) == idx, 1)'];
-	%		term_stack = [term_stack obj.PartOf(obj.PartOf(:, 2) == idx, 1)'];
-	%		term_stack = unique(term_stack);
-	%	end
-	%
-	%	genes = unique(genes);
-	%end
+	function children = descendants(obj, term)
+		children = [obj.term_idx(term)];
+		k = 1;
+		while k <= length(children)
+			idx = children(k);
+			children = [children obj.IsA(obj.IsA(:, 2) == idx, 1)'];
+			k = k + 1;
+		end
+	
+		children = unique(children(2:end));
+	end
 
 	function ontologies = DiseaseOntology(filepath, version)
 	
