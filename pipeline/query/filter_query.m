@@ -1,5 +1,4 @@
 
-%
 % FILTER_QUERY         Filter a query set using a metadata predicate.
 %
 %    QSET = FILTER_QUERY(QSET, PRED) filters the query set QSET so that only
