@@ -10,7 +10,7 @@ if ~exist(root)
 	error 'Cannot find pipeline datasets directory.';
 end
 
-if exist([root '/' flatten_str(dataset)]) ~= 0
+if exist([root '/' flatten_str(dataset) '/metadata.mat']) ~= 0
 	error 'A dataset with the given name already exists.';
 end
 

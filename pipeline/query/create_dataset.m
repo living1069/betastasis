@@ -29,7 +29,7 @@ check_dataset_path(name);
 
 name = flatten_str(name);
 path = [root '/' name];
-mkdir(path);
+[~, ~, ~] = mkdir(path);
 
 metadata = input_data.Meta;
 input_data = rmfield(input_data, 'Meta');
