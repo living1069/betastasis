@@ -26,6 +26,9 @@ for s = 1:size(samples, 2)
 	f = medfilt2(f, [window_size window_size]);
 	f(ignore) = NaN;
 	
+	f(f == -Inf) = NaN;
+	f(f == Inf) = NaN;
+	
 	samples(:, s) = samples(:, s) .* (gmed ./ f(probe_idx));
 	
 	samples(samples(:, s) == Inf, s) = NaN;
