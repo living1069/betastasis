@@ -157,10 +157,8 @@ classdef DiseaseOntology
 		ontologies.Obsolete = ontologies.Obsolete(1:idx);
 		ontologies.Description = ontologies.Description(1:idx);
 		ontologies.IsA = ontologies.IsA(1:isa_count, :);
-		ontologies.Synonym = ...
-			ontologies.Synonym(1:idx);
-		ontologies.Subset = ...
-			ontologies.Subset(1:idx);
+		ontologies.Synonym = ontologies.Synonym(1:idx);
+		ontologies.Subset = ontologies.Subset(1:idx);
 		ontologies.IsA(:) = cell2mat( ...
 			id_to_idx.values(num2cell(ontologies.IsA(:))));
 	end

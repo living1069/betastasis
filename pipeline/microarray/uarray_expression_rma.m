@@ -1,21 +1,22 @@
 
-% This function calculates the expression of genes, transcripts or exons
-% based on a set of microarray experiment replicates. The microarray
-% experiments must be executed on identical platforms.
-% 
-% A probeset needs to be provided in order for summarization of the probe
-% intensities to be possible.
+% UARRAY_EXPRESSION_RMA  Calculate expression values for transcriptomic features
 %
-% Inputs:
-%     samples - An NxM matrix where each column represents a microarray
-%         experiment and each row represents the intensities of a particular
-%         probe in the set of replicate experiments.
-%     probesets - A data structure that describes how probes are gathered into
-%         into probesets. This data structure plays a role in summarization.
+%    EXPR = UARRAY_EXPRESSION_RMA(SAMPLES, PROBESETS) calculates summarized
+%    expression values for the transcriptomic features probed by PROBESETS.
+%    The expression values are calculated using RMA based on the microarray 
+%    probe intensities in SAMPLES.
 %
-% Outputs:
-%     expr - Microarray expression results
+%    All expression values are returned in the natural scale and are not log-
+%    transformed. The rows of the expression matrix in EXPR correspond
+%    one-to-one with the probesets in PROBESETS. The probesets also determine
+%    the type of the expression values returned.
 %
+%    Probesets accepted by this  function include:
+%    - Gene expression probesets
+%    - Transcript expression probesets
+%    - Exon expression probesets
+%    - MicroRNA probesets
+
 % Author: Matti Annala <matti.annala@tut.fi>
 
 function expr = uarray_expression_rma(samples, probesets)
