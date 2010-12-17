@@ -9,6 +9,6 @@ else
 	error('Bowtie index requested for unsupported feature "%s".', feature);
 end
 
-index_path = [ppath '/tools/bowtie/indexes/' flatten_str(organism.Version) ...
-	'/' index_path];
+index_path = [ppath '/tools/bowtie/indexes/' flatten_str(organism.Name) ...
+	'/' flatten_str(organism.Version) '/' index_path];
 

@@ -42,7 +42,8 @@ varargin = varargin(~drop_args);
 
 seq_files = seq_resource_files(reads);
 
-expr = struct('Mean', zeros(length(genome.Name), length(seq_files)));
+expr = struct;
+expr.Mean = zeros(length(genome.Name), length(seq_files));
 
 expr.Meta = struct;
 if isstruct(reads), expr.Meta = reads.Meta; end
@@ -54,8 +55,14 @@ expr.Meta.Normalization = repmat({ normalization }, length(seq_files), 1);
 expr.Meta.TotalSeqReads = zeros(length(seq_files), 1);
 
 for seq_file = 1:length(seq_files)
+	if isfield(reads.Meta.Sample, 'ID')
+		sample_id = reads.Meta.Sample.ID{seq_file};
+	else
+		sample_id = reads.Meta.Sample.Filename{seq_file};
+	end
+	
 	fprintf(1, 'Calculating gene expressions for RNA-seq sample %s...\n', ...
-		reads.Meta.Sample.ID{seq_file});
+		sample_id);
 	al = align_reads(seq_files{seq_file}, 'transcripts', ...
 		'MaxMismatches', 2, 'AllowAlignments', 20, ...
 		'Columns', 'read,target', varargin{:});
