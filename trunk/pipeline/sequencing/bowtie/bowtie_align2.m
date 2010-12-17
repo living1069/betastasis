@@ -207,7 +207,7 @@ if ismember(8, bcols)
 end
 
 fid = fopen(alignments_file);
-data = textscan(fid, parse_format);
+data = textscan(fid, parse_format, 'Delimiter', '\t');
 fclose(fid);
 
 delete(alignments_file);
