@@ -1,16 +1,16 @@
 function [] = import_seq_reads(dataset, platform, varargin)
 
-metafile = '';
 move_files = false;
+recursive = false;
 
 for k = 1:2:length(varargin)
-	if strcmpi(varargin{k}, 'MetaFile')
-		metafile = varargin{k+1};
+	if strcmpi(varargin{k}, 'MoveFiles')
+		move_files = varargin{k+1};
 		continue;
 	end
 	
-	if strcmpi(varargin{k}, 'MoveFiles')
-		move_files = varargin{k+1};
+	if strcmpi(varargin{k}, 'Recursive')
+		recursive = varargin{k+1};
 		continue;
 	end
 	
@@ -40,7 +40,7 @@ while ~isempty(dirs)
 		if files(k).name(1) == '.', continue, end
 			
 		if files(k).isdir
-			dirs{end+1} = [curr_dir '/' files(k).name];
+			if recursive, dirs{end+1} = [curr_dir '/' files(k).name]; end
 			continue;
 		end
 		
@@ -57,7 +57,7 @@ while ~isempty(dirs)
 		if regexpi(filename, '.+\.sms')
 			fprintf(1, 'Found Helicos reads: %s\n', filename);
 		else
-			[color, ~] = seq_read_type(filename);
+			[color, ~] = seq_read_type([curr_dir '/' filename]);
 				
 			if color
 				fprintf(1, 'Found colorspace reads: %s\n', filename);
@@ -79,7 +79,7 @@ end
 
 reads.Meta.Platform = repmat({platform}, num_found, 1);
 
-raw_dir = [ppath '/datasets/' flatten_str(fasta_dataset) '/raw'];
+raw_dir = [ppath '/datasets/' flatten_str(dataset) '/raw'];
 [~, ~] = mkdir(raw_dir);
 
 for k = 1:length(found_files)
@@ -104,19 +104,20 @@ for k = 1:length(found_files)
 		
 		reads.SequenceResource{k} = ...
 			[flatten_str(dataset) '/raw/' path_strip_dir(fasta_reads) '.fa'];
-		continue;
+	else
+		% For the standard FASTA format files, we either copy or move them into
+		% the dataset repository.
+		cmd = 'cp';
+		if move_files, cmd = 'mv'; end
+		[status, ~] = unix([cmd ' ' found_files{k} ' "' raw_dir '/"']);
+		if status ~= 0
+			error('Could not access file %s...', found_files{k});
+		end
+		
+		reads.SequenceResource{k} = ...
+			[flatten_str(dataset) '/raw/' found_files{k}];
 	end
-	
-	% For the standard FASTA format files, we either copy or move them into the
-	% dataset repository.
-	cmd = 'cp';
-	if move_files, cmd = 'mv'; end
-	system([cmd ' ' found_files{k} ' "' raw_dir '/"']);
 end
 
 create_dataset(dataset, reads);
-
-if ~isempty(metafile)
-	augment_meta_tab(dataset, metafile);
-end
 
