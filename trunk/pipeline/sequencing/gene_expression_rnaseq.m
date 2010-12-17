@@ -9,6 +9,10 @@
 %    to normalize the produced gene expression values using the normalization
 %    method NORM. Valid selections include 'rpkm' and 'none' (the default).
 %
+%    All expression values are returned in the natural scale and are not log-
+%    transformed. The rows of the expression matrix in EXPR correspond
+%    one-to-one with gene names in organism.Genes.Name.
+%
 %    Also see HELP ALIGN_READS for a number of additional options for the
 %    alignment step.
 
