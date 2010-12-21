@@ -71,7 +71,8 @@ elseif length(total_items) > 1
 		end
 		fprintf(1, '\n');
 	end
-
+	
+	if nargout > 0, error 'Cannot return a unique dataset by that name.'; end
 	return;
 end
 
