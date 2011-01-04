@@ -23,8 +23,13 @@ function expr = uarray_expression_rma(samples, probesets)
 
 global organism;
 
-platform = samples.Meta.Platform;
-if iscellstr(platform), platform = platform{1}; end
+S = size(samples.Mean, 2);
+
+if ~iscellstr(samples.Meta.Platform)
+	samples.Meta.Platform = repmat({samples.Meta.Platform}, S, 1);
+end
+
+platform = samples.Meta.Platform{1};
 
 	
 	
@@ -118,7 +123,8 @@ if isfield(samples, 'Meta')
 		expr.Meta.miRNAVersion = probesets.miRNAVersion;
 	end
 	
-	expr.Meta.Platform = repmat({platform}, ...
-		size(samples.Mean, 2), 1);
+	if isfield(samples.Meta, 'Platform')
+		expr.Meta.Platform = samples.Meta.Platform;
+	end
 end
 
