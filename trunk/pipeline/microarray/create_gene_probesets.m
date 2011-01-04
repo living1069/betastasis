@@ -211,7 +211,7 @@ end
 
 probesets.Type = 'Gene expression';
 probesets.Organism = organism.Name;
-probesets.GenomeVersion = organism.GenomeVersion;
+%probesets.GenomeVersion = organism.GenomeVersion;
 
 % Remove temporary files.
 safe_delete(probes_fasta_tmp);
