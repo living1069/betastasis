@@ -6,17 +6,21 @@ if mirna_dat == -1
 	return;
 end
 
-pre_mirna_accessions = cell(10, 1);
-pre_mirna_names = cell(10, 1);
-mature_count = zeros(10, 1);
-mature_mirnas = zeros(10, 1);
-mature_offsets = zeros(10, 1);
-mature_ends = zeros(10, 1);
-pre_mirna_sequences = cell(10, 1);
+pre_mirnas = struct;
+pre_mirnas.Accession = cell(10, 1);
+pre_mirnas.Name = cell(10, 1);
+pre_mirnas.Sequence = cell(10, 1);
+pre_mirnas.MatureCount = zeros(10, 1);
+pre_mirnas.Matures = zeros(10, 1);
+pre_mirnas.MatureOffsets = zeros(10, 1);
+pre_mirnas.EntrezGene = zeros(10, 1);
 
-mirna_names = cell(10, 1);
-mirna_accessions = cell(10, 1);
-mirna_sequences = cell(10, 1);
+mature_ends = zeros(10, 1);
+
+mirnas = struct;
+mirnas.Name = cell(10, 1);
+mirnas.Accession = cell(10, 1);
+mirnas.Sequence = cell(10, 1);
 
 p = 1;
 m = 1;
@@ -26,7 +30,7 @@ fprintf(1, 'pre-miRNA entries read: 0');
 
 progress_len = 1;
 
-mirna_to_idx = containers.Map();
+mirna_to_idx = containers.Map;
 
 while 1
 	line = fgetl(mirna_dat);
@@ -48,10 +52,10 @@ while 1
 					if strcmp('//', skip_line(1:2)), break, end
 				end
 			else
-				pre_mirna_names{p} = tokens{1};
+				pre_mirnas.Name{p} = tokens{1};
 			end
 		else
-			pre_mirna_names{p} = tokens{1};
+			pre_mirnas.Name{p} = tokens{1};
 		end
 		continue;
 	end
@@ -59,7 +63,15 @@ while 1
 	matches = regexp(line, '^AC   (\S+);', 'tokens');
 	if length(matches) == 1
 		tokens = matches{1};
-		pre_mirna_accessions{p} = tokens{1};
+		pre_mirnas.Accession{p} = tokens{1};
+		pre_mirnas.EntrezGene(p) = NaN;
+		continue;
+	end
+	
+	matches = regexp(line, '^DR   ENTREZGENE; (\d+)', 'tokens');
+	if length(matches) == 1
+		tokens = matches{1};
+		pre_mirnas.EntrezGene(p) = str2double(tokens{1});
 		continue;
 	end
 	
@@ -76,7 +88,7 @@ while 1
 			if length(regexp(prod_line, '^FT   miRNA\s+(\d+)\.\.(\d+)', ...
 				'tokens')) == 1
 				fprintf(1, 'WARNING: No /product row found for miRNA %s.\n', ...
-					pre_mirna_names{p});
+					pre_mirnas.Name{p});
 				break;
 			end
 
@@ -104,45 +116,46 @@ while 1
 				end
 				
 				mirna_to_idx(name) = m;
-				mirna_names{m} = name;
-				mirna_sequences{m} = '';
-				mirna_accessions{m} = mirna_accession;
+				mirnas.Name{m} = name;
+				mirnas.Sequence{m} = '';
+				mirnas.Accession{m} = mirna_accession;
 				m = m + 1;
 			end
 			
-			mature_count(p) = mature_count(p) + 1;
-			mature_mirnas(p, mature_count(p)) = idx;
+			pre_mirnas.MatureCount(p) = pre_mirnas.MatureCount(p) + 1;
+			pre_mirnas.Matures(p, pre_mirnas.MatureCount(p)) = idx;
 
 			tokens = matches{1};
-			mature_offsets(p, mature_count(p)) = str2double(tokens{1});
-			mature_ends(p, mature_count(p)) = str2double(tokens{2});
+			pre_mirnas.MatureOffsets(p, pre_mirnas.MatureCount(p)) = ...
+				str2double(tokens{1});
+			mature_ends(p, pre_mirnas.MatureCount(p)) = str2double(tokens{2});
 			break;
 		end
 	end
 	
 	if regexp(line, '^SQ   Sequence')
-		pre_mirna_sequences{p} = read_sequence(mirna_dat);
-		preseq = pre_mirna_sequences{p};
+		pre_mirnas.Sequence{p} = read_sequence(mirna_dat);
+		preseq = pre_mirnas.Sequence{p};
 		
-		for k = 1:mature_count(p)
-			idx = mature_mirnas(p, k);
+		for k = 1:pre_mirnas.MatureCount(p)
+			idx = pre_mirnas.Matures(p, k);
 			if mature_ends(p, k) > length(preseq)
 				fprintf(1, 'Mature miRNA %s extends beyond pre-miRNA:\n', ...
-					mirna_names{idx});
+					mirnas.Name{idx});
 			end
 
-			seq = preseq(mature_offsets(p, k):mature_ends(p, k));
-			if length(mirna_sequences{idx}) > 0 && ...
-				~strcmp(seq, mirna_sequences{idx})
+			seq = preseq(pre_mirnas.MatureOffsets(p, k):mature_ends(p, k));
+			if length(mirnas.Sequence{idx}) > 0 && ...
+				~strcmp(seq, mirnas.Sequence{idx})
 				error('Mismatching mature sequences for miRNA %s.', ...
-					mirna_names{idx});
+					mirnas.Name{idx});
 			end
 			
-			mirna_sequences{idx} = seq;
+			mirnas.Sequence{idx} = seq;
 		end
 		
 		p = p + 1;
-		mature_count(p) = 0;
+		pre_mirnas.MatureCount(p) = 0;
 		
 		if mod(p, 100) == 0
 			for j = 1:progress_len, fprintf(1, '\b'); end
@@ -158,19 +171,6 @@ fprintf(1, '\n');
 
 fclose(mirna_dat);
 
-pre_mirnas = struct( ...
-	'Accession', { pre_mirna_accessions }, ...
-	'Name', { pre_mirna_names }, ...
-	'Sequence', { pre_mirna_sequences }, ...
-	'MatureCount', mature_count, ...
-	'Matures', mature_mirnas, ...
-	'MatureOffsets', mature_offsets);
-
-mirnas = struct( ...
-	'Name', { mirna_names }, ...
-	'Accession', { mirna_accessions }, ...
-	'Sequence', { mirna_sequences });
-	
 return;
 	
 	
