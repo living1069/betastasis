@@ -5,7 +5,8 @@
 %    the DATA, and builds consensus samples from the replicates. The way in
 %    which the consensus samples are built depends on the dataset type. The
 %    function considers two or more samples to be technical replicates if they
-%    share the same sample ID.
+%    share the same sample ID. Samples with an unknown ID ('-' or empty) are
+%    never merged.
 %
 %    By default, the function will merge and collapse N technical replicates
 %    with the same sample ID into a single sample, taking the sample metadata
@@ -44,6 +45,16 @@ if ~isfield(data, 'Meta') || ~isfield(data.Meta, 'Type') || ...
 	~isfield(data.Meta, 'Sample') || ~isfield(data.Meta.Sample, 'ID')
 	fprintf(1, 'Dataset has no sample IDs. Cannot merge replicates.\n');
 	merged = data;
+end
+
+% We must make sure that we don't merge samples with unknown sample IDs. The
+% simplest way to ensure this is to give these samples temporary unique IDs.
+for s = 1:length(data.Meta.Sample.ID)
+	unique_id = 1;
+	if strcmp(data.Meta.Sample.ID{s}, '-') || length(data.Meta.Sample.ID{s})==0
+		data.Meta.Sample.ID{s} = sprintf('__temp_%d', unique_id);
+		unique_id = unique_id + 1;
+	end
 end
 
 [uniq_samples, ~, groups] = unique(data.Meta.Sample.ID);
@@ -100,6 +111,16 @@ elseif strcmp(data.Meta.Type, 'Mutations')
 	
 else
 	error 'Dataset is of an unrecognized type. Cannot merge replicates.';
+end
+
+
+% Remove the temporary unique IDs that were used for samples with unknown
+% sample IDs.
+for s = 1:length(data.Meta.Sample.ID)
+	if length(data.Meta.Sample.ID{s} >= 7) && ...
+		strcmp(data.Meta.Sample.ID{s}, '__temp_')
+		data.Meta.Sample.ID{s} = '-';
+	end
 end
 
 
