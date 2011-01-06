@@ -107,7 +107,7 @@ else
 	trimmed_reads_tmp = filtered_tmp;
 end
 
-fprintf(1, 'Using flags "%s" when invoking GASSST.\n', flags);
+fprintf(1, 'Invoking GASST with flags "%s".\n', flags);
 
 if isempty(output_file)
 	alignments_file = [tmp '.aligned'];
@@ -198,6 +198,6 @@ else
 	error('GASSST index requested for unsupported feature "%s".', feature);
 end
 
-index_path = [ppath '/tools/gassst/indices/' ...
-	flatten_str(organism.Version) '/' index_path];
+index_path = [ppath '/tools/gassst/indices/' flatten_str(organism.Name) '/' ...
+	flatten_str(organism.Version) '/' index_path '.fa'];
 
