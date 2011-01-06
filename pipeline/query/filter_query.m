@@ -143,6 +143,10 @@ if isstruct(filtered), return, end
 filtered = filter_by_string(qset, 'Sample.Organ', ...
 	'organ|body\s*part|tissue', predicate);
 if isstruct(filtered), return, end
+	
+filtered = filter_by_string(qset, 'Platform', 'platform', predicate);
+if isstruct(filtered), return, end
+
 
 	
 
