@@ -109,10 +109,8 @@ suppress_cols = sprintf('%d,', setdiff(1:8, bcols));
 suppress_cols = suppress_cols(1:end-1);
 flags = sprintf('%s --suppress %s', flags, suppress_cols);
 
-if ~isempty(report_alignments) && ~isempty(allow_alignments)
-	fprintf(1, ['WARNING: Specified AllowAlignments and ReportAlignments. ' ...
-		'Using only the AllowAlignments option.\n']);
-	report_alignments = [];
+if report_alignments > allow_alignments
+	error 'ReportAlignments should never be higher than AllowAlignments.';
 end
 
 if ~isempty(report_alignments)
@@ -142,7 +140,7 @@ else
 	trimmed_reads_tmp = filtered_tmp;
 end
 
-fprintf(1, 'Using flags "%s" when invoking Bowtie.\n', flags);
+fprintf(1, 'Invoking Bowtie with flags "%s".\n', flags);
 
 if isempty(output_file)
 	alignments_file = ptemp;
