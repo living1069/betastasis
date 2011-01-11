@@ -10,6 +10,7 @@ allow_alignments = [];
 max_threads = pipeline_config.MaxThreads;
 columns = 'read,strand,target,offset,sequence,quality';
 output_file = '';
+unaligned_file = '';
 
 for k = 1:2:length(varargin)
 	if strcmpi(varargin{k}, 'MaxMismatches')
@@ -49,6 +50,11 @@ for k = 1:2:length(varargin)
 	
 	if strcmpi(varargin{k}, 'OutputFile')
 		output_file = varargin{k+1};
+		continue;
+	end
+	
+	if strcmpi(varargin{k}, 'UnalignedFile')
+		unaligned_file = varargin{k+1};
 		continue;
 	end
 	
@@ -127,6 +133,10 @@ else
 	filtered_tmp = reads;
 end
 
+if ~isempty(unaligned_file)
+	flags = sprintf('%s --un %s', flags, unaligned_file);
+end
+
 if trim_len > 0
 	trimmed_reads_tmp = ptemp;
 	
@@ -161,8 +171,15 @@ out = strread(out, '%s', 'delimiter', '\n');
 for k = 1:length(out)
 	match = regexp(out{k}, '^# reads processed: (\d+)', 'tokens');
 	if length(match) == 1
-		tmp = match{1};
-		results.TotalReads = str2double(tmp{1});
+		tmp = match{1}; results.TotalReads = str2double(tmp{1});
+		continue;
+	end
+	
+	match = regexp(out{k}, ...
+		'# reads with at least one reported alignment: (\d+)', 'tokens');
+	if length(match) == 1
+		tmp = match{1}; results.AlignedReads = str2double(tmp{1});
+		continue;
 	end
 end
 	
