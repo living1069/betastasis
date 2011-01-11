@@ -1,11 +1,22 @@
-function gene_cna = gene_cna(samples, refs, cgh_probesets, varargin)
+
+% GENE_CNA  Calculate per-gene CNA values based on segmented copy number data
+%
+%    GENE_CNA = GENE_CNA(SEGMENTS, PROBESETS) calculates summarized copy number
+%    alteration values GCNA for each annotated gene of the currently selected
+%    organism. The CNA values are calculated based on the segmented copy number
+%    data provided in argument SEGMENTS, and the CGH probesets provided in
+%    PROBESETS.
+
+% Author: Matti Annala <matti.annala@tut.fi>
+
+function gene_cna = gene_cna(segments, cgh_probesets)
 
 global organism;
 genes = organism.Genes;
 
-cna = cna_from_cgh(samples, refs, cgh_probesets, varargin{:});
+cna = cn_seg_expand(segments, cgh_probesets);
 
-gene_cna = nan(length(organism.Genes.Name), size(samples, 2));
+gene_cna = nan(length(organism.Genes.Name), size(cna, 2));
 
 progress = Progress;
 
