@@ -1,22 +1,22 @@
 function idx = gene_idx(name)
 
-persistent gene_name_to_idx;
+global org_;
 
-if isempty(gene_name_to_idx)
+if ~isfield(org_, 'gene_name_to_idx')
 	global organism;
-	gene_name_to_idx = containers.Map(organism.Genes.Name, ...
+	org_.gene_name_to_idx = containers.Map(organism.Genes.Name, ...
 		num2cell(1:length(organism.Genes.Name)));
 end
 
+name_map = org_.gene_name_to_idx;
+
 if iscellstr(name)
 	idx = nan(size(name));
-	valid = gene_name_to_idx.isKey(name);
-	tmp = cell2mat(gene_name_to_idx.values(name(valid)));
+	valid = name_map.isKey(name);
+	tmp = cell2mat(name_map.values(name(valid)));
 	idx(valid) = tmp;
 else
 	idx = nan;
-	if gene_name_to_idx.isKey(name)
-		idx = gene_name_to_idx(name);
-	end
+	if name_map.isKey(name), idx = name_map(name); end
 end
 

@@ -11,3 +11,6 @@ end
 global organism;
 organism = Organism(name, version);
 
+global org_;
+org_ = struct;
+
