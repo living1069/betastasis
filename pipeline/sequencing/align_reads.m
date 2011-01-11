@@ -48,12 +48,10 @@ end
 varargin = varargin(~drop_args);
 
 if isempty(aligner)
-	if regexpi(reads, '.*\.(fa|fasta|fq|fastq|csfasta|csfastq)')
-		alignments = bowtie_align2(reads, index, varargin{:});
-	elseif regexpi(reads, '.*\.sms')
+	if regexpi(reads, '.*\.sms')
 		alignments = helisphere_align(reads, index, varargin{:});
 	else
-		error 'Sequence file format is not supported.';
+		alignments = bowtie_align2(reads, index, varargin{:});
 	end
 elseif strcmpi(aligner, 'bowtie') && regexpi(reads, '.*\.sms')
 	fprintf(1, 'Converting SMS reads to FASTA...\n');
