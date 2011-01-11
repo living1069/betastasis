@@ -1,22 +1,22 @@
 function idx = mirna_idx(name)
 
-persistent mirna_name_to_idx;
+global org_;
 
-if isempty(mirna_name_to_idx)
+if ~isfield(org_, 'mirna_name_to_idx')
 	global organism;
-	mirna_name_to_idx = containers.Map(organism.miRNA.Name, ...
+	org_.mirna_name_to_idx = containers.Map(organism.miRNA.Name, ...
 		num2cell(1:length(organism.miRNA.Name)));
 end
 
+name_map = org_.mirna_name_to_idx;
+
 if iscellstr(name)
 	idx = nan(size(name));
-	valid = mirna_name_to_idx.isKey(name);
-	tmp = cell2mat(mirna_name_to_idx.values(name(valid)));
+	valid = name_map.isKey(name);
+	tmp = cell2mat(name_map.values(name(valid)));
 	idx(valid) = tmp;
 else
 	idx = nan;
-	if mirna_name_to_idx.isKey(name)
-		idx = mirna_name_to_idx(name);
-	end
+	if name_map.isKey(name), idx = name_map(name); end
 end
 
