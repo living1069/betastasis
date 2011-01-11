@@ -31,6 +31,9 @@ if any(size(samples) ~= size(refs))
 	error 'The sample and reference matrices must have equal dimensions.';
 end
 
+if isfield(samples, 'Mean'), samples = samples.Mean; end
+if isfield(refs, 'Mean'), refs = refs.Mean; end
+
 S = size(samples, 2);
 
 cnv = zeros(length(probesets.ProbeCount), S);
