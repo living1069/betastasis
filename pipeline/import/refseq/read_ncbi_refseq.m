@@ -1,44 +1,32 @@
 
-% This function imports an NCBI RefSeq transcriptome build into memory as a
-% Matlab structure.
+% READ_NCBI_REFSEQ   Parse an NCBI RefSeq transcriptome build into memory
 % 
-% The input file is assumed to contain only transcripts that are relevant to
-% the target organism. This means that a freshly downloaded NCBI RefSeq build
-% must first be filtered with the script 'compile_human_refseq.py' in order
-% to produce a suitable *.rna.gbff file.
-%
-% Inputs:
-%     filepath - Filesystem path to an *.rna.gbff file that contains a full set
-%         of transcriptome annotations for a particular organism.
-%
-% Outputs:
-%     transcriptome - Structure that contains transcript-level information
-%         about the organism's transcriptome.
-%     exons - Structure that contains the positions of all known exons within
-%         the organism's transcriptome.
-%
+%    REFSEQ = READ_NCBI_REFSEQ(FILEPATH) parses the compiled RefSeq
+%    transcriptome build stored at FILEPATH. Genes, transcripts and exons are
+%    read from the transcriptome build, and are organized into the Matlab
+%    data structure REFSEQ.
+
 % Author: Matti Annala <matti.annala@tut.fi>
 
-function [genes, transcripts, exons] = read_ncbi_refseq(filepath, orgname)
-
-chromosomes = chromosomes_for_organism(orgname);
+function refseq = read_ncbi_refseq(filepath)
 
 genes = struct;
 genes.Name = cell(50000, 1);
+genes.Synonyms = cell(50000, 1);
 genes.EntrezID = cell(50000, 1);
-genes.TranscriptCount = zeros(50000, 1);
-genes.Transcripts = zeros(50000, 10);
+genes.TranscriptCount = NaN(50000, 1);
+genes.Transcripts = NaN(50000, 10);
 
 transcripts = struct;
 transcripts.Name = cell(100000, 1);
 transcripts.Sequence = cell(100000, 1);
-transcripts.Gene = zeros(100000, 1);
-transcripts.Chromosome = zeros(100000, 1);
-transcripts.CDS = zeros(100000, 2);
+transcripts.Gene = NaN(100000, 1);
+transcripts.CDS = NaN(100000, 2);
 
 exons = struct;
-exons.Transcript = zeros(500000, 1);
-exons.Position = zeros(500000, 2);
+exons.ID = cell(500000, 1);
+exons.Gene = nan(500000, 1);
+exons.Position = nan(500000, 2);
 
 gene_count = 0;
 transcript_count = 0;
@@ -80,36 +68,23 @@ while 1
 				break;
 			end
 			
-			tokens = regexp(line, '\s+\/chromosome="(\w+)"', 'tokens');
+			tokens = regexp(line, '^     gene');
 			if length(tokens) == 1
-				tokens = tokens{1}; chr = tokens{1};
-				if strcmpi(chr, 'Unknown') || strcmpi(chr, 'Un')
-					chrnum = 0;
-				else
-					chrnum = find(strcmp(chr, chromosomes));
-				end
-				
-				if length(chrnum) ~= 1, error('Bad chr %s.', chr); end
-				transcripts.Chromosome(transcript_count) = chrnum;
-				break;
-			end
-
-			tokens = regexp(line, '^\s+gene\s+[<>]?\d+\.\.[<>]?\d+');
-			if length(tokens) == 1
-				gene_idx = 0;
+				gene_idx = NaN;
 				parse_mode = 1;
 				break;
 			end
 			
-			tokens = regexp(line, '\s+exon\s+(\d+)\.\.(\d+)', 'tokens');
+			tokens = regexp(line, '^     exon\s+(\d+)\.\.(\d+)', 'tokens');
 			if length(tokens) == 1
 				tokens = tokens{1};
 				exon_start = str2double(tokens{1});
 				exon_end = str2double(tokens{2});
 				
 				exon_count = exon_count + 1;
-				exons.Transcript(exon_count) = transcript_count;
+				exons.Gene(exon_count) = transcripts.Gene(transcript_count);
 				exons.Position(exon_count, :) = [exon_start exon_end];
+				parse_mode = 2;
 				break;
 			end
 			
@@ -119,7 +94,7 @@ while 1
 				cds_start = str2double(tokens{1});
 				cds_end = str2double(tokens{2});
 				
-				if transcripts.CDS(transcript_count, 1) ~= 0
+				if ~isnan(transcripts.CDS(transcript_count, 1))
 					error('Transcript %s has two CDS.', ...
 						transcripts.Name{transcript_count});
 				end
@@ -146,7 +121,7 @@ while 1
 			
 			
 			
-			
+		% Parsing a gene feature.
 		elseif parse_mode == 1
 			tokens = regexp(line, '/gene="(.+)"', 'tokens');
 			if length(tokens) == 1
@@ -162,6 +137,14 @@ while 1
 				break;
 			end
 			
+			tokens = regexp(line, '/gene_synonym="(.+)"', 'tokens');
+			if length(tokens) == 1
+				tokens = tokens{1};
+				synonyms = textscan(tokens{1}, '%s', 'Delimiter', ';');
+				genes.Synonyms{gene_idx} = synonyms{1};
+				break;
+			end
+			
 			tokens = regexp(line, '/db_xref="GeneID:(\d+)"', 'tokens');
 			if length(tokens) == 1
 				tokens = tokens{1}; geneid = tokens{1};
@@ -169,9 +152,27 @@ while 1
 				break;
 			end
 			
-			if length(line) < 10 || sum(line(1:10) ~= ' ')
+			if length(line) < 10 || any(line(1:10) ~= ' ')
 				parse_mode = 0;
 				continue;
+			end
+			
+			break;
+			
+			
+		
+		
+		% Parsing an exon feature.
+		elseif parse_mode == 2
+			tokens = regexp(line, '/number="(.+)"', 'tokens');
+			if length(tokens) == 1
+				tokens = tokens{1}; name = tokens{1};
+				exons.ID{exon_count} = name;
+				break;
+			end
+			
+			if length(line) < 10 || any(line(1:10) ~= ' ')
+				parse_mode = 0; continue;
 			end
 			
 			break;
@@ -190,13 +191,10 @@ genes.Transcripts = genes.Transcripts(1:gene_count, :);
 transcripts.Name = transcripts.Name(1:transcript_count);
 transcripts.Sequence = transcripts.Sequence(1:transcript_count);
 transcripts.Gene = transcripts.Gene(1:transcript_count);
-transcripts.Chromosome = transcripts.Chromosome(1:transcript_count);
 transcripts.CDS = transcripts.CDS(1:transcript_count, :);
 
-% Transcripts that have no CDS must have NaN in their 'CDS' offsets.
-transcripts.CDS(transcripts.CDS(:, 1) == 0, :) = NaN;
-
-exons.Transcript = exons.Transcript(1:exon_count);
+exons.ID = exons.ID(1:exon_count);
+exons.Gene = exons.Gene(1:exon_count);
 exons.Position = exons.Position(1:exon_count, :);
 
 for k = 1:length(transcripts.Gene)
@@ -205,13 +203,29 @@ for k = 1:length(transcripts.Gene)
 	genes.TranscriptCount(idx) = genes.TranscriptCount(idx) + 1;
 end
 
+% Sort the genes in alphabetical order.
 [genes.Name, order] = sort(genes.Name);
 genes.EntrezID = genes.EntrezID(order);
 genes.TranscriptCount = genes.TranscriptCount(order);
 genes.Transcripts = genes.Transcripts(order, :);
 
-return;
+% We must also remember to fix the gene references in exon and transcript
+% structures.
+inv_order = 1:length(order);
+inv_order(order) = inv_order;
+
+transcripts.Gene = inv_order(transcripts.Gene);
+exons.Gene = inv_order(exons.Gene);
+
+refseq.Genes = genes;
+refseq.Transcripts = transcripts;
+refseq.Exons = exons;
+
 	
+
+
+
+
 	
 
 
@@ -233,28 +247,3 @@ while 1
 	end
 end
 
-return;
-
-
-
-
-
-function chromosomes = chromosomes_for_organism(orgname)
-
-chromosomes = {};
-
-if strcmpi(orgname, 'homo sapiens')
-	for k = 1:22, chromosomes{k} = num2str(k); end
-	chromosomes{23} = 'X';
-	chromosomes{24} = 'Y';
-	chromosomes{25} = 'M';
-elseif strcmpi(orgname, 'mus musculus')
-	for k = 1:19, chromosomes{k} = num2str(k); end
-	chromosomes{20} = 'X';
-	chromosomes{21} = 'Y';
-	chromosomes{22} = 'M';
-else
-	error 'Karyotype of specified organism is not known.'; 
-end
-
-return;
