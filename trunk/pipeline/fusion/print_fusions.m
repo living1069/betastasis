@@ -1,7 +1,6 @@
 function [] = print_fusions(fusions, gene_blacklist)
 
 global organism;
-transcriptome = organism.Transcripts;
 exons = organism.Exons;
 
 blacklist = {};
@@ -21,7 +20,7 @@ for k = 1:length(sort_indices)
 	end
 	
 	print_exon_pair(fusions.Exons(idx, 1), fusions.Exons(idx, 2), ...
-		fusions.ReadCount(idx), sequences, transcriptome, exons, blacklist);
+		fusions.ReadCount(idx), sequences, exons, blacklist);
 end
 
 return;
@@ -29,30 +28,22 @@ return;
 
 
 function [] = print_exon_pair(left_exon, right_exon, read_count, sequences, ...
-	transcriptome, exons, blacklist)
+	exons, blacklist)
 
 global organism;
-genome = organism.Genes;
+genes = organism.Genes;
+exons = organism.Exons;
 
-left_transcript = exons.Transcript(left_exon);
-right_transcript = exons.Transcript(right_exon);
-
-left_gene = transcriptome.Gene(left_transcript);
-right_gene = transcriptome.Gene(right_transcript);
+left_gene = exons.Gene(left_exon);
+right_gene = exons.Gene(right_exon);
 
 for k = 1:length(blacklist)
 	if regexp(genome.Name{left_gene}, blacklist{k}), return, end
 	if regexp(genome.Name{right_gene}, blacklist{k}), return, end
 end
 
-fprintf(1, '- fusion of exon pair (%d, %d):\n', left_exon, right_exon);
-fprintf(1, '  * exon #%d is at [%d, %d] in transcript %s of gene %s\n', ...
-	left_exon, exons.Position(left_exon, 1), exons.Position(left_exon, 2), ...
-	transcriptome.Name{left_transcript}, genome.Name{left_gene});
-fprintf(1, '  * exon #%d is at [%d, %d] in transcript %s of gene %s\n', ...
-	right_exon, exons.Position(right_exon, 1), ...
-	exons.Position(right_exon, 2), ...
-	transcriptome.Name{right_transcript}, genome.Name{right_gene});
+fprintf(1, '- fusion of %s[%s] and %s[%s]:\n', genes.Name{left_gene}, ...
+	exons.ID{left_exon}, genes.Name{right_gene}, exons.ID{right});
 fprintf(1, '  * supported by %d reads:\n', read_count);
 
 for k = 1:length(sequences)
