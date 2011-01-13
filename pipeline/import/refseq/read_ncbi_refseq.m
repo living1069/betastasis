@@ -5,6 +5,10 @@
 %    transcriptome build stored at FILEPATH. Genes, transcripts and exons are
 %    read from the transcriptome build, and are organized into the Matlab
 %    data structure REFSEQ.
+%
+%    Only transcriptomic information is read from the file: genomic coordinates
+%    and other DNA level information must be read from another source, for
+%    instance using READ_UCSC_REFGENE.
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
@@ -14,19 +18,20 @@ genes = struct;
 genes.Name = cell(50000, 1);
 genes.Synonyms = cell(50000, 1);
 genes.EntrezID = cell(50000, 1);
-genes.TranscriptCount = NaN(50000, 1);
-genes.Transcripts = NaN(50000, 10);
+genes.TranscriptCount = zeros(50000, 1);
+genes.Transcripts = zeros(50000, 10);
 
 transcripts = struct;
 transcripts.Name = cell(100000, 1);
 transcripts.Sequence = cell(100000, 1);
-transcripts.Gene = NaN(100000, 1);
-transcripts.CDS = NaN(100000, 2);
+transcripts.Gene = nan(100000, 1);
+transcripts.CDS = nan(100000, 2);
+transcripts.Exons = cell(100000, 1);
 
 exons = struct;
 exons.ID = cell(500000, 1);
-exons.Gene = nan(500000, 1);
 exons.Position = nan(500000, 2);
+
 
 gene_count = 0;
 transcript_count = 0;
@@ -34,7 +39,6 @@ exon_count = 0;
 
 gene_map = containers.Map;
 transcript_map = containers.Map;
-exon_map = containers.Map;
 
 
 rna_gbff = fopen(filepath);
@@ -50,20 +54,24 @@ progress_len = 1;
 parse_mode = 0;
 
 while 1
+	%if transcript_count == 1000 && ~isempty(transcripts.Sequence{1000})
+	%	break;
+	%end
+	
 	line = fgetl(rna_gbff);
 	if line == -1, break, end
-	
+		
 	while 1
 		if parse_mode == 0
 			tokens = regexp(line, '^ACCESSION\s+(\w+)', 'tokens');
 			if length(tokens) == 1
 				tokens = tokens{1}; name = tokens{1};
-				if transcript_map.isKey(name)
-					error('Transcript %s found twice.', name);
-				end
+				%if transcript_map.isKey(name)
+				%	error('Transcript %s found twice.', name);
+				%end
 				
 				transcript_count = transcript_count + 1;
-				transcript_map(name) = transcript_count;
+				%transcript_map(name) = transcript_count;
 				transcripts.Name{transcript_count} = name;
 				break;
 			end
@@ -78,12 +86,13 @@ while 1
 			tokens = regexp(line, '^     exon\s+(\d+)\.\.(\d+)', 'tokens');
 			if length(tokens) == 1
 				tokens = tokens{1};
-				exon_start = str2double(tokens{1});
-				exon_end = str2double(tokens{2});
 				
 				exon_count = exon_count + 1;
-				exons.Gene(exon_count) = transcripts.Gene(transcript_count);
-				exons.Position(exon_count, :) = [exon_start exon_end];
+				transcripts.Exons{transcript_count}(end+1) = exon_count;
+				%exons.Position(exon_count, :) = [exon_start exon_end];
+				exons.Position(exon_count, :) = ...
+					[str2double(tokens{1}), str2double(tokens{2})];
+				
 				parse_mode = 2;
 				break;
 			end
@@ -164,7 +173,7 @@ while 1
 		
 		% Parsing an exon feature.
 		elseif parse_mode == 2
-			tokens = regexp(line, '/number="(.+)"', 'tokens');
+			tokens = regexp(line, '/number=(\S+)', 'tokens');
 			if length(tokens) == 1
 				tokens = tokens{1}; name = tokens{1};
 				exons.ID{exon_count} = name;
@@ -183,7 +192,9 @@ end
 fprintf(1, '\n');
 fclose(rna_gbff);
 
+% Squeeze any preallocated space out of the data structures.
 genes.Name = genes.Name(1:gene_count);
+genes.Synonyms = genes.Synonyms(1:gene_count);
 genes.EntrezID = genes.EntrezID(1:gene_count);
 genes.TranscriptCount = genes.TranscriptCount(1:gene_count);
 genes.Transcripts = genes.Transcripts(1:gene_count, :);
@@ -192,11 +203,23 @@ transcripts.Name = transcripts.Name(1:transcript_count);
 transcripts.Sequence = transcripts.Sequence(1:transcript_count);
 transcripts.Gene = transcripts.Gene(1:transcript_count);
 transcripts.CDS = transcripts.CDS(1:transcript_count, :);
+transcripts.Exons = transcripts.Exons(1:transcript_count);
 
 exons.ID = exons.ID(1:exon_count);
-exons.Gene = exons.Gene(1:exon_count);
 exons.Position = exons.Position(1:exon_count, :);
 
+% Assign exon sequences.
+exons.Sequence = cell(length(exons.ID), 1);
+for t = 1:transcript_count
+	ex = transcripts.Exons{t};
+	for e = 1:length(ex)
+		idx = ex(e);
+		exons.Sequence{idx} = transcripts.Sequence{t}( ...
+			exons.Position(idx, 1):exons.Position(idx, 2));
+	end
+end
+
+% Construct associations from genes to transcripts.
 for k = 1:length(transcripts.Gene)
 	idx = transcripts.Gene(k);
 	genes.Transcripts(idx, genes.TranscriptCount(idx) + 1) = k;
@@ -205,18 +228,75 @@ end
 
 % Sort the genes in alphabetical order.
 [genes.Name, order] = sort(genes.Name);
+genes.Synonyms = genes.Synonyms(order);
 genes.EntrezID = genes.EntrezID(order);
 genes.TranscriptCount = genes.TranscriptCount(order);
 genes.Transcripts = genes.Transcripts(order, :);
 
-% We must also remember to fix the gene references in exon and transcript
-% structures.
+% We must also remember to fix the gene references in transcript structures.
 inv_order = 1:length(order);
 inv_order(order) = inv_order;
 
-transcripts.Gene = inv_order(transcripts.Gene);
-exons.Gene = inv_order(exons.Gene);
+transcripts.Gene = inv_order(transcripts.Gene)';
 
+% Convert Entrez IDs into integers.
+entrez = nan(length(genes.EntrezID), 1);
+for g = 1:length(genes.EntrezID)
+	entrez(g) = str2double(genes.EntrezID{g});
+end
+genes.EntrezID = entrez;
+
+% Link exons with genes.
+exons.Gene = nan(length(exons.ID), 1);
+for t = 1:transcript_count
+	tx_exons = transcripts.Exons{t};
+	exons.Gene(tx_exons) = transcripts.Gene(t);
+end
+
+% Remove duplicate exons with identical identifiers. We also perform a sanity
+% check where we make sure that exons with an identical identifier really
+% have identical sequences.
+keep_exons = [];
+exon_map = nan(length(exons.Gene), 1);
+for g = 1:length(genes.Name)
+	gene_exons = find(exons.Gene == g);
+	if length(gene_exons) == 0, continue, end
+	
+	gex_ids = exons.ID(gene_exons);
+	uniq_gex_ids = unique(gex_ids);
+	
+	for e = 1:length(uniq_gex_ids)
+		u = gene_exons(strcmp(uniq_gex_ids{e}, gex_ids));
+		seqs = exons.Sequence(u);
+		uniq_seqs = unique(seqs);
+		if length(uniq_seqs) ~= 1
+			% Exons with the same name did not have identical sequences.
+			% We add a distinguishing suffix to the exon names.
+			for q = 1:length(uniq_seqs)
+				seq_class = u(strcmp(uniq_seqs{q}, seqs));
+				keep_exons(end+1) = seq_class(1);
+				exon_map(seq_class) = length(keep_exons);
+				exons.ID{seq_class(1)} = sprintf('%s(%d)', uniq_gex_ids{e}, q);
+			end
+		else
+			keep_exons(end+1) = u(1);
+			exon_map(u) = length(keep_exons);
+		end
+	end
+end
+
+exons.ID = exons.ID(keep_exons);
+exons.Gene = exons.Gene(keep_exons);
+exons.Sequence = exons.Sequence(keep_exons, :);
+exons.Position = exons.Position(keep_exons, :);
+
+% Since we dropped out some exons, we must remember to update the exon
+% references in the transcript data structures.
+for t = 1:length(transcripts.Name)
+	transcripts.Exons{t} = exon_map(transcripts.Exons{t});
+end
+	
+% Compile the genes, transcripts and exons into one data structure.
 refseq.Genes = genes;
 refseq.Transcripts = transcripts;
 refseq.Exons = exons;
