@@ -166,6 +166,8 @@ if status ~= 0
 end
 
 results = struct;
+results.TotalReads = NaN;
+results.AlignedReads = NaN;
 
 out = strread(out, '%s', 'delimiter', '\n');
 for k = 1:length(out)
