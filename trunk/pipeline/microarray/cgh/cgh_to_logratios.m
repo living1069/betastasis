@@ -48,11 +48,12 @@ end
 logratios = log2(cnv);
 
 if smooth_window_size > 0
-	for chr = 1:24
+	for chr = 1:length(organism.Chromosomes.Name)
 		idx = find(probesets.Chromosome == chr);
+		if isempty(idx), continue, end
+			
 		a = min(idx); b = max(idx);
-		
-		logratios(a:b, :) = medfilt2(logratios(a:b, :), [smooth_window_size 1]);
+		logratios(a:b, :) = medfilt1(logratios(a:b, :), smooth_window_size);
 	end
 end
 
