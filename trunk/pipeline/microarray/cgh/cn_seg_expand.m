@@ -5,15 +5,19 @@ global organism;
 S = size(segs.Chromosome, 2);
 cna = zeros(length(probesets.Offset), S);
 
-chr_probes = zeros(length(organism.Chromosomes.Name), 2);
+chr_probes = nan(length(organism.Chromosomes.Name), 2);
 
 for chr = 1:length(organism.Chromosomes.Name)
 	idx = find(probesets.Chromosome == chr);
-	chr_probes(chr, :) = [min(idx) max(idx)];
+	if ~isempty(idx)
+		chr_probes(chr, :) = [min(idx) max(idx)];
+	end
 end
 
 for s = 1:S
 	for chr = 1:size(segs.Chromosome, 1)
+		if any(isnan(chr_probes(chr, :))), continue, end
+			
 		probe_offsets = probesets.Offset(chr_probes(chr, 1):chr_probes(chr, 2));
 		chr_segs = segs.Chromosome{chr, s};
 		for seg = 1:length(chr_segs.Start)
