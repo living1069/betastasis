@@ -19,10 +19,6 @@
 %    CGH_SEGMENT_FAST(..., 'NormalThreshold', NT) specifies a CNA threshold
 %    for calling unaltered chromosomal segments. That is, if for any segment
 %    |CNA| < NT, the segment will be marked as unaltered. Default is 0.2.
-%
-%    CGH_SEGMENT_FAST(..., 'Smooth', SWS) specifies that the function should
-%    preprocess the data using a median filter with a window size of SWS probes.
-%    Default is to use a median window of size 7.
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
@@ -34,7 +30,6 @@ normal_threshold = 0.2;
 sample_purity = 0.7;
 significance = 1e-8;
 detect_gender = false;
-smooth_window_size = 7;
 
 for k = 1:2:length(varargin)
 	if strcmpi(varargin{k}, 'NormalThreshold')
@@ -52,12 +47,6 @@ for k = 1:2:length(varargin)
 		continue;
 	end
 	
-	if strcmpi(varargin{k}, 'SmoothWindowSize') || ...
-		strcmpi(varargin{k}, 'Smooth')
-		smooth_window_size = varargin{k+1};
-		continue;
-	end
-	
 	%if strcmpi(varargin{k}, 'DetectGender')
 	%	detect_gender = varargin{k+1};
 	%	continue;
@@ -66,12 +55,7 @@ for k = 1:2:length(varargin)
 	error('Unrecognized option "%s".', varargin{k});
 end
 
-% We apply a slight median filtering to the data before the multiscale
-% analysis that is based on mean filtering. The median filtering helps remove
-% artifacts.
-logratios = cgh_to_logratios(test, ref, probesets, ...
-	'Smooth', smooth_window_size);
-
+logratios = cgh_to_logratios(test, ref, probesets, 'Smooth', 0);
 S = size(logratios, 2);
 
 chr_range = nan(length(organism.Chromosomes.Name), 2);
@@ -84,38 +68,7 @@ end
 
 
 
-fprintf(1, 'Checking sample ploidy information...\n');
-
-genders_match = false(S, 1);
-if isfield(test.Meta, 'Patient') && isfield(test.Meta.Patient, 'Gender') && ...
-	isfield(ref.Meta, 'Patient') && isfield(ref.Meta.Patient, 'Gender')
-	
-	genders_known = ~strcmpi('-', test.Meta.Patient.Gender) & ...
-		~strcmpi('-', ref.Meta.Patient.Gender);
-	genders_match = strcmpi(test.Meta.Patient.Gender, ...
-		ref.Meta.Patient.Gender) | genders_known;
-end
-
-if ~all(genders_match)
-	fprintf(1, ['WARNING: Skipping sex chromosomes in %d samples with ' ...
-	            'mismatched or missing gender information.\n'], ...
-				sum(~genders_match));
-end
-
-ploidy = nan(length(organism.Chromosomes.Name), S);
-for s = 1:S
-	if ~genders_match(s) || strcmp(test.Meta.Patient.Gender{s}, '-')
-		ploidy(:, s) = [2*ones(1, 22) NaN NaN NaN]';
-	elseif strcmpi(test.Meta.Patient.Gender{s}, 'Male')
-		ploidy(:, s) = [2*ones(1, 22) 1 1 NaN]';
-	elseif strcmpi(test.Meta.Patient.Gender{s}, 'Female')
-		ploidy(:, s) = [2*ones(1, 22) 2 0 NaN]';
-	else
-		ploidy(:, s) = [2*ones(1, 22) NaN NaN NaN]';
-		fprintf(1, 'Ploidy of gender "%s" is unknown.\n', ...
-			test.Meta.Patient.Gender{s});
-	end
-end
+ploidy = cgh_ploidy(test, ref);
 
 cna = zeros(size(logratios));
 for s = 1:S
@@ -146,14 +99,14 @@ fprintf(1, 'Detecting breakpoints with significance threshold %.1x...\n', ...
 all_bp = false(size(cna));
 
 % Generate scales that are all odd.
-scales = 7 * 1.5.^(0:13);
+scales = 7 * 1.5.^(0:8);
 scales = round(scales);
 scales = scales - (1 - mod(scales, 2));
 
 progress = Progress;
 
 % Run a multiscale breakpoint analysis.
-for k = 1:length(scales)
+for k = length(scales):-1:1
 	scale = scales(k);
 	
 	med_diff = zeros(size(cna));
@@ -161,8 +114,8 @@ for k = 1:length(scales)
 		a = chr_range(chr, 1); b = chr_range(chr, 2);
 		if isnan(a) || isnan(b), continue, end
 		
-		med(a:b, :) = conv2(cna(a:b, :), ones(scale, 1) / scale, 'same');
-		%med(a:b, :) = medfilt2(cna(a:b, :), [scale 1]);
+		%med(a:b, :) = conv2(cna(a:b, :), ones(scale, 1) / scale, 'same');
+		med(a:b, :) = medfilt1(cna(a:b, :), scale);
 		
 		r = ceil(scale / 2); d = scale;
 		range = a+d-1:b-d;
@@ -187,30 +140,39 @@ for k = 1:length(scales)
 		
 		bp = (p < significance);
 		
+		% Remove any breakpoints near chromosome edges.
 		for chr = 1:length(organism.Chromosomes.Name)
-			cr = chr_range(chr, 1):chr_range(chr, 2);
-			if any(isnan(cr)), continue, end
+			a = chr_range(chr, 1); b = chr_range(chr, 2);
+			if isnan(a) || b - a < scale, continue, end
 
-			acmd = abs(med_diff(cr, s));
-			cbp = bp(cr);
-			
-			% Cleanup phase, for contiguous breakpoints we only pick the one
-			% with the largest difference of medians.
-			run_ends = [find(cbp(2:end) ~= cbp(1:end-1)); length(cbp)];
-			run_lengths = diff([0; run_ends]);
-			pos = 1;
-			for r = 1:length(run_lengths)
-				[~, idx] = max(acmd(pos:pos+run_lengths(r)-1));
-				cbp(pos:pos+run_lengths(r)-1) = false;
-				cbp(pos+idx-1) = true;
-				pos = pos + run_lengths(r);
-			end
-			
-			all_bp(cr, s) = all_bp(cr, s) | cbp;
+			bp(a:a+scale-1) = false;
+			bp(b-scale+1:b) = false;
 		end
+
+		% Cleanup phase: for contiguous breakpoints we only pick the middle one
+		% Since chromosome edges have been cleared of breakpoints, we can do
+		% this over all the probes at once.
+		%acmd = abs(med_diff(:, s));
+			
+		run_starts = [1; find(bp(2:end) ~= bp(1:end-1)) + 1; length(bp) + 1];
+		for r = 1:length(run_starts)-1
+			pos = run_starts(r);
+			if bp(pos) == false, continue, end
+				
+			run_end = run_starts(r+1) - 1;
+			
+			% If we have already found a breakpoint at this position with a
+			% larger median window, keep that breakpoint.
+			if any(all_bp(pos:run_end, s)), continue, end
+
+			bp(pos:run_end) = false;
+			bp(floor((pos+run_end)/2)) = true;
+		end
+			
+		all_bp(:, s) = all_bp(:, s) | bp;
 	end
 	
-	progress.update(k / length(scales));
+	progress.update((length(scales) - k + 1) / length(scales));
 end
 		
 for s = 1:S
@@ -271,6 +233,9 @@ segments.Meta.Organism = probesets.Organism;
 segments.Meta.Type = 'Copy number segments';
 segments.Meta.SegmentationMethod = ...
 	repmat({'Multiscale difference of medians'}, S, 1);
+segments.Meta.SamplePurity = sample_purity;
+segments.Meta.NormalThreshold = normal_threshold;
+
 segments.Meta.Ref = rmfield(segments.Meta.Ref, 'Type');
 segments.Meta.Ref = rmfield(segments.Meta.Ref, 'Platform');
 
