@@ -1,21 +1,26 @@
-function segments = cgh_segment_cbs(samples, refs, probesets, varargin)
+
+% CGH_SEGMENT_RCBS   Segment aCGH data using R's CBS implementation
+%
+%    SEGMENTS = CGH_SEGMENT_RCBS(TEST, REF, PROBESETS) calculates copy number 
+%    segments using the paired aCGH data in TEST and REF. The mappings from CGH
+%    probes to chromosomal loci are provided in the argument PROBESETS. The
+%    function uses the CBS implementation of R's DNAcopy package.
+%
+%    In order to use this function, you must have R installed with the packages
+%    DNAcopy, R.matlab and any package dependencies of these.
+
+% Author: Matti Annala <matti.annala@tut.fi>
+
+function segments = cgh_segment_rcbs(test, ref, probesets, varargin)
 
 global organism;
 
-smooth_window_size = 9;
-
 normal_threshold = 0.2;
 sample_purity = 0.7;
-significance = 0.005;
-drop_sex_chromosomes = true;
-show_segments = false;
+significance = 1e-8;
+detect_gender = false;
 
 for k = 1:2:length(varargin)
-	if strcmpi(varargin{k}, 'SmoothWindowSize')
-		smooth_window_size = varargin{k+1};
-		continue;
-	end
-	
 	if strcmpi(varargin{k}, 'NormalThreshold')
 		normal_threshold = varargin{k+1};
 		continue;
@@ -31,103 +36,83 @@ for k = 1:2:length(varargin)
 		continue;
 	end
 	
-	if strcmpi(varargin{k}, 'SexChromosomes')
-		drop_sex_chromosomes = ~varargin{k+1};
-		continue;
-	end
-
+	%if strcmpi(varargin{k}, 'DetectGender')
+	%	detect_gender = varargin{k+1};
+	%	continue;
+	%end
+	
 	error('Unrecognized option "%s".', varargin{k});
 end
 
-A = samples.Mean;
-B = refs.Mean;
+logratios = cgh_to_logratios(test, ref, probesets, 'Smooth', 0);
+chr = probesets.Chromosome;
+offset = probesets.Offset;
 
-if any(size(A) ~= size(B))
-	error 'The sample and reference matrices must have equal dimensions.';
-end
+S = size(logratios, 2);
 
-S = size(A, 2);
+tmp = ptemp
 
-cnv = zeros(length(probesets.ProbeCount), S);
-for k = 1:length(probesets.ProbeCount)
-	probes = probesets.Probes(k, 1:probesets.ProbeCount(k));
-	cnv(k, :) = median(A(probes, :), 1) ./ median(B(probes, :), 1);
-end
+r_script = [tmp '.Rscript'];
 
-logratios = log2(cnv);
-
-for chr = 1:24
-	idx = find(probesets.Chromosome == chr);
-	chr_range(chr, :) = [min(idx) max(idx)];
-end
-
-for chr = 1:24
-	a = chr_range(chr, 1); b = chr_range(chr, 2);
-	logratios(a:b, :) = medfilt2(logratios(a:b, :), [smooth_window_size 1]);
-end
-
-for s = 1:size(A, 2)
-	% Normalize logratios by moving the highest peak to zero on the x-axis.
-	bins = -4:0.05:4;
-	n = hist(logratios(:, s), bins);
-
-	bins = bins(2:end-1);
-	n = n(2:end-1);
-
-	[~, normal_idx] = max(n);
-	normal_level = bins(normal_idx);
-	
-	logratios(:, s) = logratios(:, s) - normal_level;
-end
-
-logratio_tmp = ptemp
-fid = fopen(logratio_tmp, 'W');
-for k = 1:length(probesets.ProbeCount)
-	fprintf(fid, 'chr%s\t%d', organism.Chromosomes.Name{ ...
-		probesets.Chromosome(k)}, probesets.Offset(k));
-	fprintf(fid, '\t%f', logratios(k, :));
-	fprintf(fid, '\n');
-end
+fid = fopen(r_script, 'W');
+fprintf(fid, [ ...
+	'library(R.matlab)\n' ...
+	'library(DNAcopy)\n' ...
+	'data = readMat("' [tmp '.mat'] '")\n' ...
+	'cna = CNA(data$lr, data$chr, data$offset, data.type = "logratio")\n' ...
+	'smoothed.cna = smooth.CNA(cna)\n' ...
+	'segmented.cna = segment(smoothed.cna, verbose = 1)\n' ...
+	'writeMat("' [tmp '.mat'] '", chr = segmented.cna$output$chrom, segstart = segmented.cna$output$loc.start, segend = segmented.cna$output$loc.end, segmean = segmented.cna$output$seg.mean)\n']);
 fclose(fid);
-return;
+
+
+ploidy = cgh_ploidy(test, ref);
 
 
 segments = struct;
-segments.Chromosome = cell(length(organism.Chromosomes.Name), size(A, 2));
+segments.Chromosome = cell(length(organism.Chromosomes.Name), S);
 
-for s = 1:size(A, 2)
-	fprintf(1, 'Performing CBS segmentation on sample %s [%d/%d]...\n', ...
-		samples.Meta.Sample.ID{s}, s, size(A, 2));
+progress = Progress;
+
+for s = 1:S
+	lr = logratios(:, s);
+	save([tmp '.mat'], 'lr', 'chr', 'offset', '-v6');
 	
-	N = length(probesets.ProbeCount);
+	[status, out] = unix(sprintf('/worktmp/R/bin/R CMD BATCH %s ~/out.txt', ...
+		r_script));
+	if status ~= 0, error 'R CBS segmentation failed.'; end
+	
+	results = load([tmp '.mat']);
+	
+	for c = 1:length(organism.Chromosomes.Name)
+		chr_segs = (results.chr == c);
+		seg = struct;
 		
-	% Prepare the data structure that the Matlab CBS function requires.
-	cbs_data = struct;
-	cbs_data.Chromosome = probesets.Chromosome;
-	cbs_data.GenomicPosition = probesets.Offset;
-	cbs_data.Log2Ratio = logratios;
-	
-	seg = cghcbs(cbs_data, 'StoppingRule', true, 'Alpha', significance);
-	for k = 1:length(seg.SegmentData)
-		segments.Chromosome{k, s} = seg.SegmentData(k);
+		if ~isnan(ploidy(c, s))
+			seg.Start = results.segstart(chr_segs);
+			seg.End = results.segend(chr_segs);
+		
+			lr = results.segmean(chr_segs);
+			seg.CNA = ploidy(c, s) * 2.^lr - ploidy(c, s);
+			seg.CNA(seg.CNA < - 2) = -2;
+			
+			% Filter out segments below the normal threshold.
+			seg.CNA(abs(seg.CNA) < normal_threshold) = 0;
+		end
+		
+		segments.Chromosome{c, s} = seg;
 	end
+		
+	progress.update(s / S);
 end
 
-segments.Meta = samples.Meta;
-segments.Meta.Type = probesets.Type;
-segments.Meta.SegmentationMethod = 'Circular binary segmentation';
+segments.Meta = test.Meta;
+segments.Meta.Ref = ref.Meta;
 segments.Meta.Organism = probesets.Organism;
-segments.Meta.Platform = repmat({segments.Meta.Platform}, ...
-	size(samples.Mean, 2), 1);
-
-	
-	
-	
-	
-	
-	
-
-
-
-
+segments.Meta.Type = 'Copy number segments';
+segments.Meta.SegmentationMethod = repmat({'CBS (R)'}, S, 1);
+segments.Meta.SamplePurity = sample_purity;
+segments.Meta.NormalThreshold = normal_threshold;
+segments.Meta.Ref = rmfield(segments.Meta.Ref, 'Type');
+segments.Meta.Ref = rmfield(segments.Meta.Ref, 'Platform');
 
