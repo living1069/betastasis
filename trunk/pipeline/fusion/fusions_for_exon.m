@@ -151,7 +151,7 @@ end
 
 rearrangements.Meta.Type = 'Genetic rearrangements';
 rearrangements.Meta.Organism = organism.Name;
-rearrangements.Meta.GenomeVersion = organism.GenomeVersion;
+%rearrangements.Meta.GenomeVersion = organism.GenomeVersion;
 	
 return;
 
