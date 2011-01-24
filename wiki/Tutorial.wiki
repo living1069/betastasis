@@ -568,6 +568,41 @@ If you're more interested in the percentage-wise recurrence of copy number alter
 
 
 
+
+
+= MICROARRAY ANALYSIS - MICRORNA EXPRESSION =
+
+Given a probe definition data structure for a microarray platform, you can generate microRNA probesets against the currently selected microRNA annotations (see `organism.miRNA`) in the following manner:
+{{{
+    >> load /worktmp/pipeline/platforms/agilent_human_mirna_8x15k_v2/probes;
+    >> mirna_probesets = create_mirna_probesets(agilent_human_mirna_8x15k_v2_probes)
+    mirna_probesets =
+             miRNA: {904x1 cell}
+        ProbeCount: [904x1 double]
+            Probes: [904x17 double]
+          Organism: 'Homo sapiens'
+              Type: 'miRNA expression'
+}}}
+
+For most commonly used microRNA arrays, these probesets have been pre-generated and made available under pipeline/platforms, so you only need to do this step for new and exotic miRNA arrays.
+
+Given microRNA probesets, you can calculate microRNA expression levels from raw microarray samples in the following way (note that in this example we use the pre-built probesets):
+{{{
+    >> load /worktmp/pipeline/platforms/agilent_human_mirna_8x15k_v2/probesets;
+    >> raw = realize(query('taylor*mirna raw'));
+    >> mirna_expr = uarray_expression_rma(raw, agilent_human_mirna_8x15k_v2_probesets)
+    mirna_expr =
+        Mean: [904x142 double]
+        Meta: [1x1 struct]
+}}}
+
+The raw microRNA array samples in this example were loaded from an existing dataset. If your raw samples have not yet been imported as a dataset, you can do so using `import_uarray_data()` (see HELP IMPORT_UARRAY_DATA for more details). 
+
+The rows of the `mirna_expr.Mean` matrix represent different mature miRNAs annotated for the currently selected organism. The rows are in the same order as the fields under `organism.miRNA`. Columns represent samples.
+
+
+
+
 = MICROARRAY ANALYSIS - MISCELLANEOUS =
 
 You can visualize the spatial distribution of probe intensities on the microarray slide by using the function render_uarray_intensities():
