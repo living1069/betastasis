@@ -60,9 +60,9 @@ end
 %probesets.Probes(probesets.ProbeCount < 3, :) = 0;
 
 probesets.Organism = organism.Name;
-probesets.miRNAVersion = organism.miRNAVersion;
+%probesets.miRNAVersion = organism.miRNAVersion;
 probesets.Type = 'miRNA expression';
 
-system(['rm ' probes_fasta_tmp]);
-system(['rm ' alignments_tmp]);
+safe_delete(probes_fasta_tmp);
+safe_delete(alignments_tmp);
 
