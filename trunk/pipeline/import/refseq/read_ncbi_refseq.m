@@ -27,10 +27,12 @@ transcripts.Sequence = cell(100000, 1);
 transcripts.Gene = nan(100000, 1);
 transcripts.CDS = nan(100000, 2);
 transcripts.Exons = cell(100000, 1);
+transcripts.ExonPos = cell(100000, 1);
 
 exons = struct;
 exons.ID = cell(500000, 1);
-exons.Position = nan(500000, 2);
+
+exon_pos = nan(500000, 2);
 
 
 gene_count = 0;
@@ -85,13 +87,15 @@ while 1
 			
 			tokens = regexp(line, '^     exon\s+(\d+)\.\.(\d+)', 'tokens');
 			if length(tokens) == 1
-				tokens = tokens{1};
-				
+				token = tokens{1};
+				exon_start = str2double(token{1});
+				exon_end = str2double(token{2});
+
 				exon_count = exon_count + 1;
 				transcripts.Exons{transcript_count}(end+1) = exon_count;
-				%exons.Position(exon_count, :) = [exon_start exon_end];
-				exons.Position(exon_count, :) = ...
-					[str2double(tokens{1}), str2double(tokens{2})];
+				transcripts.ExonPos{transcript_count}(end+1, :) = ...
+					[exon_start exon_end];
+				exon_pos(exon_count, :) = [exon_start exon_end];
 				
 				parse_mode = 2;
 				break;
@@ -204,9 +208,10 @@ transcripts.Sequence = transcripts.Sequence(1:transcript_count);
 transcripts.Gene = transcripts.Gene(1:transcript_count);
 transcripts.CDS = transcripts.CDS(1:transcript_count, :);
 transcripts.Exons = transcripts.Exons(1:transcript_count);
+transcripts.ExonPos = transcripts.ExonPos(1:transcript_count);
 
 exons.ID = exons.ID(1:exon_count);
-exons.Position = exons.Position(1:exon_count, :);
+exon_pos = exon_pos(1:exon_count, :);
 
 % Assign exon sequences.
 exons.Sequence = cell(length(exons.ID), 1);
@@ -215,7 +220,7 @@ for t = 1:transcript_count
 	for e = 1:length(ex)
 		idx = ex(e);
 		exons.Sequence{idx} = transcripts.Sequence{t}( ...
-			exons.Position(idx, 1):exons.Position(idx, 2));
+			exon_pos(idx, 1):exon_pos(idx, 2));
 	end
 end
 
@@ -288,7 +293,6 @@ end
 exons.ID = exons.ID(keep_exons);
 exons.Gene = exons.Gene(keep_exons);
 exons.Sequence = exons.Sequence(keep_exons, :);
-exons.Position = exons.Position(keep_exons, :);
 
 % Since we dropped out some exons, we must remember to update the exon
 % references in the transcript data structures.
