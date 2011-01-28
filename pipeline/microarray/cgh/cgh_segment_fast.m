@@ -6,6 +6,10 @@
 %    probes to chromosomal loci are provided in the argument PROBESETS. The
 %    algorithm performs multiscale mean filtering on the CGH ratios, and then
 %    detects segment breakpoints by looking for edges in the filtered signal.
+%
+%    If your aCGH data only has one channel, you can call CGH_SEGMENT_FAST with
+%    REF = []. This will cause the algorithm to not use any paired samples, but
+%    to instead estimate the zero CNA level from the single channel data.
 % 
 %    CGH_SEGMENT_FAST(..., 'Significance', ALPHA) specifies the significance
 %    level ALPHA at which breakpoints will be called. A high significance 
@@ -228,7 +232,6 @@ end
 % Build the segments.
 segments = struct;
 segments.Meta = test.Meta;
-segments.Meta.Ref = ref.Meta;
 segments.Meta.Organism = probesets.Organism;
 segments.Meta.Type = 'Copy number segments';
 segments.Meta.SegmentationMethod = ...
@@ -236,8 +239,11 @@ segments.Meta.SegmentationMethod = ...
 segments.Meta.SamplePurity = sample_purity;
 segments.Meta.NormalThreshold = normal_threshold;
 
-segments.Meta.Ref = rmfield(segments.Meta.Ref, 'Type');
-segments.Meta.Ref = rmfield(segments.Meta.Ref, 'Platform');
+if isstruct(ref) && isfield(ref, 'Meta')
+	segments.Meta.Ref = ref.Meta;
+	segments.Meta.Ref = rmfield(segments.Meta.Ref, 'Type');
+	segments.Meta.Ref = rmfield(segments.Meta.Ref, 'Platform');
+end
 
 segments.Chromosome = cell(length(organism.Chromosomes.Name), S);
 
