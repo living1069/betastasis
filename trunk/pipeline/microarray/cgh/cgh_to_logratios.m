@@ -4,7 +4,9 @@ function logratios = cgh_to_logratios(test, ref, probesets, varargin)
 global organism;
 
 A = test.Mean;
+if isempty(ref), ref.Mean = ones(size(A)); end
 B = ref.Mean;
+
 S = size(A, 2);
 
 smooth_window_size = 5;
@@ -47,6 +49,10 @@ end
 
 logratios = log2(cnv);
 
+% Replace negative infinities with the smallest non-infinite value.
+logratios(logratios == -Inf) = NaN;
+logratios(isnan(logratios)) = nanmin(nanmin(logratios));
+
 if smooth_window_size > 0
 	for chr = 1:length(organism.Chromosomes.Name)
 		idx = find(probesets.Chromosome == chr);
@@ -66,14 +72,13 @@ for s = 1:S
 	smoothed = conv2(logratios, ones(9, 1) / 9, 'same');
 	
 	% Normalize logratios by moving the highest peak to zero on the x-axis.
-	bins = -4:0.05:4;
+	bins = -5:0.05:max(smoothed(:, s));
 	n = hist(smoothed(:, s), bins);
 	
 	if render_histograms
 		figure; hist(smoothed(:, s), bins);
 		xlabel('Probe logratio'); ylabel('Number of probes');
-		saveas(gcf, sprintf('%s_hist_%d.pdf', ...
-			regexprep(track_file, '\.igv', '', 'ignorecase'), s));
+		saveas(gcf, sprintf('hist_%d.pdf', s));
 	end
 
 	bins = bins(2:end-1);
