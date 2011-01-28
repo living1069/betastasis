@@ -25,10 +25,6 @@
 %    during the DPI pruning step. Default is 1.0 (no DPI pruning). Margolin
 %    et al recommend values between 0.0 and 0.2 if DPI pruning is desired.
 %
-%    ARACNE(..., 'MaxThreads', THREADS) specifies the maximum number of
-%    parallel ARACNE runs that this function is allowed to spawn. Defaults
-%    to the maximum number of threads specified in the pipeline configuration.
-%
 %    ARACNE(..., 'Significance', ALPHA) specifies the significance level ALPHA
 %    that ARACNE should use when pruning regulatory links between genes. No
 %    familywise error rate correction is applied to the requested significance
@@ -39,10 +35,9 @@
 
 function links = aracne(expr, varargin)
 
-global pipeline_config;
 global organism;
 
-max_threads = pipeline_config.MaxThreads;
+max_threads = 1;
 include_genes = [];
 subnetwork = [];
 significance = 1.0;
@@ -67,11 +62,6 @@ for k = 1:2:length(varargin)
 	
 	if strcmpi(varargin{k}, 'ToleranceDPI')
 		dpi_tolerance = varargin{k+1};
-		continue;
-	end
-	
-	if strcmpi(varargin{k}, 'MaxThreads')
-		max_threads = varargin{k+1};
 		continue;
 	end
 	
@@ -109,7 +99,9 @@ else
 	end
 end
 
-input_genes = ~any(isnan(expr.Mean), 2);
+log_expr = log2(expr.Mean);
+
+input_genes = ~any(isnan(log_expr), 2);
 if ~isempty(include_genes)
 	input_genes = (input_genes & include_genes);
 end
@@ -126,8 +118,8 @@ end
 subnetwork = find(subnetwork & input_genes);
 
 
-max_threads = min(max_threads, length(subnetwork));
-parsize = floor(length(subnetwork) / max_threads);
+%max_threads = min(max_threads, length(subnetwork));
+%parsize = floor(length(subnetwork) / max_threads);
 
 
 
@@ -146,7 +138,7 @@ input_genes = find(input_genes);
 for g = 1:length(input_genes)
 	gene = input_genes(g);
 	fprintf(fid, '%s\t---', organism.Genes.Name{gene});
-	fprintf(fid, '\t%f', expr.Mean(gene, :));
+	fprintf(fid, '\t%f', log_expr(gene, :));
 	fprintf(fid, '\n');
 end
 fclose(fid);
@@ -321,11 +313,4 @@ while 1
 	end
 end
 fclose(fid);
-
-%if nargout == 0
-%	for k = 1:length(links.MI)
-%		fprintf(1, '%s - %s: %.4f\n', organism.Genes.Name{links.Genes(k,1)}, ...
-%			organism.Genes.Name{links.Genes(k, 2)}, links.MI(k));
-%	end
-%end
 
