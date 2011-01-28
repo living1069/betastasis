@@ -197,16 +197,16 @@ for r = 1:length(run_lengths)
 	pos = pos + run_lengths(r);
 end
 
+if any(~include_genes)
+	probesets.Probes(~include_genes, :) = 0;
+	probesets.ProbeCount(~include_genes) = 0;
+end
+
 if min_probes_per_probeset > 0
 	fprintf(1, 'Filtering out probesets with less than %d probes...\n', ...
 		min_probes_per_probeset);
 	probesets.ProbeCount(probesets.ProbeCount < min_probes_per_probeset) = 0;
 	probesets.Probes(probesets.ProbeCount < min_probes_per_probeset, :) = 0;
-end
-
-if any(~include_genes)
-	probesets.Probes(~include_genes, :) = 0;
-	probesets.ProbeCount(~include_genes) = 0;
 end
 
 probesets.Type = 'Gene expression';
@@ -225,14 +225,11 @@ if ~isempty(report_dir)
 	
 	fid = fopen([report_dir '/genelist.json'], 'w');
 	fprintf(fid, '{ "genes": [ ');
-	first = true;
 	
 	for g = 1:length(organism.Genes.Name)
-		if probesets.ProbeCount(g) == 0, continue, end
 		plot_probe_reads(report, g, report_dir);
-		if first 
+		if g == 1 
 			fprintf(fid, '"%s"', organism.Genes.Name{g});
-			first = false;
 		else
 			fprintf(fid, ', "%s"', organism.Genes.Name{g});
 		end
@@ -252,12 +249,14 @@ end
 function [] = plot_probe_reads(report, gene_idx, report_dir)
 	
 global organism;
+transcripts = organism.Transcripts;
+exons = organism.Exons;
 
-tx_indices = find(organism.Transcripts.Gene == gene_idx);
+tx_indices = find(transcripts.Gene == gene_idx);
 
 longest_tx = 0;
 for t = 1:length(tx_indices)
-	tx_seq = organism.Transcripts.Sequence{tx_indices(t)};
+	tx_seq = transcripts.Sequence{tx_indices(t)};
 	longest_tx = max(longest_tx, length(tx_seq));
 end
 
@@ -265,44 +264,58 @@ gene_name = organism.Genes.Name{gene_idx};
 [~, ~] = mkdir([report_dir '/' lower(gene_name(1))]);
 
 fid = fopen([report_dir '/' lower(gene_name(1)) '/' ...
-	organism.Genes.Name{gene_idx} '.json'], 'w');
+	organism.Genes.Name{gene_idx} '.json'], 'W');
 fprintf(fid, '{\n');
 
 for t = 1:length(tx_indices)
 	tx_idx = tx_indices(t);
-	tx_seq = organism.Transcripts.Sequence{tx_idx};
+	tx_seq = transcripts.Sequence{tx_idx};
 	
 	probe_pos = report.TxProbePosition{tx_idx};
 	accepted = report.TxProbeAccepted{tx_idx};
 	probe_seq = report.TxProbeSeq{tx_idx};
 	
-	fprintf(fid, '"%s": {\n', organism.Transcripts.Name{tx_idx});
+	fprintf(fid, '"%s": {\n', transcripts.Name{tx_idx});
 	fprintf(fid, '\t"length": %d,\n', length(tx_seq));
 	fprintf(fid, '\t"exons": [');
 	
-	tx_exons = find(organism.Exons.Transcript == tx_idx);
+	tx_exons = transcripts.Exons{tx_idx};
 	for m = 1:length(tx_exons)
-		left = organism.Exons.Position(tx_exons(m), 1);
-		right = organism.Exons.Position(tx_exons(m), 2);
-		
+		exon_id = exons.ID{tx_exons(m)};
 		if m == length(tx_exons)
+			fprintf(fid, '"%s"],\n', exon_id);
+		else
+			fprintf(fid, '"%s", ', exon_id);
+		end
+	end
+	
+	if length(tx_exons) == 0
+		fprintf(fid, '],\n');
+	end
+	
+	fprintf(fid, '\t"exon_pos": [');
+	
+	tx_exon_pos = transcripts.ExonPos{tx_idx};
+	for m = 1:size(tx_exon_pos, 1)
+		left = tx_exon_pos(m, 1);
+		right = tx_exon_pos(m, 2);
+		
+		if m == size(tx_exon_pos, 1)
 			fprintf(fid, '%d],\n', left);
 		else
 			fprintf(fid, '%d, ', left);
 		end
 	end
 	
-	if isempty(tx_exons)
+	if size(tx_exon_pos, 1) == 0
 		fprintf(fid, '1],\n');
 	end
 	
-	cds = organism.Transcripts.CDS(tx_idx, :);
+	cds = transcripts.CDS(tx_idx, :);
 	if ~any(isnan(cds))
 		cds(isnan(cds)) = 0;
 		fprintf(fid, '\t"cds": [%d, %d],\n', cds(1), cds(2));
 	end
-	
-	read_count_dist = zeros(1, length(tx_seq));
 	
 	fprintf(fid, '\t"probe_pos": [ ');
 	
