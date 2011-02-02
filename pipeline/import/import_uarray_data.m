@@ -1,3 +1,19 @@
+
+% IMPORT_UARRAY_DATA   Import raw microarray data into the pipeline
+%
+%    METADATA = IMPORT_UARRAY_DATA(DATASET, PLATFORM) searches the current
+%    working directory for raw microarray sample files, and imports any found
+%    samples into the pipeline as a dataset. The name of the new dataset is
+%    specified by the argument DATASET. The microarray platform name PLATFORM
+%    must be specified, and must be one of the microarray names found in
+%    "ontologies.uarray_platforms".
+%
+%    IMPORT_UARRAY_DATA(..., 'SampleMap', SAMPLE_MAP) uses the associative map
+%    SAMPLE_MAP to specify sample IDs for samples based on their filename. The
+%    default is to give no sample IDs for the samples.
+
+% Author: Matti Annala <matti.annala@tut.fi>
+
 function metadata = import_uarray_data(dataset, platform, varargin)
 
 files = {};
