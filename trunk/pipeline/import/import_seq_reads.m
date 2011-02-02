@@ -1,3 +1,17 @@
+
+% IMPORT_SEQ_READS   Import high throughput sequence reads into the pipeline
+%
+%    IMPORT_SEQ_READS(DATASET, PLATFORM) searches the current working directory 
+%    high throughput sequencing read files, and imports any found read files
+%    into the pipeline as a dataset. The name of the new dataset is
+%    specified by the argument DATASET. The sequencing platform name PLATFORM
+%    must be specified.
+%
+%    IMPORT_SEQ_READS(..., 'Recursive', TRUE) tells the function to also 
+%    recursively look for read files in subfolders.
+
+% Author: Matti Annala <matti.annala@tut.fi>
+
 function [] = import_seq_reads(dataset, platform, varargin)
 
 move_files = false;

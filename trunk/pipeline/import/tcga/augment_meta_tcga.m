@@ -12,10 +12,10 @@ files = dir(pipeline_config.TCGA.Path);
 for k = 1:length(files)
 	if files(k).name(1) == '.' || ~files(k).isdir, continue, end
 	
-	sources = {'intgen.org', 'nationwidechildrens.org'};
+	sources = {'intgen.org/', 'nationwidechildrens.org/', ''};
 	for s = 1:length(sources)
 		clin_dir = [pipeline_config.TCGA.Path '/' files(k).name ... 
-			'/bcr/' sources{s} '/biotab/clin'];
+			'/bcr/' sources{s} 'biotab/clin'];
 		if exist(clin_dir)
 			[tmp_patients, tmp_samples, tmp_misc] = ...
 				read_tcga_clinical_data(clin_dir);
@@ -124,10 +124,10 @@ end
 function sample_type = parse_sample_type(sample_type, sample_id)
 
 if regexpi(sample_id, 'Stratagene.*Ref')
-	sample_type = 'Stratagene universal reference DNA';
+	sample_type = 'Stratagene universal reference';
 	return;
 elseif regexpi(sample_id, 'Promega.*Ref')
-	sample_type = 'Promega universal reference DNA';
+	sample_type = 'Promega universal reference';
 	return;
 end
 
