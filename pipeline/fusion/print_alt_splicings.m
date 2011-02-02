@@ -1,67 +1,120 @@
-function [] = print_alt_splicings(alt_splicings, gene_blacklist)
+function [] = print_alt_splicings(splices, varargin)
 
 global organism;
-transcriptome = organism.Transcripts;
+genes = organism.Genes;
 exons = organism.Exons;
 
+min_reads = 0;
 blacklist = {};
-if nargin == 2
-	blacklist = gene_blacklist;
-end
-	
-[~, sort_indices] = sort(alt_splicings.ReadCount, 1, 'descend');
 
-fprintf(1, 'Potential alt. splicing events (ordered by prevalence):\n');
-for k = 1:length(sort_indices)
-	idx = sort_indices(k);
-	
-	sequences = {};
-	if isfield(alt_splicings, 'ReadSequences')
-		sequences = alt_splicings.ReadSequences(idx, ...
-			1:alt_splicings.ReadCount(idx));
+% Organism specific genes that are blacklisted by default.
+if strcmpi(organism.Name, 'Homo sapiens')
+	blacklist = { ...
+		'RPPH1', 'LOC100008588', 'LOC100008589', 'RN18S1', 'SNORD', 'SNORA', ...
+		'RNY1', 'RNY3', 'RNY5', 'RN7SL', 'RN7SK', 'RNU2-1' 'RNU5D', ...
+	};
+end
+
+for k = 1:2:length(varargin)
+	if strcmpi(varargin{k}, 'MinReads')
+		min_reads = varargin{k+1};
+		continue;
 	end
-
-	print_exon_pair(alt_splicings.Exons(idx, 1), ...
-		alt_splicings.Exons(idx, 2), ...
-		alt_splicings.ReadCount(idx), sequences, ...
-		transcriptome, exons, blacklist);
+	
+	if strcmpi(varargin{k}, 'Blacklist')
+		blacklist = varargin{k+1};
+		continue;
+	end
+	
+	error('Unrecognized option "%s".', varargin{k});
 end
 
-return;
+if isstruct(splices), splices = { splices }; end
 
+S = length(splices);
 
+joint_splices = {};
+total_splice_reads = [];
 
-function [] = print_exon_pair(left_exon, right_exon, read_count, sequences, ...
-	transcriptome, exons, blacklist)
-
-global organism;
-genome = organism.Genes;
-
-left_transcript = exons.Transcript(left_exon);
-right_transcript = exons.Transcript(right_exon);
-
-left_gene = transcriptome.Gene(left_transcript);
-right_gene = transcriptome.Gene(right_transcript);
-
-if left_transcript ~= right_transcript, return, end
-
-for k = 1:length(blacklist)
-	if regexp(genome.Name{left_gene}, blacklist{k}), return, end
-	if regexp(genome.Name{right_gene}, blacklist{k}), return, end
+% First we build a map of all gene pairs shown to participate in splices.
+splice_map = containers.Map('KeyType', 'double', 'ValueType', 'double');
+for s = 1:S
+	for f = 1:length(splices{s}.ReadCount)
+		left_exon = splices{s}.Exons(f, 1);
+		right_exon = splices{s}.Exons(f, 2);
+		
+		gene = organism.Exons.Gene(left_exon);
+		
+		key = gene;
+		if ~splice_map.isKey(key)
+			gsplice.Gene = gene;
+			gsplice.Exons = [left_exon, right_exon];
+			gsplice.ReadSequences = ...
+				{ splices{s}.ReadSequences(f, 1:splices{s}.ReadCount(f))' };
+			gsplice.ReadSamples = { repmat(s, splices{s}.ReadCount(f), 1) };
+			joint_splices{end+1, 1} = gsplice;
+			total_splice_reads(end+1, 1) = splices{s}.ReadCount(f);
+			splice_map(key) = length(joint_splices);
+		else
+			fus_idx = splice_map(key);
+			gsplice = joint_splices{fus_idx};
+			idx = find(gsplice.Exons(:, 1) == left_exon & ...
+				gsplice.Exons(:, 2) == right_exon);
+			if isempty(idx)
+				gsplice.Exons(end+1, :) = [left_exon, right_exon];
+				gsplice.ReadSequences{end+1, 1} = ...
+					splices{s}.ReadSequences(f, 1:splices{s}.ReadCount(f))';
+				gsplice.ReadSamples{end+1, 1} = ...
+					repmat(s, splices{s}.ReadCount(f), 1);
+			else
+				gsplice.ReadSequences{idx} = cat(1, ...
+					gsplice.ReadSequences{idx}, ...
+					splices{s}.ReadSequences(f, 1:splices{s}.ReadCount(f))');
+				gsplice.ReadSamples{idx} = [ gsplice.ReadSamples{idx}; ...
+					repmat(s, splices{s}.ReadCount(f), 1) ];
+			end
+			total_splice_reads(fus_idx) = total_splice_reads(fus_idx) + ...
+				splices{s}.ReadCount(f);
+			joint_splices{fus_idx} = gsplice;
+		end
+	end
 end
 
-fprintf(1, '- fusion of exon pair (%d, %d):\n', left_exon, right_exon);
-fprintf(1, '  * exon #%d is at [%d, %d] in transcript %s of gene %s\n', ...	
-	left_exon, exons.Position(left_exon, 1), exons.Position(left_exon, 2), ...
-	transcriptome.Name{left_transcript}, genome.Name{left_gene});
-fprintf(1, '  * exon #%d is at [%d, %d] in transcript %s of gene %s\n', ... 
-	right_exon, exons.Position(right_exon, 1), ...
-	exons.Position(right_exon, 2), ...
-	transcriptome.Name{right_transcript}, genome.Name{right_gene});
-fprintf(1, '  * supported by %d reads:\n', read_count);
+[~, order] = sort(total_splice_reads, 'descend');
 
-for k = 1:length(sequences)
-	fprintf(1, '    * %s\n', sequences{k});
+fprintf(1, 'Potential splice transcripts (ordered by prevalence):\n');
+for k = 1:length(order)
+	idx = order(k);
+	
+	gsplice = joint_splices{idx};
+
+	if total_splice_reads(idx) < min_reads, continue, end
+	
+	blacklisted = false;
+	for k = 1:length(blacklist)
+		if regexp(genes.Name{gsplice.Gene}, blacklist{k})
+			blacklisted = true; break;
+		end
+	end
+	
+	if blacklisted, continue, end
+	
+	fprintf(1, '- splice variant of %s (%d total reads):\n', ...
+		genes.Name{gsplice.Gene}, total_splice_reads(idx));
+	
+	num_exon_pairs = size(gsplice.Exons, 1);
+	for p = 1:num_exon_pairs
+		fprintf(1, '  * junction between %s[%s] and %s[%s]:\n', ...
+			genes.Name{gsplice.Gene}, exons.ID{gsplice.Exons(p, 1)}, ...
+			genes.Name{gsplice.Gene}, exons.ID{gsplice.Exons(p, 2)});
+		
+		for s = 1:length(gsplice.ReadSequences{p})
+			fprintf(1, '    * %d: %s\n', gsplice.ReadSamples{p}(s), ...
+				gsplice.ReadSequences{p}{s});
+		end
+	end
 end
 
-return;
+
+
+

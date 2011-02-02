@@ -351,10 +351,9 @@ build_junction_index(junction_index_tmp, tag_junctions, color, exons, ...
 
 fprintf(1, 'Aligning full reads against candidate junctions...\n');
 [alignments_tmp, out] = bowtie_align(unaligned_reads, junction_index_tmp, ...
-	'-p4 -m3 -k3 -v2 --suppress 6,7,8');
+	'-p4 -m3 -k3 -v2 -B1 --suppress 6,7,8');
 
 fprintf(1, '%s', out);
-
 system(['rm ' junction_index_tmp '*']);
 
 fprintf(1, 'Reading aligned reads into memory...\n');
@@ -366,33 +365,33 @@ safe_delete(alignments_tmp);
 
 read_ids = data{1};
 junction_exons = data{2};
-read_offsets = data{3} + 1;
+read_offsets = data{3};
 read_sequences = data{4};
-clear data;
 
-% Calculate the lengths of the reference sequences on the 5' side of junctions.
-left_lengths = zeros(length(junction_exons), 1);
-for k = 1:length(junction_exons)
-	ex = sscanf(junction_exons{k}, '%d,%d');
-	len = exons.Position(ex(1), 2) - exons.Position(ex(1), 1) + 1;
-	if len > max_read_len, len = max_read_len; end
-	left_lengths(k) = len;
-end
-
-% Only reads that have at least 5 nucleotides on both sides of the junction
-% count towards validation.
 valid = false(length(read_ids), 1);
-for k = 1:length(valid)
+breakpoint_offsets = zeros(length(read_ids), 1);
+for k = 1:length(junction_exons)
+	% Calculate the length of the validation sequence on the 5' side of the
+	% junction.
+	ex = sscanf(junction_exons{k}, '%d,%d');
+	left_len = length(exons.Sequence{ex(1)});
+	if left_len > max_read_len, left_len = max_read_len; end
+
+	% Only reads that have at least 5 nucleotides on both sides of the junction
+	% count towards validation.
 	len = length(read_sequences{k});
 	offset = read_offsets(k);
-	if offset <= left_lengths(k) - 5 && offset + len > left_lengths(k) + 5
+	if offset <= left_len - 5 && offset + len > left_len + 5
 		valid(k) = true;
 	end
+	
+	breakpoint_offsets(k) = left_len - offset + 1;
 end
 
-read_ids = read_ids(valid);
+%read_ids = read_ids(valid);
 junction_exons = junction_exons(valid);
-read_offsets = read_offsets(valid);
+%read_offsets = read_offsets(valid);
+breakpoint_offsets = breakpoint_offsets(valid);
 read_sequences = read_sequences(valid);
 
 unique_junctions = unique(junction_exons);
@@ -404,9 +403,11 @@ end
 
 [~, sort_indices] = sort(junction_reads_count, 1, 'descend');
 
-validated = struct('Exons', zeros(length(unique_junctions), 2), ...
-	'ReadCount', junction_reads_count);
-
+validated = struct;
+validated.Exons = zeros(length(unique_junctions), 2);
+validated.ReadCount = junction_reads_count;
+validated.JunctionOffsets = zeros(length(unique_junctions), ...
+	max(junction_reads_count));
 validated.ReadSequences = cell(length(unique_junctions), ...
 	max(junction_reads_count));
 
@@ -415,6 +416,7 @@ for k = 1:length(unique_junctions)
 	
 	indices = find(strcmp(unique_junctions{k}, junction_exons));
 	for s = 1:length(indices)
+		validated.JunctionOffsets(k, s) = breakpoint_offsets(indices(s));
 		validated.ReadSequences{k, s} = read_sequences{indices(s)};
 	end
 end	
