@@ -3,10 +3,13 @@ function [] = print_fusions(fusions, varargin)
 global organism;
 genes = organism.Genes;
 exons = organism.Exons;
+chromosomes = organism.Chromosomes;
 
 min_reads = 0;
 min_anchor_len = 10;
 blacklist = {};
+only_unique = false;
+report_exon_seq = false;
 
 % Organism specific genes that are blacklisted by default.
 if strcmpi(organism.Name, 'Homo sapiens')
@@ -29,6 +32,16 @@ for k = 1:2:length(varargin)
 	
 	if strcmpi(varargin{k}, 'MinAnchorLength')
 		min_anchor_len = varargin{k+1};
+		continue;
+	end
+	
+	if strcmpi(varargin{k}, 'OnlyUnique')
+		only_unique = varargin{k+1};
+		continue;
+	end
+	
+	if strcmpi(varargin{k}, 'ReportExonSeq')
+		report_exon_seq = varargin{k+1};
 		continue;
 	end
 	
@@ -96,6 +109,14 @@ for s = 1:S
 	end
 end
 
+if only_unique
+	for j = 1:length(joint_fusions)
+		gfusion = joint_fusions{j};
+		
+		
+	end
+end
+
 [~, order] = sort(total_fusion_reads, 'descend');
 
 fprintf(1, 'Potential fusion transcripts (ordered by prevalence):\n');
@@ -139,13 +160,47 @@ for k = 1:length(order)
 	
 	num_exon_pairs = size(gfusion.Exons, 1);
 	for p = 1:num_exon_pairs
+		left_exon = gfusion.Exons(p, 1);
+		right_exon = gfusion.Exons(p, 2);
+		left_exon_seq = upper(exons.Sequence{left_exon});
+		right_exon_seq = upper(exons.Sequence{right_exon});
+		
 		fprintf(1, '  * junction between %s[%s] and %s[%s]:\n', ...
 			genes.Name{gfusion.Genes(1)}, exons.ID{gfusion.Exons(p, 1)}, ...
 			genes.Name{gfusion.Genes(2)}, exons.ID{gfusion.Exons(p, 2)});
-			
-		left_exon_seq = upper(exons.Sequence{gfusion.Exons(p, 1)});
-		right_exon_seq = upper(exons.Sequence{gfusion.Exons(p, 2)});
 		
+		if report_exon_seq
+			left_chr = genes.Chromosome(exons.Gene(left_exon));
+			right_chr = genes.Chromosome(exons.Gene(right_exon));
+			
+			if isnan(left_chr)
+				left_chr = 'unknown chr';
+			else
+				left_chr = ['chr' chromosomes.Name{left_chr}];
+			end
+			
+			if isnan(right_chr)
+				right_chr = 'unknown chr';
+			else
+				right_chr = ['chr' chromosomes.Name{right_chr}];
+			end
+			
+			left_strand = genes.Strand(exons.Gene(left_exon));
+			right_strand = genes.Strand(exons.Gene(right_exon));
+			
+			if left_strand == ' ', left_strand = 'unknown'; end
+			if right_strand == ' ', right_strand = 'unknown'; end
+			
+			fprintf(1, '    * %s[%s] sequence (%s, %s strand): %s\n', ...
+				genes.Name{exons.Gene(gfusion.Exons(p, 1))}, ...
+				exons.ID{gfusion.Exons(p, 1)}, left_chr, left_strand, ...
+				left_exon_seq);
+			fprintf(1, '    * %s[%s] sequence (%s, %s strand): %s\n', ...
+				genes.Name{exons.Gene(gfusion.Exons(p, 2))}, ...
+				exons.ID{gfusion.Exons(p, 2)}, right_chr, right_strand, ...
+				right_exon_seq);
+		end
+			
 		for s = 1:length(gfusion.ReadSequences{p})
 			left_len = gfusion.JunctionOffsets{p}(s);
 			seq = gfusion.ReadSequences{p}{s};
