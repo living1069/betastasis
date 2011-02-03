@@ -44,12 +44,8 @@ filtered = qset;
 
 if isnumeric(predicate) || islogical(predicate)
 	% Assume that we're dealing with an index vector or logical vector.
-	filtered = filter_struct(filtered, predicate);
+	filtered = filter_dataset(filtered, predicate);
 	return;
-end
-
-if ~isfield(qset, 'Resource')
-	error 'filter_query() only works on query sets.';
 end
 
 if isempty(regexp(predicate, '\S')), return, end
@@ -161,7 +157,10 @@ return;
 
 
 
-function filtered = filter_by_string(qset, field, field_aliases, predicate)
+function filtered = filter_by_string(ds, field, field_aliases, predicate)
+
+meta = ds;
+if isfield(ds, 'Meta'), meta = ds.Meta; end
 
 filtered = [];
 tokens = regexpi(predicate, ...
@@ -169,7 +168,7 @@ tokens = regexpi(predicate, ...
 if length(tokens) == 1
 	tokens = tokens{1}; cmp = tokens{2};
 	cmp = regexprep(cmp, '(N/A|unknown)', '-', 'ignorecase');
-	eval(['filtered = filter_struct(qset, strcmpi(cmp, qset.' field '));']);
+	eval(['filtered = filter_dataset(ds, strcmpi(cmp, meta.' field '));']);
 	return;
 end
 
@@ -178,7 +177,7 @@ tokens = regexpi(predicate, ...
 if length(tokens) == 1
 	tokens = tokens{1}; cmp = tokens{2};
 	cmp = regexprep(cmp, '(N/A|unknown)', '-', 'ignorecase');
-	eval(['filtered = filter_struct(qset, ~strcmpi(cmp, qset.' field '));']);
+	eval(['filtered = filter_dataset(ds, ~strcmpi(cmp, meta.' field '));']);
 	return;
 end
 
@@ -186,12 +185,12 @@ tokens = regexpi(predicate, ...
 	['^\s*(' field_aliases ')\s*~+\s*(.*?)\s*$'], 'tokens');
 if length(tokens) == 1
 	tokens = tokens{1}; regex = tokens{2};
-	eval(['f = qset.' field ';']);
+	eval(['f = meta.' field ';']);
 	selected = false(length(f), 1);
 	for k = 1:length(f)
 		if regexpi(f{k}, regex), selected(k) = true; end
 	end
-	filtered = filter_struct(qset, selected);
+	filtered = filter_dataset(ds, selected);
 	return;
 end
 
@@ -199,12 +198,12 @@ tokens = regexpi(predicate, ...
 	['^\s*(' field_aliases ')\s*!~+\s*(.*?)\s*$'], 'tokens');
 if length(tokens) == 1
 	tokens = tokens{1}; regex = tokens{2};
-	eval(['f = qset.' field ';']);
+	eval(['f = meta.' field ';']);
 	selected = false(length(f), 1);
 	for k = 1:length(f)
 		if regexpi(f{k}, regex), selected(k) = true; end
 	end
-	filtered = filter_struct(qset, ~selected);
+	filtered = filter_dataset(ds, ~selected);
 	return;
 end
 
@@ -212,14 +211,19 @@ return;
 
 
 
-function filtered = filter_by_num(qset, field, field_aliases, predicate)
+
+
+function filtered = filter_by_num(ds, field, field_aliases, predicate)
+
+meta = ds;
+if isfield(ds, 'Meta'), meta = ds.Meta; end
 
 filtered = [];
 tokens = regexp(predicate, ...
 	['^\s*(' field_aliases ')\s*=+\s*(.+?)\s*$'], 'tokens');
 if length(tokens) == 1
 	tokens = tokens{1}; cmp = tokens{2};
-	eval(['filtered = filter_struct(qset, qset.' field ' == ' cmp ');']);
+	eval(['filtered = filter_dataset(ds, meta.' field ' == ' cmp ');']);
 	return;
 end
 
@@ -227,7 +231,7 @@ tokens = regexp(predicate, ...
 	['^\s*(' field_aliases ')\s*[~!]=+\s*(.+?)\s*$'], 'tokens');
 if length(tokens) == 1
 	tokens = tokens{1}; cmp = tokens{3};
-	eval(['filtered = filter_struct(qset, qset.' field ' ~= ' cmp ');']);
+	eval(['filtered = filter_dataset(ds, meta.' field ' ~= ' cmp ');']);
 	return;
 end
 
@@ -235,7 +239,7 @@ tokens = regexp(predicate, ...
 	['^\s*(' field_aliases ')\s*(<|<=|>|>=)\s*(.+?)\s*$'], 'tokens');
 if length(tokens) == 1
 	tokens = tokens{1}; cmp = tokens{3};
-	eval(['filtered = filter_struct(qset, qset.' field ' ' tokens{2} ' ' ...
+	eval(['filtered = filter_dataset(ds, meta.' field ' ' tokens{2} ' ' ...
 	      cmp ');']);
 	return;
 end
@@ -244,7 +248,9 @@ return;
 
 
 
-function filtered = filter_by_date(qset, field, field_aliases, predicate)
+
+
+function filtered = filter_by_date(ds, field, field_aliases, predicate)
 
 filtered = [];
 tokens = regexp(predicate, ...
@@ -253,7 +259,7 @@ if length(tokens) == 1
 	tokens = tokens{1}; cmp = tokens{2};
 	
 	if strcmp(cmp, '-') || strcmpi(cmp, 'nan')
-		eval(['filtered = filter_struct(qset, isnan(qset.' field '));']);
+		eval(['filtered = filter_dataset(ds, isnan(meta.' field '));']);
 		return;
 	end
 	
@@ -262,7 +268,7 @@ if length(tokens) == 1
 		error 'Right hand argument uses an unrecognized date format.';
 	end
 	
-	eval(['filtered = filter_struct(qset, qset.' field ' == ' cmp ');']);
+	eval(['filtered = filter_dataset(ds, meta.' field ' == ' cmp ');']);
 	return;
 end
 
@@ -272,7 +278,7 @@ if length(tokens) == 1
 	tokens = tokens{1}; cmp = tokens{3};
 	
 	if strcmp(cmp, '-') || strcmpi(cmp, 'nan')
-		eval(['filtered = filter_struct(qset, ~isnan(qset.' field '));']);
+		eval(['filtered = filter_dataset(ds, ~isnan(meta.' field '));']);
 		return;
 	end
 	
@@ -281,7 +287,7 @@ if length(tokens) == 1
 		error 'Right hand argument uses an unrecognized date format.';
 	end
 
-	eval(['filtered = filter_struct(qset, qset.' field ' ~= ' cmp ');']);
+	eval(['filtered = filter_dataset(ds, meta.' field ' ~= ' cmp ');']);
 	return;
 end
 
@@ -295,11 +301,34 @@ if length(tokens) == 1
 		error 'Right hand argument uses an unrecognized date format.';
 	end
 	
-	eval(['filtered = filter_struct(qset, qset.' field ' ' tokens{2} ' ' ...
+	eval(['filtered = filter_dataset(ds, meta.' field ' ' tokens{2} ' ' ...
 		cmp ');']);
 	return;
 end
 
 return;
 
+
+
+
+
+
+function filtered = filter_dataset(ds, selected)
+
+if isfield(ds, 'Resource')
+	filtered = filter_struct(ds, selected);
+elseif isfield(ds, 'Meta')
+	filtered = ds;
+	filtered.Meta = filter_struct(filtered.Meta, selected);
+	
+	fields = fieldnames(filtered);
+	for k = 1:length(fields)
+		if strcmp(fields{k}, 'Meta'), continue, end
+		eval(['filtered.' fields{k} ' = ds.' fields{k} '(:, selected);']);
+	end
+else
+	error 'filter_dataset() called with a parameter of unrecognized type.';
+end
+
+return;
 

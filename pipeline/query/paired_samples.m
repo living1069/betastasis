@@ -115,12 +115,8 @@ function ds = filter_realized(ds, selected)
 fields = fieldnames(ds);
 for k = 1:length(fields)
 	if strcmp(fields{k}, 'Meta'), continue, end
-	
-	f = getfield(ds, fields{k});
-	if isstruct(f), continue, end
-	
-	ds = setfield(ds, fields{k}, f(:, selected));
+	eval(['ds.' fields{k} ' = ds.' fields{k} '(:, selected);']);
 end
 
-ds.Meta = filter_query(ds.Meta, selected);
+ds.Meta = filter_struct(ds.Meta, selected);
 
