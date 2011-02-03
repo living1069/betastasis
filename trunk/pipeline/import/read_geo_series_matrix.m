@@ -96,8 +96,7 @@ while 1
 	
 	tokens = regexpi(line, '!Sample_label_ch(\d)', 'tokens');
 	if length(tokens) == 1
-		token = tokens{1};
-		channel = token{1};
+		token = tokens{1}; channel = token{1};
 		
 		tokens = regexpi(line, '"(.+?)"', 'tokens');
 		eval(['meta.LabelCh' channel ' = cell(length(tokens), 1);']);
@@ -110,8 +109,7 @@ while 1
 	
 	tokens = regexpi(line, '!Sample_source_name_ch(\d)', 'tokens');
 	if length(tokens) == 1
-		token = tokens{1};
-		channel = token{1};
+		token = tokens{1}; channel = token{1};
 		
 		tokens = regexpi(line, '"(.+?)"', 'tokens');
 		eval(['meta.SourceNameCh' channel ' = cell(length(tokens), 1);']);
@@ -119,6 +117,41 @@ while 1
 			token = tokens{k}; eval(['meta.SourceNameCh' channel ...
 				'{k} = token{1};']);
 		end
+		continue;
+	end
+	
+	if regexpi(line, '!Sample_description\s+');
+		G = length(meta.SampleAccession);
+		
+		tokens = regexpi(line, '"(.*?)"', 'tokens');
+		if length(tokens) ~= G
+			error 'Invalid number of sample description columns.';
+		end
+		
+		for k = 1:length(tokens)
+			token = tokens{k}; token = token{1};
+			t = regexpi(token, '(.+?):\s*(.+)', 'tokens');
+			if length(t) ~= 1, continue, end
+			
+			t = t{1}; key = t{1}; val = t{2};
+			
+			% Convert the description field name to a valid Matlab field name.
+			field = strrep(key, ' ', '_');
+			field = strrep(field, '?', '');
+			field = strrep(field, '/', '_');
+			field = strrep(field, '=', '');
+			field = strrep(field, '#', 'num');
+			field = strrep(field, '(', '');
+			field = strrep(field, ')', '');
+			
+			if length(field) > namelengthmax, continue, end
+			
+			if ~isfield(meta, field)
+				eval(['meta.' field ' = repmat({''-''}, G, 1);']);
+			end
+			eval(['meta.' field '{k} = val;']);
+		end
+		
 		continue;
 	end
 	

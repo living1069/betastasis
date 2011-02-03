@@ -3,15 +3,13 @@ function meta = meta_geo(qset, geo_series_matrix)
 meta = qset;
 geo = read_geo_series_matrix(geo_series_matrix);
 
-if isfield(meta.Sample, 'Filename')
-	S = length(meta.Sample.Filename);
-end
+S = length(meta.Sample.Filename);
 
 geo_to_row = containers.Map(geo.SampleAccession, ...
 	num2cell(1:length(geo.SampleAccession)));;
 sample_to_row = zeros(S, 1);
 
-if isfield(meta.Sample, 'Filename') && regexp(meta.Sample.Filename{1}, 'GSM\d+')
+if regexp(meta.Sample.Filename{1}, 'GSM\d+')
 	for s = 1:length(meta.Sample.Filename)
 		tokens = regexp(meta.Sample.Filename{s}, '(GSM\d+)', 'tokens');
 		if length(tokens) ~= 1, continue, end
@@ -27,6 +25,28 @@ end
 
 found = (sample_to_row ~= 0);
 found_rows = sample_to_row(found);
+
+if ~isfield(meta, 'Misc'), meta.Misc = struct; end	
+	
+G = length(geo.SampleAccession);
+
+fields = fieldnames(geo);
+for k = 1:length(fields)
+	f = getfield(geo, fields{k});
+	if length(f) ~= G, continue, end
+		
+	% If a field by this name already exists, we simply add the new values
+	% to the field without clearing any existing ones.
+	if ~isfield(meta.Misc, fields{k})
+		eval(['meta.Misc.' fields{k} ' = repmat({''-''}, S, 1);']);
+	end
+	eval(['meta.Misc.' fields{k} '(found) = f(found_rows);']);
+end
+
+return;
+
+
+
 
 if isfield(geo, 'SampleIDCh1')
 	if ~isfield(meta.Sample, 'ID')
