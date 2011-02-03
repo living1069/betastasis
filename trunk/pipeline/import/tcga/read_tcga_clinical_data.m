@@ -40,8 +40,12 @@ fclose(fid);
 misc = struct;
 for k = 1:length(data)
 	token = tokens{k}; col_name = token{1};
-	misc = setfield(misc, col_name, replace_nulls(data{k}));
+	if length(col_name) <= 63
+		misc = setfield(misc, col_name, replace_nulls(data{k}));
+	end
 end
+
+S = length(misc.bcr_patient_barcode);
 
 patients = struct;
 patients.ID = misc.bcr_patient_barcode;
@@ -101,8 +105,16 @@ for k = 1:length(patients.SurvivalTime)
 end
 
 samples = struct;
-samples.Type = replace_nulls(misc.histological_type);
-samples.Organ = replace_nulls(misc.anatomic_organ_subdivision);
+
+if isfield(misc, 'histological_type')
+	samples.Type = replace_nulls(misc.histological_type);
+else
+	samples.Type = repmat({'-'}, S, 1);
+end
+
+if isfield(misc, 'anatomic_organ_subdivision')
+	samples.Organ = replace_nulls(misc.anatomic_organ_subdivision);
+end
 
 samples.Type = regexprep(samples.Type, '\(De Nova\) ', '');
 patients.Race = regexprep(patients.Race, ' or african american', '');
