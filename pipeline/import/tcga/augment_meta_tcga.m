@@ -209,6 +209,8 @@ end
 sample_to_subtype = containers.Map(subtype_sample_ids, data{2});
 found = sample_to_subtype.isKey(sample_ids);
 
+if sum(found) == 0, return, end
+
 if ~isfield(samples, 'SubtypeTCGA')
 	samples.SubtypeTCGA = repmat({'-'}, length(sample_ids), 1);
 end
