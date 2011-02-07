@@ -5,7 +5,10 @@ genes = organism.Genes;
 exons = organism.Exons;
 
 min_reads = 0;
+min_anchor_len = 10;
 blacklist = {};
+only_unique = false;
+report_exon_seq = false;
 
 % Organism specific genes that are blacklisted by default.
 if strcmpi(organism.Name, 'Homo sapiens')
@@ -23,6 +26,21 @@ for k = 1:2:length(varargin)
 	
 	if strcmpi(varargin{k}, 'Blacklist')
 		blacklist = varargin{k+1};
+		continue;
+	end
+	
+	if strcmpi(varargin{k}, 'MinAnchorLength')
+		min_anchor_len = varargin{k+1};
+		continue;
+	end
+	
+	if strcmpi(varargin{k}, 'OnlyUnique')
+		only_unique = varargin{k+1};
+		continue;
+	end
+	
+	if strcmpi(varargin{k}, 'ReportExonSeq')
+		report_exon_seq = varargin{k+1};
 		continue;
 	end
 	
@@ -51,6 +69,8 @@ for s = 1:S
 			gsplice.Exons = [left_exon, right_exon];
 			gsplice.ReadSequences = ...
 				{ splices{s}.ReadSequences(f, 1:splices{s}.ReadCount(f))' };
+			gsplice.JunctionOffsets = ...
+				{ splices{s}.JunctionOffsets(f, 1:splices{s}.ReadCount(f)) };
 			gsplice.ReadSamples = { repmat(s, splices{s}.ReadCount(f), 1) };
 			joint_splices{end+1, 1} = gsplice;
 			total_splice_reads(end+1, 1) = splices{s}.ReadCount(f);
@@ -64,12 +84,17 @@ for s = 1:S
 				gsplice.Exons(end+1, :) = [left_exon, right_exon];
 				gsplice.ReadSequences{end+1, 1} = ...
 					splices{s}.ReadSequences(f, 1:splices{s}.ReadCount(f))';
+				gsplice.JunctionOffsets{end+1, 1} = ...
+					splices{s}.JunctionOffsets(f, 1:splices{s}.ReadCount(f));
 				gsplice.ReadSamples{end+1, 1} = ...
 					repmat(s, splices{s}.ReadCount(f), 1);
 			else
 				gsplice.ReadSequences{idx} = cat(1, ...
 					gsplice.ReadSequences{idx}, ...
 					splices{s}.ReadSequences(f, 1:splices{s}.ReadCount(f))');
+				gsplice.JunctionOffsets{idx} = [ ...
+					gsplice.JunctionOffsets{idx}, ...
+					splices{s}.JunctionOffsets(f, 1:splices{s}.ReadCount(f)) ];
 				gsplice.ReadSamples{idx} = [ gsplice.ReadSamples{idx}; ...
 					repmat(s, splices{s}.ReadCount(f), 1) ];
 			end
@@ -98,19 +123,49 @@ for k = 1:length(order)
 	end
 	
 	if blacklisted, continue, end
+		
+	% Check the minimum anchor length.
+	num_exon_pairs = size(gsplice.Exons, 1);
+	best_anchor_len = 0;
+	for p = 1:num_exon_pairs
+		for s = 1:length(gsplice.ReadSequences{p})
+			left_len = gsplice.JunctionOffsets{p}(s);
+			seq = gsplice.ReadSequences{p}{s};
+			right_len = length(seq) - left_len;
+			
+			best_anchor_len = max(min(left_len, right_len), best_anchor_len);
+		end
+	end
+
+	if best_anchor_len < min_anchor_len, continue, end
 	
 	fprintf(1, '- splice variant of %s (%d total reads):\n', ...
 		genes.Name{gsplice.Gene}, total_splice_reads(idx));
 	
 	num_exon_pairs = size(gsplice.Exons, 1);
 	for p = 1:num_exon_pairs
+		left_exon = gsplice.Exons(p, 1);
+		right_exon = gsplice.Exons(p, 2);
+		left_exon_seq = upper(exons.Sequence{left_exon});
+		right_exon_seq = upper(exons.Sequence{right_exon});
+
 		fprintf(1, '  * junction between %s[%s] and %s[%s]:\n', ...
-			genes.Name{gsplice.Gene}, exons.ID{gsplice.Exons(p, 1)}, ...
-			genes.Name{gsplice.Gene}, exons.ID{gsplice.Exons(p, 2)});
+			genes.Name{gsplice.Gene}, exons.ID{left_exon}, ...
+			genes.Name{gsplice.Gene}, exons.ID{right_exon});
 		
 		for s = 1:length(gsplice.ReadSequences{p})
-			fprintf(1, '    * %d: %s\n', gsplice.ReadSamples{p}(s), ...
-				gsplice.ReadSequences{p}{s});
+			left_len = gsplice.JunctionOffsets{p}(s);
+			seq = gsplice.ReadSequences{p}{s};
+			
+			ref_seq = [left_exon_seq(end-left_len+1:end) ...
+				right_exon_seq(1:length(seq)-left_len)];
+			
+			mismatches = (seq ~= ref_seq);
+			seq(mismatches) = lower(seq(mismatches));
+
+			fprintf(1, '    * %d: %s|', gsplice.ReadSamples{p}(s), ...
+				seq(1:left_len));
+			fprintf(1, '%s\n', seq(left_len+1:end));
 		end
 	end
 end

@@ -113,7 +113,7 @@ if only_unique
 	for j = 1:length(joint_fusions)
 		gfusion = joint_fusions{j};
 		
-		
+		%unique_seq = unique(gfusion.ReadSequences
 	end
 end
 
