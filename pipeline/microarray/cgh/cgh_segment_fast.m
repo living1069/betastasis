@@ -14,7 +14,7 @@
 %    CGH_SEGMENT_FAST(..., 'Significance', ALPHA) specifies the significance
 %    level ALPHA at which breakpoints will be called. A high significance 
 %    threshold gives high sensitivity, a low threshold high specificity.
-%    Default significance threshold is 1e-8.
+%    Default significance threshold is 1e-6.
 %
 %    CGH_SEGMENT_FAST(..., 'SamplePurity', PURITY) specifies the average sample
 %    purity. All calculated copy number alterations will be scaled up by
@@ -32,7 +32,7 @@ global organism;
 
 normal_threshold = 0.2;
 sample_purity = 0.7;
-significance = 1e-8;
+significance = 1e-6;
 detect_gender = false;
 
 for k = 1:2:length(varargin)
@@ -59,7 +59,7 @@ for k = 1:2:length(varargin)
 	error('Unrecognized option "%s".', varargin{k});
 end
 
-logratios = cgh_to_logratios(test, ref, probesets, 'Smooth', 0);
+logratios = cgh_to_logratios(test, ref, probesets, 'Smooth', 5);
 S = size(logratios, 2);
 
 chr_range = nan(length(organism.Chromosomes.Name), 2);
@@ -103,23 +103,29 @@ fprintf(1, 'Detecting breakpoints with significance threshold %.1x...\n', ...
 all_bp = false(size(cna));
 
 % Generate scales that are all odd.
-scales = 7 * 1.5.^(0:8);
+scales = 5 * 1.5.^(0:13);
 scales = round(scales);
-scales = scales - (1 - mod(scales, 2));
 
 progress = Progress;
+
+%lowpass = zeros(size(cna));
+highpass = cna;
 
 % Run a multiscale breakpoint analysis.
 for k = length(scales):-1:1
 	scale = scales(k);
+	
+	%if scale > 100
+%		highpass = cna - lowpass;
+%	end
 	
 	med_diff = zeros(size(cna));
 	for chr = 1:length(organism.Chromosomes.Name)
 		a = chr_range(chr, 1); b = chr_range(chr, 2);
 		if isnan(a) || isnan(b), continue, end
 		
-		%med(a:b, :) = conv2(cna(a:b, :), ones(scale, 1) / scale, 'same');
-		med(a:b, :) = medfilt1(cna(a:b, :), scale);
+		med(a:b, :) = conv2(highpass(a:b, :), ones(scale, 1) / scale, 'same');
+		%med(a:b, :) = medfilt1(cna(a:b, :), scale);
 		
 		r = ceil(scale / 2); d = scale;
 		range = a+d-1:b-d;
@@ -156,9 +162,8 @@ for k = length(scales):-1:1
 		% Cleanup phase: for contiguous breakpoints we only pick the middle one
 		% Since chromosome edges have been cleared of breakpoints, we can do
 		% this over all the probes at once.
-		%acmd = abs(med_diff(:, s));
-			
 		run_starts = [1; find(bp(2:end) ~= bp(1:end-1)) + 1; length(bp) + 1];
+		clean_bp = zeros(size(bp));
 		for r = 1:length(run_starts)-1
 			pos = run_starts(r);
 			if bp(pos) == false, continue, end
@@ -167,13 +172,29 @@ for k = length(scales):-1:1
 			
 			% If we have already found a breakpoint at this position with a
 			% larger median window, keep that breakpoint.
-			if any(all_bp(pos:run_end, s)), continue, end
+			%if any(all_bp(pos:run_end, s)), continue, end
 
-			bp(pos:run_end) = false;
-			bp(floor((pos+run_end)/2)) = true;
+			clean_bp(floor((pos+run_end)/2)) = true;
 		end
-			
-		all_bp(:, s) = all_bp(:, s) | bp;
+		
+		all_bp(:, s) = all_bp(:, s) | clean_bp;
+		
+		% Then we build the lowpass reference.
+		%if scale > 100
+		if 0
+			for chr = 1:length(organism.Chromosomes.Name)
+				a = chr_range(chr, 1); b = chr_range(chr, 2);
+				if isnan(a) || isnan(b), continue, end
+
+				all_cbp = all_bp(a:b, s);
+				cbp = [a - 1; a - 1 + find(all_cbp); b];   % Breakpoints
+				
+				for k = 1:length(cbp)-1
+					seg = cbp(k)+1:cbp(k+1);
+					lowpass(seg, s) = median(cna(seg, s));
+				end
+			end
+		end
 	end
 	
 	progress.update((length(scales) - k + 1) / length(scales));

@@ -30,6 +30,18 @@ function [] = cgh_logratio_track(samples, refs, probesets, track_file, varargin)
 
 global organism;
 
+range = [];
+
+drop_args = false(length(varargin), 1);
+for k = 1:2:length(varargin)
+	if strcmpi(varargin{k}, 'Range')
+		range = varargin{k+1};
+		drop_args(k:k+1) = true;
+		continue;
+	end
+end
+varargin = varargin(~drop_args);
+
 logratios = cgh_to_logratios(samples, refs, probesets, varargin{:});
 
 S = size(logratios, 2);
@@ -52,8 +64,27 @@ else
 end
 fprintf(fid, '\n');
 
+% Check if the user only wished to write logratio tracks for a small window
+% of the genome.
+probeset_range = [1 length(probesets.Offset)];
+if ~isempty(range)
+	tokens = regexpi(range, '^chr(.+?):\s*(\d+)\s*-\s*(\d+)$', 'tokens');
+	if length(tokens) ~= 1, error 'Invalid range specified.'; end
+	
+	token = tokens{1};
+	chr = chromosome_sym2num(token{1});
+	chr_range = [str2double(token{2}) str2double(token{3})];
+	
+	if isnan(chr), error 'Invalid chromosome specified.'; end
+	
+	ps_in_range = (probesets.Chromosome == chr & ...
+		probesets.Offset >= chr_range(1) & probesets.Offset <= chr_range(2));
+	probeset_range = [min(ps_in_range) max(ps_in_range)];
+end
+
+% Write the logratio tracks into a file.
 progress = Progress;
-for k = 1:size(logratios, 1)
+for k = probeset_range(1):probeset_range(2)
 	fprintf(fid, '%s\t%d\t%d\t-', ...
 		organism.Chromosomes.Name{probesets.Chromosome(k)}, ...
 		probesets.Offset(k), probesets.Offset(k));

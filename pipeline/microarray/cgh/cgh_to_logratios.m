@@ -63,13 +63,13 @@ if smooth_window_size > 0
 	end
 end
 
+smoothed = conv2(logratios, ones(15, 1) / 15, 'same');
+
 for s = 1:S
 	if ~isnan(normal_level(s))
 		logratios(:, s) = logratios(:, s) - normal_level(s);
 		continue;
 	end
-	
-	smoothed = conv2(logratios, ones(9, 1) / 9, 'same');
 	
 	% Normalize logratios by moving the highest peak to zero on the x-axis.
 	bins = -5:0.05:max(smoothed(:, s));
@@ -83,10 +83,10 @@ for s = 1:S
 
 	bins = bins(2:end-1);
 	n = n(2:end-1);
-
+	
 	[~, normal_idx] = max(n);
 	normal_level(s) = bins(normal_idx);
 	
-	logratios(:, s) = smoothed(:, s) - normal_level(s);
+	logratios(:, s) = logratios(:, s) - normal_level(s);
 end
 
