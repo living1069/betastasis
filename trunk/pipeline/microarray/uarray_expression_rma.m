@@ -42,7 +42,9 @@ if any(any(samples.Mean <= 0))
 	samples.Mean(samples.Mean == Inf) = min(min(samples.Mean));
 end
 
-
+if any(any(isnan(samples.Mean))) || any(any(samples.Mean == Inf))
+	error 'Probe intensity data contains NaN or Inf values.';
+end
 
 
 	
@@ -52,6 +54,18 @@ if regexp(platform, 'Agilent')
 else
 	fprintf(1, 'Performing RMA background adjustment on samples...\n');
 	samples.Mean = rmabackadj(samples.Mean);
+	
+	% Sometimes RMA background adjustment introduces Inf or NaN values in data.
+	% Check for such samples, and warn the user about them.
+	bad = find(any(isnan(samples.Mean), 1) | any(samples.Mean == Inf, 1));
+	if length(bad) > 0
+		bad_str = sprintf('%d', bad(1));
+		for k = 2:length(bad)
+			bad_str = sprintf('%s, %d', bad_str, bad(k));
+		end
+		error(['Background adjustment seems to have introduced Inf or NaN ' ...
+			'values in samples %s.'], bad_str);
+	end
 end
 
 
@@ -63,7 +77,7 @@ fprintf(1, 'Normalizing probe intensities using quantile normalization...\n');
 progress = Progress;
 
 %sketch_cols = 1:floor((size(samples.Mean, 2)-1)/S):size(samples.Mean, 2);
-sketch_mean = zeros(size(samples.Mean, 1), 1, 'single');
+sketch_mean = zeros(size(samples.Mean, 1), 1);
 
 S = size(samples.Mean, 2);
 

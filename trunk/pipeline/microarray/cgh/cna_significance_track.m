@@ -36,9 +36,14 @@ end
 cna = cn_seg_expand(segments, cgh_probesets);
 g_score = sum(cna, 2);
 
+orig_N = size(cna, 1);
+valid = all(~isnan(cna), 2);
+cna = cna(valid, :);
+
 fprintf(1, 'Performing permutation tests to find significance thresholds...\n');
 
 N = size(cna, 1);
+S = size(cna, 2);
 
 ptest_num = 100;
 
@@ -100,6 +105,15 @@ logp(logp == -Inf) = min(logp .* (logp ~= -Inf));
 
 
 
+% Extend the logp and g_score vectors so that the NaN probes are again included.
+full_logp = nan(orig_N, S);
+full_logp(valid) = logp;
+logp = full_logp;
+
+full_gscore = nan(orig_N, S);
+full_gscore(valid) = gscore;
+gscore = full_gscore;
+
 
 
 
@@ -110,7 +124,6 @@ fprintf(fid, ...
 	'#track maxHeightPixels=500:400:300 graphType=bar viewLimits=-20:20\n');
 fprintf(fid, 'Chromosome\tStart\tEnd\tFeature\tCNA_p\n');
 
-% Find all probes that target the chromosome we're interested in.
 for chr = 1:24
 	idx = find(cgh_probesets.Chromosome == chr);
 	N = length(idx);
@@ -132,6 +145,5 @@ fclose(fid);
 
 significance = struct;
 significance.Score = g_score;
-significance.P = p_val;
-significance.CNAType = cna_sign;
+significance.LogP = logp;
 

@@ -19,9 +19,10 @@
 %    CREATE_GENE_PROBESETS(..., 'IncludeGenes', GENES) only builds probesets
 %    for GENES. Default is to include all genes.
 %
-%    CREATE_GENE_PROBESETS(..., 'EveryTranscript', BOOL) lets the user specify
-%    whether a probe is required to align to every transcript of a gene in order
-%    to be included in its probeset. Enabled by default.
+%    CREATE_GENE_PROBESETS(..., 'EveryTranscript', false) removes the
+%    requirement that a probe is required to align to every transcript of a
+%    gene in order to be included in its probeset. The default option is to
+%    require this.
 %
 %    CREATE_GENE_PROBESETS(..., 'MinProbesetSize', NPROBES) discards probesets
 %    with less than NPROBES probes. Default is NPROBES = 4.
