@@ -5,6 +5,13 @@ N = length(probes.Sequence);
 if nargin < 3, channels = {}; end
 
 fid = fopen(sample_file);
+
+% Sanity check, see if the file even is an Agilent array file.
+line = fgetl(fid);
+if ~strcmp(line(1:4), 'TYPE')
+	error 'The given file does not look like an Agilent sample file.';
+end
+
 while 1
 	line = fgetl(fid);
 	if line == -1, break, end
