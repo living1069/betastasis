@@ -114,7 +114,8 @@ if status ~= 0, error 'Read splitting failed.'; end
 	
 fprintf(1, 'Aligning split reads into the human exome using Bowtie...\n');
 al = align_reads(split_reads_tmp, 'exons', 'AllowAlignments', 3, ...
-	'ReportAlignments', 3, 'MaxMismatches', 0, 'Columns', 'read,target,offset');
+	'ReportAlignments', 3, 'MaxMismatches', 0, ...
+	'Columns', 'read,strand,target,offset');
 fprintf(1, '%d / %d (%.2f%%) of all tags aligned to exome.\n', ...
 	al.AlignedReads, al.TotalReads, al.AlignedReads / al.TotalReads * 100);
 
@@ -125,7 +126,6 @@ safe_delete(split_reads_tmp);
 
 read_ids = al.ReadID;
 exon_indices = str2double(al.Target);
-read_offsets = al.Offset;
 
 
 
@@ -159,6 +159,9 @@ for r = 1:length(run_starts)
 		
 		left_exons = exon_indices(left_run);
 		right_exons = exon_indices(right_run);
+		
+		left_strands = al.Strand(left_run);
+		right_strands = al.Strand(right_run);
 
 		left_genes = exons.Gene(left_exons);
 		right_genes = exons.Gene(right_exons);
@@ -167,6 +170,9 @@ for r = 1:length(run_starts)
 		% the origin of each read that did not align to the transcriptome.
 		
 		if ~isempty(intersect(left_genes, right_genes))
+			
+			% We have an alignment pair that indicates that the tags come from
+			% the same gene. Hence we need not hypothesize a fusion event.
 			
 			if ~isempty(intersect(left_exons, right_exons))
 				continue;    % Hypothesis: Tags come from the same exon.
@@ -201,7 +207,14 @@ for r = 1:length(run_starts)
 						continue;
 					end
 					
-					key = sprintf('%d,%d', left_exons(k), right_exons(m));
+					if left_strands(k) ~= right_strands(m), continue, end
+					
+					if left_strands(k) == '+'
+						key = sprintf('%d,%d', left_exons(k), right_exons(m));
+					elseif left_strands(k) == '-'
+						key = sprintf('%d,%d', right_exons(m), left_exons(k));
+					end
+					
 					if ~alt_splicing_map.isKey(key)
 						alt_splicing_map(key) = 0;
 					end
@@ -217,45 +230,22 @@ for r = 1:length(run_starts)
 			
 			for k = 1:length(left_exons)
 				for m = 1:length(right_exons)
-					key = sprintf('%d,%d', left_exons(k), right_exons(m));
+					
+					% FIXME: Add support for inversions.
+					if left_strands(k) ~= right_strands(m), continue, end
+					
+					if left_strands(k) == '+'
+						key = sprintf('%d,%d', left_exons(k), right_exons(m));
+					elseif left_strands(k) == '-'
+						key = sprintf('%d,%d', right_exons(m), left_exons(k));
+					end
+					
 					if ~fusion_map.isKey(key), fusion_map(key) = 0; end
 					fusion_map(key) = fusion_map(key) + 1;
 						
 					potential_fusions = potential_fusions + 1;
 				end
 			end
-			
-%			for k = 1:length(left_exons)
-%				% If we are aligning in colorspace, then colorspace reads
-%				% usually contain a primer base in the beginning and the
-%				% first color is trimmed out of the read. Therefore a
-%				% 20-bp read essentially becomes a 19-bp read.
-%				left_end_gap = exon_len(left_exons(k)) - ...
-%					(read_offsets(left_run(k)) + paired_tag_len - ...
-%					colorspace) + 1;
-%				
-%				if left_end_gap < 0, error 'Negative left gap.'; end
-%				
-%				for m = 1:length(right_exons)
-%					right_end_gap = read_offsets(right_run(m)) - 1;
-%					total_gap = left_end_gap + right_end_gap;
-%					
-%					% FIXME: The size of the gap should not be hardcoded.
-%					if total_gap > 5 && total_gap < 15
-%						%fprintf(1, ['Potential fusion of exons (%d, %d). ' ...
-%						%            'Gap: %d + %d = %d.\n'], ...
-%						%	left_exons(k), right_exons(m), ...
-%						%	left_end_gap, right_end_gap, ...
-%						%	left_end_gap + right_end_gap);
-%							
-%						key = sprintf('%d,%d', left_exons(k), right_exons(m));
-%						if ~fusion_map.isKey(key), fusion_map(key) = 0; end
-%						fusion_map(key) = fusion_map(key) + 1;
-%						
-%						potential_fusions = potential_fusions + 1;
-%					end
-%				end
-%			end
 		end
 	end
 	
