@@ -46,7 +46,7 @@ end
 
 if N == 0, error 'Could not determine data set dimensions.'; end
 	
-fprintf(1, 'Data set appears to consist of %d samples.\n', N);
+fprintf(1, 'Data set contains %d samples.\n', N);
 
 for k = 1:N
 	s = struct;
