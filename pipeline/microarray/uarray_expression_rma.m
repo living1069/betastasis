@@ -23,6 +23,10 @@ function expr = uarray_expression_rma(samples, probesets)
 
 global organism;
 
+if ~strcmpi(samples.Meta.Type, 'Microarray probe intensities')
+	error 'First argument to the function must consist of probe intensities.';
+end
+
 S = size(samples.Mean, 2);
 
 if ~iscellstr(samples.Meta.Platform)
@@ -31,8 +35,8 @@ end
 
 platform = samples.Meta.Platform{1};
 
-	
-	
+
+
 	
 	
 if any(any(samples.Mean <= 0))
