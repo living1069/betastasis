@@ -77,7 +77,7 @@ if ~isempty(range)
 	
 	if isnan(chr), error 'Invalid chromosome specified.'; end
 	
-	ps_in_range = (probesets.Chromosome == chr & ...
+	ps_in_range = find(probesets.Chromosome == chr & ...
 		probesets.Offset >= chr_range(1) & probesets.Offset <= chr_range(2));
 	probeset_range = [min(ps_in_range) max(ps_in_range)];
 end
@@ -91,7 +91,7 @@ for k = probeset_range(1):probeset_range(2)
 	fprintf(fid, '\t%f', logratios(k, :));
 	fprintf(fid, '\n');
 	
-	progress.update(k / size(logratios, 1));
+	progress.update((k - probeset_range(1)) / (probeset_range(2) - probeset_range(1)));
 end
 
 fclose(fid);

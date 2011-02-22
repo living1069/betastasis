@@ -1,11 +1,23 @@
-function feature_cna = feature_cna(samples, refs, cgh_probesets, features, ...
-	varargin)
+function region_cna = feature_cna(segments, cgh_probesets, regions, varargin)
 
-cna = cna_from_cgh(samples, refs, cgh_probesets, varargin{:});
+cna = cn_seg_expand(segments, cgh_probesets);
 
 S = size(samples, 2);
+R = length(regions.Chromosome);
+region_cna = zeros(R, S);
 
-feature_cna = zeros(length(features.Name), S);
+for r = 1:R
+	ps = find(cgh_probesets.Chromosome == regions.Chromosome(r) & ...
+		cgh_probesets.Offset >= regions.Position(1) & ...
+		cgh_probesets.Offset <= regions.Position(2));
+	
+	region_cna(r, :) = nanmedian(cna(ps, :), 1);
+end
+
+return;
+
+
+
 
 for f = 1:length(features.Spec)
 	tokens = regexpi(features.Spec{f}, ...
