@@ -11,11 +11,11 @@ end
 N = length(qset.Resource);
 if N == 0, error('Query data set is empty.\n'); end
 
-fprintf(1, 'Progress: 00%%');
-progress = 0;
+raw_data = false;
+if strcmpi('Sequence reads', qset.Type), raw_data = true; end
 
-resources = strcat(qset.Resource, '.mat');
-resource_files = resources;
+resources = qset.Resource;
+resource_files = cell(size(resources));
 
 % Find a handle to the repository where the resources are stored and
 % cache (download) all referred data resources.
@@ -23,8 +23,11 @@ repo_ids = {};
 for k = 1:length(resources)
 	colon = find(resources{k} == ':');
 	if length(colon) ~= 1, error 'Invalid resource identifier.'; end
-	repo_ids{end + 1, 1} = resources{k}(1:colon-1);
-	resource_files{k} = resources{k}(colon+1:end);
+	repo_ids{end+1, 1} = resources{k}(1:colon-1);
+	resource_files{k} = [resources{k}(colon+1:end)];
+	if raw_data == false
+		resource_files{k} = strcat(resource_files{k}, '.mat');
+	end
 end
 
 repo_name = unique(repo_ids);
@@ -41,65 +44,50 @@ for r = 1:length(pipeline_config.Repositories)
 	end
 end
 
-repo.cache(resource_files);
+cached = repo.cache(resource_files);
+progress = Progress;
 
-% Load the first data resource and extend its column vectors into matrices
-% in preparation for loading the other data resources.
-s = fetch_resource(resource_files{1}, repo);
-fields = fieldnames(s);
-
-for k = 1:length(fields)
-	f = getfield(s, fields{k});
-	if isnumeric(f) && size(f, 2) == 1
-		eval(['data.' fields{k} ' = f; data.' fields{k} '(end, N) = 0;']);
-	elseif iscell(f) && size(f, 2) == 1
-		data = setfield(data, fields{k}, cat(2, f, cell(size(f, 1), N-1)));
-	else
-		error('realize() found a field "%s" it cannot handle.', fields{k});
+for d = 1:N
+	if raw_data
+		data.Raw{1, d} = FilePool;
+		data.Raw{1, d}.static(cached{d});
+		progress.update(d/N);
+		continue;      % For raw data we don't need to merge any .mat data.
 	end
-end
-
-if floor(1 / N * 100) > progress
-	progress = floor(1 / N * 100);
-	fprintf(1, '\b\b\b%02d%%', progress);
-end
-
-for r = 2:N
-	s = fetch_resource(resource_files{r}, repo);
-	for k = 1:length(fields)
-		if size(f, 2) == 1
-			% eval() seems to be a million times faster than using subsasgn().
-			eval(['data.' fields{k} '(:, r) = s.' fields{k} ';']);
-		else
-			error('realize() found a field "%s" it cannot handle.', fields{k});
+	
+	s = load(cached{d}); s = s.data;
+	fields = fieldnames(s);
+	
+	if d == 1
+		% Extend the columns of the first resource into matrices
+		% in preparation for loading the other data resources.
+		for k = 1:length(fields)
+			f = getfield(s, fields{k});
+			if isnumeric(f) && size(f, 2) == 1
+				eval(['data.' fields{k} ' = f;' ...
+					  'data.' fields{k} '(end, N) = 0;']);
+			elseif iscell(f) && size(f, 2) == 1
+				data = setfield(data, fields{k}, ...
+					cat(2, f, cell(size(f, 1), N-1)));
+			else
+				error('realize() found a field "%s" it cannot handle.', ...
+					fields{k});
+			end
+		end
+	else
+		for k = 1:length(fields)
+			f = getfield(s, fields{k});
+			if size(f, 2) == 1
+				% eval() is much faster than using subsasgn().
+				eval(['data.' fields{k} '(:, d) = s.' fields{k} ';']);
+			else
+				error('realize() cannot handle field "%s".', fields{k});
+			end
 		end
 	end
 	
-	if floor(r / N * 100) > progress
-		progress = floor(r / N * 100);
-		fprintf(1, '\b\b\b%02d%%', progress);
-	end
+	progress.update(d/N);
 end
 
-fprintf(1, '\n');
-
-data.Meta = qset;
-data.Meta = rmfield(data.Meta, 'Resource');
-return;
-
-
-
-
-
-
-function data = fetch_resource(resource, repo)
-
-data = [];
-if resource(1) == '/'
-	error 'Bad resource URL.';
-end
-
-data = repo.load_cached(resource);
-data = data.data;
-return;
+data.Meta = rmfield(qset, 'Resource');
 

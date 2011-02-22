@@ -82,17 +82,16 @@ for r = 1:length(pipeline_config.Repositories)
 	repo = pipeline_config.Repositories{r};
 	if strcmp(repo.Name, total_repos{1})
 		ds = total_items{1};
-		metadata = repo.load([ds '/metadata.mat']);
+		cached = repo.cache([ds '/metadata.mat']);
+		metadata = load(cached);
+		repo.clear_cache(cached);
 		qset = metadata.metadata;
 		
 		% Check if the dataset is using old style resource URLs.
 		res = qset.Resource{1};
 		if any(res == '/') || any(res == ':')
-			%fprintf(1, ['WARNING: Dataset uses old style resource URLs. ' ...
-			%	'Converting to new style URLs...\n']);
 			qset.Resource = regexprep(qset.Resource, '^.+/(.+?)$', '$1');
 		end
-
 		
 		% Append the repository name to the resource identifiers.
 		qset.Resource = strcat(repo.Name, ':', ds, '/', qset.Resource);

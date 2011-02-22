@@ -84,8 +84,8 @@ if strcmp(data.Meta.Type, 'Microarray probe intensities') || ...
 	merged.Mean = zeros(size(data.Mean, 1), length(uniq_samples));
 	for r = 1:length(replicates)
 		rep = replicates{r};
-		qnorm = quantilenorm(data.Mean(:, rep));
-		merged.Mean(:, r) = median(qnorm, 2);
+		%qnorm = quantilenorm(data.Mean(:, rep));
+		merged.Mean(:, r) = mean(qnorm, 2);
 		progress.update(r / length(replicates));
 	end
 	
