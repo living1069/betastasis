@@ -9,6 +9,8 @@ if isempty(strfind(file, pipeline_config.TempDir))
 end
 
 old_state = recycle('off');
+warning off;
 delete(file);
+warning on;
 recycle(old_state);
 
