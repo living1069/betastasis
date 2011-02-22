@@ -29,19 +29,26 @@ def main():
 			line = sam.readline()
 			if line == '': break
 			
-			m = unmapped_regexp.search(line)
-			if m:
-				sys.stdout.write('>%s\n' % m.group(1))
-				sys.stdout.write('%s\n' % m.group(2))
-				continue
+			tokens = line.split('\t')
+			if tokens[1] != '4':
+				if tokens[0] in read_ids: continue
+				read_ids.add(tokens[0]) 
+				
+			sys.stdout.write('%s\n' % tokens[9])
+				
+			#m = unmapped_regexp.search(line)
+			#if m:
+			#	sys.stdout.write('>%s\n' % m.group(1))
+			#	sys.stdout.write('%s\n' % m.group(2))
+			#	continue
 			
-			m = mapped_regexp.search(line)
-			if m:
-				if m.group(1) in read_ids: continue
-				read_ids.add(m.group(1)) 
-				sys.stdout.write('>%s\n' % m.group(1))
-				sys.stdout.write('%s\n' % m.group(2))
-				continue
+			#m = mapped_regexp.search(line)
+			#if m:
+			#	if m.group(1) in read_ids: continue
+			#	read_ids.add(m.group(1)) 
+			#	sys.stdout.write('>%s\n' % m.group(1))
+			#	sys.stdout.write('%s\n' % m.group(2))
+			#	continue
 		
 		sam.close()
 		
