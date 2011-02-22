@@ -1,7 +1,5 @@
 function [] = reads_for_seed(reads, seed)
 
-threshold = 10;
-
 seed = upper(seed);
 if isempty(regexpi(seed, '[ACGT]+'))
 	error 'Seed must be given as a string of nucleotides.';
@@ -16,28 +14,24 @@ kmers(kmers == '3') = 'T';
 
 seed_ext = [repmat(seed, 4^6, 1) kmers];
 
-
-
 for s = 1:length(reads.Raw)
 	trimmed = trim_reads(filter_query(reads, s), length(seed) + 6);
 	
-	al = align_reads(trimmed, seed_ext, 'MaxMismatches', 0, ...
+	al = align_reads(trimmed, cellstr(seed_ext), 'MaxMismatches', 0, ...
 		'Columns', 'target');
 	
-	num_reads = zeros(size(kmers, 1), 1),
+	num_reads = zeros(size(kmers, 1), 1);
 	targets = str2double(al.Target);
 	
-	for t = 1:length(targets)
+	for t = targets'
 		num_reads(t) = num_reads(t) + 1;
 	end
 	
 	fprintf(1, 'Most prevalent reads for sample %d:\n', s);
 	
-	good = find(num_reads >= threshold);
-	[~, order] = sort(num_reads(good), 'descend');
-	
-	for k = 1:length(order)
-		idx = good(order(k));
+	[~, order] = sort(num_reads, 'descend');
+	for k = 1:10
+		idx = order(k);
 		fprintf(1, '%s|%s: %d reads\n', seed, kmers(idx, :), num_reads(idx));
 	end
 	
