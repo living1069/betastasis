@@ -12,18 +12,21 @@
 %    The alignment step can be customized by providing additional options
 %    arguments; see HELP ALIGN_READS for a full list of available options.
 
+% Author: Matti Annala <matti.annala@tut.fi>
+
 function [] = plot_transcript_reads(reads, transcript_idx, image_prefix, ...
 	varargin)
 	
 global organism;
 
-seq_files = seq_resource_files(reads);
-	
-for k = 1:length(seq_files)
+S = length(reads.Raw);
+
+for k = 1:S
 	tx_seq = organism.Transcripts.Sequence{transcript_idx};
 	
-	al = align_reads(seq_files{k}, {tx_seq}, varargin{:}, ...
-		'AllowAlignments', 1, 'Columns', 'strand,offset,sequence');
+	al = align_reads(filter_query(reads, k), {tx_seq}, varargin{:}, ...
+		'MaxMismatches', 2, 'AllowAlignments', 1, ...
+		'Columns', 'strand,offset,sequence');
 
 	strands = al.Strand;
 	offsets = al.Offset;
@@ -69,10 +72,11 @@ for k = 1:length(seq_files)
 	figure; hold all; xlim([0 length(tx_seq)]); ylim([-9 150]);
 	patch(x, y, 'k');
 	
-	tx_exons = find(organism.Exons.Transcript == transcript_idx);
+	tx_exons = organism.Transcripts.Exons{transcript_idx};
+	exon_pos = organism.Transcripts.ExonPos{transcript_idx};
 	for m = 1:length(tx_exons)
-		left = organism.Exons.Position(tx_exons(m), 1);
-		right = organism.Exons.Position(tx_exons(m), 2);
+		left = exon_pos(m, 1);
+		right = exon_pos(m, 2);
 		fill([left right right left], [-5 -5 -2 -2], [.9 .9 .9]);
 	end
 	
@@ -86,11 +90,8 @@ for k = 1:length(seq_files)
 		fill([cds(1) cds(2) cds(2) cds(1)], [-4 -4 -3 -3], [.5 .5 .5]);
 	end
 	
-	gene_name = '';
-	if isfield(organism.Transcripts, 'Gene')
-		gene_name = [' (' organism.Genes.Name{ ...
-			organism.Transcripts.Gene(transcript_idx)} ')'];
-	end
+	gene_name = [' (' organism.Genes.Name{ ...
+		organism.Transcripts.Gene(transcript_idx)} ')'];
 
 	title(sprintf('Quiver plot of reads for transcript %s%s\nin sample %s', ...
 		organism.Transcripts.Name{transcript_idx}, gene_name, ...

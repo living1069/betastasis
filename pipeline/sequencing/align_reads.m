@@ -47,24 +47,15 @@ for k = 1:2:length(varargin)
 end
 varargin = varargin(~drop_args);
 
-if isempty(aligner)
-	if regexpi(reads, '.*\.sms')
-		alignments = helisphere_align(reads, index, varargin{:});
-	else
-		alignments = bowtie_align2(reads, index, varargin{:});
-	end
-elseif strcmpi(aligner, 'bowtie') && regexpi(reads, '.*\.sms')
-	fprintf(1, 'Converting SMS reads to FASTA...\n');
-	fasta_tmp = ptemp;
-	[status, ~] = unix(sprintf(['%s/tools/helisphere/bin/sms2txt ' ...
-		'--fasta --input_file %s --output_file_prefix %s'], ...
-		ppath, reads, fasta_tmp));
-	if status ~= 0, error 'SMS to FASTA conversion failed.'; end
-	
-	fasta_tmp = [fasta_tmp '.fa'];  % sms2txt appends .fa to the filename
-	alignments = bowtie_align2(fasta_tmp, index, varargin{:});
-	delete(fasta_tmp);
-elseif strcmpi(aligner, 'bowtie')
+if ~isfield(reads, 'Raw') && ~ischar(reads)
+	error 'Reads must be passed as either a dataset or file path.';
+end
+
+if isfield(reads, 'Raw') && length(reads.Raw) ~= 1
+	error 'align_reads() can only be called one sample at a time.';
+end
+
+if isempty(aligner) || strcmpi(aligner, 'bowtie')
 	alignments = bowtie_align2(reads, index, varargin{:});
 elseif strcmpi(aligner, 'helisphere')
 	alignments = helisphere_align(reads, index, varargin{:});
