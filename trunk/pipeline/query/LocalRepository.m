@@ -37,16 +37,12 @@ classdef LocalRepository < handle
 			items = sort(items);
 		end
 		
-		function [] = cache(obj, files)
+		function cached = cache(obj, files)
+			cached = strcat([obj.URL '/'], files);
+		end
+		
+		function [] = clear_cache(obj, cached)
 			return;
-		end
-		
-		function data = load_cached(obj, path)
-			data = load([obj.URL '/' path]);
-		end
-		
-		function data = load(obj, path)
-			data = load([obj.URL '/' path]);
 		end
 	end
 end
