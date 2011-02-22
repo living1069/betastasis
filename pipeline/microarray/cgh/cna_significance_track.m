@@ -34,26 +34,26 @@ if isempty(regexpi(track_file, '.+\.igv'))
 end
 
 cna = cn_seg_expand(segments, cgh_probesets);
-g_score = sum(cna, 2);
 
 orig_N = size(cna, 1);
 valid = all(~isnan(cna), 2);
 cna = cna(valid, :);
 
-fprintf(1, 'Performing permutation tests to find significance thresholds...\n');
-
 N = size(cna, 1);
 S = size(cna, 2);
 
-ptest_num = 100;
+g_score = sum(cna, 2);
 
+fprintf(1, 'Performing permutation tests to find significance thresholds...\n');
+
+ptest_num = 100;
 pscores = zeros(N * ptest_num, 1);
 
 progress = Progress;
 
 for p = 1:ptest_num
 	pscore = zeros(N, 1);
-	for k = 1:size(cna, 2)
+	for k = 1:S
 		pscore = pscore + cna(randperm(N), k);
 	end
 	pos = 1 + (p-1) * N;
@@ -106,12 +106,12 @@ logp(logp == -Inf) = min(logp .* (logp ~= -Inf));
 
 
 % Extend the logp and g_score vectors so that the NaN probes are again included.
-full_logp = nan(orig_N, S);
+full_logp = nan(orig_N, 1);
 full_logp(valid) = logp;
 logp = full_logp;
 
-full_gscore = nan(orig_N, S);
-full_gscore(valid) = gscore;
+full_gscore = nan(orig_N, 1);
+full_gscore(valid) = g_score;
 gscore = full_gscore;
 
 
