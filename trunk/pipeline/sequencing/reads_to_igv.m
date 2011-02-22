@@ -9,7 +9,7 @@
 %
 %    READS_TO_IGV(..., 'Granularity', GR) sets the size of the bins to which
 %    the genome will be divided up when performing run length encoding to
-%    decrease the size of the IGV tracks. Default is 10 bases.
+%    decrease the size of the IGV tracks. Default is 50 bases.
 %    
 %    Alignments against the genome are done allowing a maximum of 2 base
 %    mismatches in the reads. A maximum of 10 alignments are reported for each
@@ -22,7 +22,7 @@ function [] = reads_to_igv(reads, igv_file_prefix, varargin)
 
 global organism;
 
-granularity = 10;
+granularity = 50;
 
 drop_args = false(length(varargin), 1);
 for k = 1:2:length(varargin)
@@ -43,7 +43,8 @@ for seq_file = 1:length(seq_files)
 	fprintf(1, 'Aligning reads to genome...\n');
 	al = align_reads(seq_files{seq_file}, 'genome', ...
 		'Columns', 'target,offset,sequence', ...
-		'MaxMismatches', 2, 'AllowAlignments', 10, varargin{:});
+		'MaxMismatches', 2, 'ReportAlignments', 1, ...
+		'AllowAlignments', 1, varargin{:});
 
 	chromosomes = al.Target;
 	start_pos = int32(al.Offset);

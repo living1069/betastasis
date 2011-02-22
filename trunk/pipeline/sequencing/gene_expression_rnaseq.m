@@ -31,10 +31,6 @@ for k = 1:2:length(varargin)
 			normalization = 'None';
 		elseif strcmpi('rpkm', varargin{k+1})
 			normalization = 'RPKM';
-		elseif strcmpi('quantile', varargin{k+1})
-			normalization = 'Quantile';
-		elseif regexpi(varargin{k+1}, 'rpkm.*quantile')
-			normalization = 'RPKM + Quantile';
 		else
 			error 'Unrecognized normalization option given as a parameter.';
 		end
@@ -44,30 +40,31 @@ for k = 1:2:length(varargin)
 end
 varargin = varargin(~drop_args);
 
-seq_files = seq_resource_files(reads);
+S = length(reads.Raw);
 
 expr = struct;
-expr.Mean = zeros(length(genome.Name), length(seq_files));
+expr.Mean = zeros(length(genome.Name), S);
 
 expr.Meta = struct;
 if isstruct(reads), expr.Meta = reads.Meta; end
 
 expr.Meta.Type = 'Gene expression';
 expr.Meta.Organism = organism.Name;
-expr.Meta.OrganismVersion = organism.Version;
-expr.Meta.Normalization = repmat({ normalization }, length(seq_files), 1);
-expr.Meta.TotalSeqReads = zeros(length(seq_files), 1);
+%expr.Meta.OrganismVersion = organism.Version;
+expr.Meta.Normalization = repmat({ normalization }, S, 1);
+expr.Meta.TotalSeqReads = zeros(S, 1);
 
-for seq_file = 1:length(seq_files)
+
+for s = 1:S
 	if isfield(reads.Meta.Sample, 'ID')
-		sample_id = reads.Meta.Sample.ID{seq_file};
+		sample_id = reads.Meta.Sample.ID{s};
 	else
-		sample_id = reads.Meta.Sample.Filename{seq_file};
+		sample_id = reads.Meta.Sample.Filename{s};
 	end
 	
 	fprintf(1, 'Calculating gene expressions for RNA-seq sample %s...\n', ...
 		sample_id);
-	al = align_reads(seq_files{seq_file}, 'transcripts', ...
+	al = align_reads(filter_query(reads, s), 'transcripts', ...
 		'MaxMismatches', 2, 'AllowAlignments', 20, ...
 		'Columns', 'read,target', varargin{:});
 	
@@ -110,13 +107,7 @@ for seq_file = 1:length(seq_files)
 	transcript_expr = struct('Mean', transcript_expr);
 	gene_expr = gene_expression_from_transcript_expression( ...
 		transcript_expr, 'sum');
-	expr.Mean(:, seq_file) = gene_expr.Mean;
-	expr.Meta.TotalSeqReads(seq_file) = al.TotalReads;
-end
-
-if regexp(normalization, 'Quantile')
-	fprintf(1, ['Performing quantile normalization on gene ' ...
-	            'expression levels...\n']);
-	expr.Mean = quantilenorm(expr.Mean);
+	expr.Mean(:, s) = gene_expr.Mean;
+	expr.Meta.TotalSeqReads(s) = al.TotalReads;
 end
 

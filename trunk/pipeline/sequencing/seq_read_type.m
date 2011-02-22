@@ -1,32 +1,24 @@
 function [color, quality] = seq_read_type(reads)
 
-file = fopen(reads, 'r');
+file = fopen(reads);
 
-quality = -1;
+quality = 0;
 color = -1;
 
 while 1
 	line = fgetl(file);
 	if line == -1, break, end
 	
-	if strcmp('#', line(1)), continue, end
+	if line(1) == '#' || line(1) == '>', continue, end
 	
-	if quality ~= -1
-		if regexpi(line, '^[tcgarykmswbdhvn]+$')
-			color = 0;
-			break;
-		elseif regexpi(line, '^[ACTG][0123\.]+$')
-			color = 1;
-			break;
-		else
-			error 'Read sequences are in an unrecognized format.';
-		end
+	if line(1) == '@', quality = 1; end
+
+	if regexpi(line, '^[tcgarykmswbdhvn]+$')
+		color = 0; break;
+	elseif regexpi(line, '^[ACTG][0123\.]+$')
+		color = 1; break;
 	else
-		if strcmp('@', line(1))
-			quality = 1;
-		elseif strcmp('>', line(1))
-			quality = 0;
-		end
+		error 'Read sequences are in an unrecognized format.';
 	end
 end
 
