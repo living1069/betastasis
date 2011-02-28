@@ -14,8 +14,8 @@ def main():
 	
 	raw = open(sys.argv[1], 'r')
 	tag_length = int(sys.argv[2])
-	5p_tags = open(sys.argv[3], 'w')
-	3p_tags = open(sys.argv[4], 'w')
+	tags_5p = open(sys.argv[3], 'w')
+	tags_3p = open(sys.argv[4], 'w')
 
 	while 1:
 		str = raw.readline()
@@ -27,14 +27,14 @@ def main():
 			color = (str[1] in '0123.')
 		
 		if color:
-			5p_tags.write(str[0:tag_length+1] + '\n')
-			3p_tags.write('T' + str[-tag_length-1:])
+			tags_5p.write(str[0:tag_length+1] + '\n')
+			tags_3p.write('T' + str[-tag_length-1:])
 		else:
-			5p_tags.write(str[0:tag_length] + '\n')
-			3p_tags.write(str[-tag_length:])
+			tags_5p.write(str[0:tag_length] + '\n')
+			tags_3p.write(str[-tag_length:])
 	
-	5p_tags.close()
-	3p_tags.close()
+	tags_5p.close()
+	tags_3p.close()
 
 
 if __name__ == '__main__':
