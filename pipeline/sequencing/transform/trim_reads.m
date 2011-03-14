@@ -1,5 +1,7 @@
 function trimmed = trim_reads(reads, trim_len)
 
+fprintf(1, '-> Trimming reads to a length of %d bases...\n', trim_len);
+
 extracted = extract_reads(reads);
 
 S = length(reads.Raw);
@@ -11,7 +13,7 @@ trimmed.Raw = {};
 for s = 1:S
 	read_files = extracted.Raw{s}.Paths;
 	
-	color = ~isempty(regexpi(reads.Meta.Sample.SequenceType{s}, 'color'));
+	color = ~isempty(regexpi(reads.Meta.Sequence.Space{s}, 'color'));
 	
 	trimmed.Raw{s} = FilePool;
 	
