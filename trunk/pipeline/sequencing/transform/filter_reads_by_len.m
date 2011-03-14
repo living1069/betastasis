@@ -19,28 +19,19 @@ filtered.Meta = reads.Meta;
 filtered.Raw = {};
 
 for s = 1:S
-	read_files = reads.Raw{s}.Paths;
+	read_files = extracted.Raw{s}.Paths;
 	
-	color = 0;
-	if regexpi(reads.Meta.Sample.SequenceType, 'color')
-		color = 1;
-	end
+	color = ~isempty(regexpi(reads.Meta.Sequence.Space{s}, 'color'));
 
 	filtered.Raw{s} = FilePool;
 
 	for f = 1:length(read_files)
+		filtered_file = filtered.Raw{s}.temp(sprintf('%d', f));
+		[status, out] = unix(sprintf(['%s/sources/sequencing/transform/' ...
+			'filter_raw_reads_by_len.py %s %d > %s'], ...
+			ppath, read_files{f}, len_range(1)+1*color, ...
+			len_range(2)+1*color, filtered_file));
+		if status ~= 0, error('trim_reads.py returned an error:\n%s', out); end
 	end
-end
-	
-
-
-[color, quality] = seq_read_type(reads);
-
-[status, output] = unix(sprintf( ...
-	'%s/sources/sequencing/filter_reads_by_len.py %s %d %d > %s', ...
-	ppath, reads, len_range(1) + 3 * color, len_range(2) + 3 * color, ...
-	trimmed_tmp));
-if status ~= 0
-	error('Filtering of reads by length failed:\n%s\n', output);
 end
 
