@@ -31,6 +31,11 @@ dir_skip_patterns = [
         #'^gsc$',
         #'humanhap',
 
+        # Redundant Level_1 data that we're not interested in (as of 3/18/2011)
+        'hg-cgh-244a',
+        'hg-cgh-415k_g4124a',
+        'cgh-1x1m_g4447a',
+
         # These are redundant old-style archives whose contents are also available
         # in unified Level_1 archives.
         'unc.edu_GBM.AgilentG4502A_07_2.\d',
@@ -85,19 +90,23 @@ class DownloadFileThread(threading.Thread):
 	def run(self):
 		#check is isEmpty
 		#while True and (not fileQueue.empty()):
-		while True:    
+		while True:     
 			fileinfo = fileQueue.get()
-			if fileinfo != None: 
-				time.sleep(1)
-				resp, content = self.conn.request(fileinfo.url)
-				if resp['status'] == '200':
-					localFile = open('%s' % (fileinfo.file), 'w')
-					localFile.write(content)
-					localFile.close()
-					print 'Downloaded %s: \n%s' % (time.strftime("%c"), fileinfo.file)
-				else:
-					print 'DownloadFileThread: Error Getting %s  \n Resp: %s' % (fileinfo.url, resp)
-					errorLogFile.write("Error Downloading url " + fileinfo.url + '\n')
+			if fileinfo != None:
+                            print 'Beginning download of file:',fileinfo.file
+                            resp, content = self.conn.request(fileinfo.url)
+                            if resp['status'] == '200':
+                                try:
+                                    localFile = open('%s' % (fileinfo.file), 'w')
+                                    localFile.write(content)
+                                    localFile.close()
+                                    print 'Downloaded %s: \n%s' % (time.strftime("%c"), fileinfo.file)
+                                except IOError:
+                                    print 'DownloadFileThread: IOError opening local file %s' % (fileinfo.file)
+                                    errorLogFile.write("Error Opening local file " + fileinfo.file + '. IOError caught.\n')
+                            else:
+                                print 'DownloadFileThread: Error Getting %s  \n Resp: %s' % (fileinfo.url, resp)
+                                errorLogFile.write("Error Downloading url " + fileinfo.url + '\n')
 			#for i in range(2):
 			#    threadName = 'Dir' + str(i)
 			#    if thread.Thread(threadName).isAlive():	       	         
@@ -131,7 +140,9 @@ class DownloadDirThread(threading.Thread):
             if resp['status'] != '200':
                 print resp
                 print 'HTTP request failed for ' + dwninfo.url
-                return
+                fileQueue.join()
+		self.queue.task_done()
+                continue
             listing = []
             for line in content.splitlines():
                 m = re.match('^\s*<a href=.+?>(.+)</a>.*', line)
@@ -155,7 +166,7 @@ class DownloadDirThread(threading.Thread):
 		    fileQueue.join()	
 		    fileQueue.put(DownloadFile(dwninfo.url + '/' + ffile, ffile_path))
 		    print '++ new resource to fileQueue %s' % (dwninfo.url + '/' + ffile)
-		    continue		
+		    #continue		
                     #if os.path.exists(ffile_path + '.bz2'):
                     #    local_size = ftp_size
                     #elif os.path.exists(ffile_path + '.gz'):
@@ -215,8 +226,8 @@ def file_size(conn, url):
 		resp, content = conn.request(url, 'HEAD', headers={'Accept-Encoding': 'plain'})
 		return int(resp['content-length'])
 	except KeyError:
-		print "Key error on checking remote file content-length " + resp
-		errorLogFile.write("Error getting file size for " + url + '\n')
+		print "Key error on checking remote file content-length " + str(resp.status) + " url: " + url
+		errorLogFile.write("Error getting file size for " + url + " status " + str(resp.status) +  '\n')
 		return -1
 
 def make_path(localpath):
