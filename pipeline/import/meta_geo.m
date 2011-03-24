@@ -19,6 +19,16 @@ if regexp(meta.Sample.Filename{1}, 'GSM\d+')
 			sample_to_row(s) = geo_to_row(accession);
 		end
 	end
+elseif isfield(meta.Sample, 'GeoAccession')
+	for s = 1:length(meta.Sample.GeoAccession)
+		tokens = regexp(meta.Sample.GeoAccession{s}, '(GSM\d+)', 'tokens');
+		if length(tokens) ~= 1, continue, end
+		
+		token = tokens{1}; accession = token{1};
+		if geo_to_row.isKey(accession)
+			sample_to_row(s) = geo_to_row(accession);
+		end
+	end
 else
 	error 'Could not find a link between samples and the GEO series matrix.';
 end
