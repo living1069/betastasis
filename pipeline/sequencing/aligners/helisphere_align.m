@@ -67,18 +67,25 @@ if index(1) ~= '/'
 	index = helisphere_index(index);
 end
 
-fprintf(1, 'Using flags "%s" when invoking Helisphere.\n', flags);
-
 if isempty(output_file)
 	alignments_file = tmp_pool.temp('align.bin');
 else
 	error 'Helisphere output capture not yet supported.';
 end
 
+filtered = tmp_pool.temp('.filtered.sms');
+
 % FIXME: Make the reads.Raw{1}.Paths{1} less magic.
-[status, out] = unix(sprintf(['%s/tools/helisphere/bin/indexDPgenomic %s ' ...
+fprintf(1, '-> Discarding reads shorter than 20 bases...\n');
+[status, out] = unix(sprintf(['%s/tools/helisphere/bin/filterSMS ' ...
+	'--minlen 20 --input_file %s --output_file %s'], ...
+	ppath, reads.Raw{1}.Paths{1}, filtered));
+if status ~= 0, error('filterSMS failed:\n%s\n', out); end
+
+fprintf(1, '-> Invoking Helisphere with flags "%s".\n', flags);
+status = unix(sprintf(['%s/tools/helisphere/bin/indexDPgenomic %s ' ...
 	'--read_file %s --reference_file %s.fa --data_base %s --output_file %s'],...
-	ppath, flags, reads.Raw{1}.Paths{1}, index, index, alignments_file));
+	ppath, flags, filtered, index, index, alignments_file));
 if status ~= 0, error('Helisphere read alignment failed:\n%s\n', out); end
 
 tab_al_tmp = regexprep(alignments_file, '\.bin$', '\.txt')
