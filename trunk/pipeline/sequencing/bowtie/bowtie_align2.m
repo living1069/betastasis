@@ -1,17 +1,17 @@
-function alignments = bowtie_align(reads, index, varargin)
+function [alignments, unaligned] = bowtie_align(reads, index, varargin)
 
 global pipeline_config;
 
 tmp_pool = FilePool;
 
-ignore_pairs = false;
+ignore_pairs = true;
 max_mismatches = 0;
 report_alignments = [];
 allow_alignments = [];
 max_threads = pipeline_config.MaxThreads;
 columns = 'read,strand,target,offset,sequence,quality';
 output_file = '';
-unaligned_file = '';
+unaligned = [];
 
 for k = 1:2:length(varargin)
 	if strcmpi(varargin{k}, 'IgnorePairs')
@@ -49,34 +49,29 @@ for k = 1:2:length(varargin)
 		continue;
 	end
 	
-	if strcmpi(varargin{k}, 'UnalignedFile')
-		unaligned_file = varargin{k+1};
-		continue;
-	end
-	
 	error('Unrecognized option "%s".', varargin{k});
 end
 
-%if isstruct(reads) && isfield(reads.Meta.Sample, 'ID')
-%	sample_id = reads.Meta.Sample.ID{1};
-%else
-%	sample_id = sprintf('sample #%d', r);
-%end
-fprintf(1, 'Aligning sample using Bowtie:\n');
+if nargout == 2
+	unaligned = struct;
+	unaligned.Raw = { FilePool };
+	unaligned.Meta = reads.Meta;
+	unaligned.Meta.Sequence.Paired = { 'Single end' };
+end
+
 fprintf(1, '-> Preparing reads for alignment...\n');
 
 paired = false;
 color = false;
 
 if isstruct(reads)
-	if regexpi(reads.Meta.Sample.SequenceType{1}, 'paired')
+	if regexpi(reads.Meta.Sequence.Paired{1}, 'paired')
 		paired = true;
 	end
-	if regexpi(reads.Meta.Sample.SequenceType{1}, 'color')
+	if regexpi(reads.Meta.Sequence.Space{1}, 'color')
 		color = true;
 	end
 end
-
 
 
 
@@ -124,9 +119,6 @@ if ~isempty(allow_alignments)
 	flags = sprintf('%s -m%d', flags, allow_alignments);
 end
 
-if ~isempty(unaligned_file)
-	flags = sprintf('%s --un %s', flags, unaligned_file);
-end
 
 
 
@@ -184,27 +176,41 @@ elseif paired && ignore_pairs == true
 		error 'Output file not supported with paired reads';
 	end
 	
+	flags_1 = flags;
+	flags_2 = flags;
+	if ~isempty(unaligned)
+		unaligned_tmp = { tmp_pool.temp('unaligned.1'); ...
+		                  tmp_pool.temp('unaligned.2') };
+		flags_1 = sprintf('%s --un %s', flags, unaligned_tmp{1});
+		flags_2 = sprintf('%s --un %s', flags, unaligned_tmp{2});
+	end
+	
 	fprintf(1, '-> Invoking Bowtie with flags "%s"...\n', flags);
 	[status, out] = unix(sprintf('%s/tools/bowtie/bowtie %s %s %s > %s', ...
-		ppath, flags, index_name, read_files{1}, alignments_file));
-	if status ~= 0
-		fprintf(1, '%s', out);
-		error 'Bowtie read alignment failed.';
-	end
+		ppath, flags_1, index_name, read_files{1}, alignments_file));
+	if status ~= 0, error('Bowtie read alignment failed:\n%s', out); end
 	
 	al_first = parse_alignments(alignments_file, out, bcols);
-	al_first.ReadID = strcat(al_first.ReadID, '/1');
+	if isfield(al_first, 'ReadID')
+		al_first.ReadID = strcat(al_first.ReadID, '/1');
+	end
 	
 	fprintf(1, '-> Invoking Bowtie with flags "%s"...\n', flags);
 	[status, out] = unix(sprintf('%s/tools/bowtie/bowtie %s %s %s > %s', ...
-		ppath, flags, index_name, read_files{2}, alignments_file));
-	if status ~= 0
-		fprintf(1, '%s', out);
-		error 'Bowtie read alignment failed.';
-	end
+		ppath, flags_2, index_name, read_files{2}, alignments_file));
+	if status ~= 0, error('Bowtie read alignment failed:\n%s', out); end
 	
 	al_second = parse_alignments(alignments_file, out, bcols);
-	al_second.ReadID = strcat(al_second.ReadID, '/2');
+	if isfield(al_first, 'ReadID')
+		al_second.ReadID = strcat(al_second.ReadID, '/2');
+	end
+	
+	if ~isempty(unaligned)
+		unaligned_cat = unaligned.Raw{1}.temp('unaligned');
+		[status, out] = unix(sprintf('cat %s %s > %s', ...
+			unaligned_tmp{1}, unaligned_tmp{2}, unaligned_cat));
+		if status ~= 0, error('Unaligned read cat() failed:\n%s', out); end
+	end
 	
 	al = struct;
 	fields = fieldnames(al_first);
@@ -213,7 +219,13 @@ elseif paired && ignore_pairs == true
 		eval(sprintf('al.%s = cat(1, al_first.%s, al_second.%s);', ...
 			field, field, field));
 	end
+
 else
+	if ~isempty(unaligned)
+		flags = sprintf('%s --un %s', flags, ...
+			unaligned.Raw{1}.temp('unaligned'));
+	end
+
 	% Single end read alignment.
 	fprintf(1, '-> Invoking Bowtie with flags "%s"...\n', flags);
 	
@@ -263,6 +275,8 @@ if ~isnan(al.TotalReads) && ~isnan(al.AlignedReads)
 	fprintf(1, '-> %d / %d (%.1f%%) reads with at least one alignment\n', ...
 		al.AlignedReads, al.TotalReads, al.AlignedReads / al.TotalReads * 100);
 end
+
+if isempty(bcols), return, end
 
 parse_format = '';
 file_col = 0;
