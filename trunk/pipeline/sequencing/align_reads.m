@@ -20,20 +20,12 @@
 %    mismatches is specified in nucleotide space or colorspace, depending on
 %    the data type used.
 %
-%    ALIGN_READS(..., 'Trim', TRIM_LEN) tells the alignment algorithm to
-%    first trim all reads so that only the first TRIM_LEN nucleotides
-%    (or colors) from the 5' end are aligned.
-%
-%    ALIGN_READS(..., 'LengthFilter', LEN_RANGE) tells the alignment algorithm
-%    to discard all reads outside the range specified by the two element vector
-%    LEN_RANGE.
-%
 %    ALIGN_READS(..., 'MaxThreads', MAX_THR) constrains the alignment algorithm
 %    to use a maximum of MAX_THR processing threads. The default is to use 
 %    pipeline_config.MaxThreads threads. Not all alignment algorithms
 %    support multithreading; for those algorithms this option has no effect.
 
-function alignments = align_reads(reads, index, varargin)
+function [alignments, unaligned] = align_reads(reads, index, varargin)
 
 aligner = '';
 
@@ -47,21 +39,32 @@ for k = 1:2:length(varargin)
 end
 varargin = varargin(~drop_args);
 
-if ~isfield(reads, 'Raw') && ~ischar(reads)
-	error 'Reads must be passed as either a dataset or file path.';
+if ~isfield(reads, 'Raw')
+	error 'Reads must be passed as a dataset.';
 end
-
-if isfield(reads, 'Raw') && length(reads.Raw) ~= 1
+if length(reads.Raw) ~= 1
 	error 'align_reads() can only be called one sample at a time.';
 end
 
-if isempty(aligner) || strcmpi(aligner, 'bowtie')
-	alignments = bowtie_align2(reads, index, varargin{:});
+if isempty(aligner)
+	if regexpi(reads.Meta.Sequence.Format{1}, 'SMS')
+		align = @helisphere_align;
+	else
+		align = @bowtie_align2;
+	end
+elseif strcmpi(aligner, 'bowtie')
+	align = @bowtie_align2;
 elseif strcmpi(aligner, 'helisphere')
-	alignments = helisphere_align(reads, index, varargin{:});
+	align = @helisphere_align;
 elseif strcmpi(aligner, 'gassst')
-	alignments = gassst_align(reads, index, varargin{:});
+	align = @gassst_align;
 else
 	error 'Requested alignment software is not supported.';
+end
+
+if nargout == 2
+	[alignments, unaligned] = align(reads, index, varargin{:});
+elseif nargout == 1
+	alignments = align(reads, index, varargin{:});
 end
 
