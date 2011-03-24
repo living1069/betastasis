@@ -64,36 +64,37 @@ while 1
 		continue;
 	end
 	
-	tokens = regexpi(line, '!Sample_characteristics_ch(\d)\s+"(.+?):', ...
-		'tokens');
+	tokens = regexpi(line, '!Sample_characteristics_ch(\d)\s+"[^"]*:','tokens');
 	if length(tokens) == 1
-		token = tokens{1};
-		channel = token{1};
-		ch = token{2};
+		token = tokens{1}; channel = token{1};
+		G = length(meta.SampleAccession);
 		
-		if regexpi(ch, 'sample.*id'), field = 'SampleID';
-		elseif regexpi(ch, 'tissue'), field = 'Tissue';
-		elseif regexpi(ch, 'disease.*status'), field = 'DiseaseStatus';
-		elseif regexpi(ch, 'tumor.*type'), field = 'TumorType';
-		elseif regexpi(ch, 'pathological.*stage'), field = 'PathologicalStage';
-		elseif regexpi(ch, 'sample.*source'), field = 'SampleSource';
-		else continue; end
-			
 		tokens = regexpi(line, '"(.*?)"', 'tokens');
-		eval(['meta.' field 'Ch' channel ' = cell(length(tokens), 1);']);
+		if length(tokens) ~= G
+			error 'Invalid number of sample description columns.';
+		end
+		
 		for k = 1:length(tokens)
 			token = tokens{k}; token = token{1};
-			t = regexpi(token, [ch ':\s*(.+)'], 'tokens');
-			if length(t) == 1
-				t = t{1}; t = t{1};
-				eval(['meta.' field 'Ch' channel '{k} = t;']);
-			else
+			t = regexpi(token, '(.+?):\s*(.+)', 'tokens');
+			if length(t) ~= 1
 				eval(['meta.' field 'Ch' channel '{k} = ''-'';']);
+				continue;
 			end
+			
+			t = t{1}; key = t{1}; val = t{2};
+			
+			field = valid_field_name(key);
+			field = [field 'Ch' channel];
+			
+			if ~isfield(meta, field)
+				eval(['meta.' field ' = repmat({''-''}, G, 1);']);
+			end
+			eval(['meta.' field '{k} = val;']);
 		end
 		continue;
 	end
-	
+
 	tokens = regexpi(line, '!Sample_label_ch(\d)', 'tokens');
 	if length(tokens) == 1
 		token = tokens{1}; channel = token{1};
@@ -120,7 +121,7 @@ while 1
 		continue;
 	end
 	
-	if regexpi(line, '!Sample_description\s+');
+	if regexpi(line, '!Sample_description\s+"[^"]*:');
 		G = length(meta.SampleAccession);
 		
 		tokens = regexpi(line, '"(.*?)"', 'tokens');
@@ -135,25 +136,25 @@ while 1
 			
 			t = t{1}; key = t{1}; val = t{2};
 			
-			% Convert the description field name to a valid Matlab field name.
-			field = strrep(key, ' ', '_');
-			field = strrep(field, '?', '');
-			field = strrep(field, '/', '_');
-			field = strrep(field, '=', '');
-			field = strrep(field, '#', 'num');
-			field = strrep(field, '(', '');
-			field = strrep(field, ')', '');
-			
-			if length(field) > namelengthmax, continue, end
+			field = valid_field_name(key);
 			
 			if ~isfield(meta, field)
 				eval(['meta.' field ' = repmat({''-''}, G, 1);']);
 			end
 			eval(['meta.' field '{k} = val;']);
 		end
-		
 		continue;
 	end
+	
+	if regexpi(line, '!Sample_description\s+');
+		tokens = regexpi(line, '"(.+?)"', 'tokens');
+		meta.SampleDesc = cell(length(tokens), 1);
+		for k = 1:length(tokens)
+			token = tokens{k}; meta.SampleDesc{k} = token{1};
+		end
+		continue;
+	end
+
 	
 	if regexpi(line, '!series_matrix_table_begin')
 		break;
@@ -162,4 +163,29 @@ while 1
 end
 
 fclose(fid);
+
+
+
+
+function field = valid_field_name(str)
+
+% Convert the description field name to a valid Matlab field name.
+field = strrep(str, ' ', '_');
+field = strrep(field, '/', '_');
+field = strrep(field, '?', '');
+field = strrep(field, '=', '');
+field = strrep(field, '#', 'num');
+field = strrep(field, '(', '');
+field = strrep(field, ')', '');
+
+ws = (field == '_');
+field(find(ws)+1) = upper(field(find(ws)+1));
+field(1) = upper(field(1));
+field = field(~ws);
+
+field = strrep(field, ',', '_');
+
+if length(field) > namelengthmax
+	field = field(1:namelengthmax-3);
+end
 
