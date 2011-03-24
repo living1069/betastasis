@@ -34,25 +34,25 @@ path = [root '/' name];
 metadata = input_data.Meta;
 input_data = rmfield(input_data, 'Meta');
 
-N = 0;
+S = 0;
 fields = fieldnames(input_data);
 for k = 1:length(fields)
 	f = getfield(input_data, fields{k});
 	if (isnumeric(f) || iscell(f)) && numel(f) > 0
-		N = size(f, 2);
+		S = size(f, 2);
 		break;
 	end
 end
 
-if N == 0, error 'Could not determine data set dimensions.'; end
+if S == 0, error 'Could not determine data set dimensions.'; end
 	
-fprintf(1, 'Data set contains %d samples.\n', N);
+fprintf(1, 'Data set contains %d samples.\n', S);
 
-for k = 1:N
+for k = 1:S
 	s = struct;
 	for n = 1:length(fields)
 		f = getfield(input_data, fields{n});
-		if size(f, 2) == N
+		if size(f, 2) == S
 			eval(sprintf('s.%s = f(:, %d);', fields{n}, k));
 		else
 			error('create_dataset() could not handle field "%s".\n', ...
@@ -61,6 +61,6 @@ for k = 1:N
 	end
 	metadata.Resource{k, 1} = create_sample(name, s);
 end
-
+	
 save([path '/metadata.mat'], 'metadata');
 

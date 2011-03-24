@@ -93,7 +93,7 @@ for r = 1:length(pipeline_config.Repositories)
 			qset.Resource = regexprep(qset.Resource, '^.+/(.+?)$', '$1');
 		end
 		
-		% Append the repository name to the resource identifiers.
+		% Append the repository name and dataset to the resource identifiers.
 		qset.Resource = strcat(repo.Name, ':', ds, '/', qset.Resource);
 		break;
 	end
