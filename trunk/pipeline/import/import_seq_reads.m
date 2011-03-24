@@ -11,23 +11,17 @@
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
-function [] = import_seq_reads(dataset, varargin)
+function metadata = import_seq_reads(varargin)
 
 tmp = ptemp;
 
 recursive = false;
-sequence_type = '';
 platform = '';
 paired_end = [];
 
 for k = 1:2:length(varargin)
 	if strcmpi(varargin{k}, 'Platform')
 		platform = varargin{k+1};
-		continue;
-	end
-	
-	if strcmpi(varargin{k}, 'SequenceType')
-		sequence_type = varargin{k+1};
 		continue;
 	end
 	
@@ -45,22 +39,12 @@ for k = 1:2:length(varargin)
 end
 
 reads = struct;
-reads.Sample = struct;
-reads.Sample.Filename = {};
-reads.Sample.SequenceType = {};
-reads.Resource = {};
 reads.Type = 'Sequence reads';
-
-if ~exist([ppath '/datasets'])
-	error 'Cannot find pipeline datasets directory.';
-end
 
 single_files = {};
 paired_files = {};
 
 dirs = {'.'};
-
-ds_dir = [ppath '/datasets/' flatten_str(dataset)];
 
 while ~isempty(dirs)
 	curr_dir = dirs{1};
@@ -83,7 +67,7 @@ while ~isempty(dirs)
 		filename = files(k).name;
 		
 		if isempty(regexpi(filename, ...
-			'\.(fa|fasta|csfasta|csfastq|fastq|fq|raw|sms|sam|bam)'))
+			'\.(fa|fasta|csfasta|csfastq|fastq|fq|raw|sms|sam|bam)$'))
 			continue;   % Not a sequence file.
 		end
 		
@@ -126,6 +110,7 @@ end
 
 
 
+S = 0;   % Number of sequence samples found.
 
 % Now we take all paired end files and add them to our dataset.
 for k = 1:size(paired_files, 1)	
@@ -140,7 +125,7 @@ for k = 1:size(paired_files, 1)
 		error 'Raw reads not supported yet.';
 	elseif regexpi(filename, '\.sms')
 		fprintf(1, 'Found Helicos SMS format reads: %s\n', filename);
-		error 'SMS reads not supported yet.';
+		error 'Paired end SMS reads are not supported yet.';
 	elseif regexpi(filename, '\.sam')
 		fprintf(1, 'Found SAM format alignments: %s\n', filename);
 		error 'SAM reads not supported yet.';
@@ -195,25 +180,28 @@ for k = 1:size(paired_files, 1)
 	
 	[color, ~] = seq_read_type(first_raw);
 	
-	reads.Sample.Filename{end+1, 1} = first;
-	reads.Resource{end+1, 1} = [flatten_str(dataset) '/' gen_uuid() '.gz'];
+	res = strcat(gen_uuid(), { '.1.gz'; '.2.gz' });
+	
+	S = S + 1;
+	reads.Sample.Filename{S, 1} = first;
+	reads.Resource{S, 1} = [res{1} ';' res{2}];
+	reads.Sequence.Format{S, 1} = 'Raw';
+	reads.Sequence.Paired{S, 1} = 'Paired end';
 
 	if color
-		reads.Sample.SequenceType{end+1, 1} = 'Colorspace, paired end';
+		reads.Sequence.Space{S, 1} = 'Colorspace';
 	else
-		reads.Sample.SequenceType{end+1, 1} = 'Nucleotide, paired end';
+		reads.Sequence.Space{S, 1} = 'Nucleotide';
 	end
 	
 	fprintf(1, '-> Storing reads in compressed format...\n');
 	[~, ~] = mkdir(ds_dir);
 	[status, ~] = unix(sprintf('gzip -c %s > %s', first_raw, ...
-		[ppath '/datasets/' reads.Resource{end}(1:end-3) '.1' ...
-		reads.Resource{end}(end-2:end)]));
+		[ds_dir '/' res{1}]));
 	if status, error 'Gzip compression failed.'; end
 	
 	[status, ~] = unix(sprintf('gzip -c %s > %s', second_raw, ...
-		[ppath '/datasets/' reads.Resource{end}(1:end-3) '.2' ...
-		reads.Resource{end}(end-2:end)]));
+		[ds_dir '/' res{2}]));
 	if status, error 'Gzip compression failed.'; end
 
 	if ~strcmp(first_raw, first_extracted)
@@ -244,6 +232,9 @@ for k = 1:length(single_files)
 		filename = filename(1:end-3);
 	end
 	
+	S = S + 1;
+	reads.Sample.Filename{S, 1} = filename;
+	
 	raw_file = [tmp '.raw'];
 	
 	if regexpi(filename, '\.(fa|fasta|csfasta|csfastq|fastq|fq)')
@@ -257,6 +248,9 @@ for k = 1:length(single_files)
 			error('fasta_to_raw.py returned an error:\n%s', out);
 		end
 		
+		[color, ~] = seq_read_type(raw_file);
+		reads.Sequence.Format{S, 1} = 'Raw';
+		
 	elseif regexpi(filename, '\.raw')
 		fprintf(1, 'Found raw reads: %s\n', filename);
 		error 'Raw reads not supported yet.';
@@ -267,11 +261,20 @@ for k = 1:length(single_files)
 		
 	elseif regexpi(filename, '\.sms')
 		fprintf(1, 'Found Helicos SMS format reads: %s\n', filename);
-		error 'SMS reads not supported yet.';
+		
+		reads.Resource{S, 1} = absolutepath(full_path);
+		reads.Sequence.Format{S, 1} = 'SMS';
+		reads.Sequence.Paired{S, 1} = 'Single end';
+		reads.Sequence.Space{S, 1} = 'Nucleotide';
 		
 	elseif regexpi(filename, '\.bam')
 		fprintf(1, 'Found BAM format alignments: %s\n', filename);
-		error 'BAM reads not supported yet.';
+		
+		fprintf(1, '-> Extracting raw reads from BAM file...\n');
+		[status, out] = unix(sprintf( ...
+			[ppath '/sources/sequencing/transform/bam_to_raw.py %s > %s'], ...
+			extracted, raw_file));
+		if status ~= 0, error('samtools view returned an error:\n%s', out); end
 		
 	else
 		error 'Unrecognized file format.';
@@ -281,21 +284,22 @@ for k = 1:length(single_files)
 		safe_delete(extracted);
 	end
 	
-	[color, ~] = seq_read_type(raw_file);
+	continue;
 	
-	reads.Sample.Filename{end+1, 1} = filename;
-	reads.Resource{end+1, 1} = [flatten_str(dataset) '/' gen_uuid() '.gz'];
+	reads.Resource{S, 1} = [gen_uuid() '.gz'];
+	reads.Sequence.Format{S, 1} = 'Raw';
+	reads.Sequence.Paired{S, 1} = 'Single end';
 
 	if color
-		reads.Sample.SequenceType{end+1, 1} = 'Colorspace, single end';
+		reads.Sequence.Space{S, 1} = 'Colorspace';
 	else
-		reads.Sample.SequenceType{end+1, 1} = 'Nucleotide, single end';
+		reads.Sequence.Space{S, 1} = 'Nucleotide';
 	end
 	
 	fprintf(1, '-> Storing reads in compressed format...\n');
 	[~, ~] = mkdir(ds_dir);
 	[status, ~] = unix(sprintf('gzip -c %s > %s', raw_file, ...
-		[ppath '/datasets/' reads.Resource{end}]));
+		[ds_dir '/' reads.Resource{S}]));
 	if status, error 'Gzip compression failed.'; end
 	
 	if ~strcmp(raw_file, extracted)
@@ -303,7 +307,6 @@ for k = 1:length(single_files)
 	end
 end
 
-S = size(paired_files, 1) + length(single_files);
 if S == 0
 	fprintf(1, 'No sequencing samples found.\n');
 	return;
@@ -314,5 +317,4 @@ if ~isempty(platform)
 end
 
 metadata = reads;
-save([ds_dir '/metadata.mat'], 'metadata');
 
