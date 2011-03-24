@@ -72,13 +72,12 @@ for s = 1:S
 	transcripts = al.Target;
 	
 	transcript_expr = zeros(length(transcriptome.Name), 1);
+	transcript_indices = transcript_idx(transcripts);
 
 	fprintf(1, 'Summarizing transcript expression levels...\n');
 	run_ends = [ find(strcmp(read_ids(1:end-1), read_ids(2:end)) == 0); ...
 		length(read_ids) ];
 	run_lengths = diff([0; run_ends]);
-
-	transcript_indices = transcript_idx(transcripts);
 
 	pos = 1;
 	for r = 1:length(run_lengths)
@@ -88,7 +87,7 @@ for s = 1:S
 		end
 		pos = pos + run_lengths(r);
 	end
-
+	
 	if regexp(normalization, 'RPKM')
 		fprintf(1, ['Performing RPKM normalization on transcript ' ...
 		            'expression levels...\n']);
@@ -108,6 +107,6 @@ for s = 1:S
 	gene_expr = gene_expression_from_transcript_expression( ...
 		transcript_expr, 'sum');
 	expr.Mean(:, s) = gene_expr.Mean;
-	expr.Meta.TotalSeqReads(s) = al.TotalReads;
+	expr.Meta.TotalSeqReads(s) = sum(al.TotalReads);
 end
 
