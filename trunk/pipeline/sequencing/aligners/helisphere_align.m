@@ -98,7 +98,7 @@ fid = fopen(tab_al_tmp);
 while 1
 	line = fgetl(fid);
 	if line == -1, error 'Alignment file ended abruptly.'; end
-	if regexp(line, '^Reference_ID.*'), continue, end
+	if regexp(line, '^Reference_ID.*'), break, end
 end
 
 data = textscan(fid, '%s %s %d %d %*d %*d %*f %*d %*d %*d %*d %s %*s %*s');

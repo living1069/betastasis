@@ -11,7 +11,7 @@
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
-function metadata = import_seq_reads(varargin)
+function reads = import_seq_reads(varargin)
 
 tmp = ptemp;
 
@@ -38,8 +38,8 @@ for k = 1:2:length(varargin)
 	error('Unrecognized option "%s".', varargin{k});
 end
 
-reads = struct;
-reads.Type = 'Sequence reads';
+meta = struct;
+meta.Type = 'Sequence reads';
 
 single_files = {};
 paired_files = {};
@@ -183,15 +183,15 @@ for k = 1:size(paired_files, 1)
 	res = strcat(gen_uuid(), { '.1.gz'; '.2.gz' });
 	
 	S = S + 1;
-	reads.Sample.Filename{S, 1} = first;
-	reads.Resource{S, 1} = [res{1} ';' res{2}];
-	reads.Sequence.Format{S, 1} = 'Raw';
-	reads.Sequence.Paired{S, 1} = 'Paired end';
+	meta.Sample.Filename{S, 1} = first;
+	meta.Resource{S, 1} = [res{1} ';' res{2}];
+	meta.Sequence.Format{S, 1} = 'Raw';
+	meta.Sequence.Paired{S, 1} = 'Paired end';
 
 	if color
-		reads.Sequence.Space{S, 1} = 'Colorspace';
+		meta.Sequence.Space{S, 1} = 'Colorspace';
 	else
-		reads.Sequence.Space{S, 1} = 'Nucleotide';
+		meta.Sequence.Space{S, 1} = 'Nucleotide';
 	end
 	
 	fprintf(1, '-> Storing reads in compressed format...\n');
@@ -233,7 +233,7 @@ for k = 1:length(single_files)
 	end
 	
 	S = S + 1;
-	reads.Sample.Filename{S, 1} = filename;
+	meta.Sample.Filename{S, 1} = filename;
 	
 	raw_file = [tmp '.raw'];
 	
@@ -249,7 +249,7 @@ for k = 1:length(single_files)
 		end
 		
 		[color, ~] = seq_read_type(raw_file);
-		reads.Sequence.Format{S, 1} = 'Raw';
+		meta.Sequence.Format{S, 1} = 'Raw';
 		
 	elseif regexpi(filename, '\.raw')
 		fprintf(1, 'Found raw reads: %s\n', filename);
@@ -262,10 +262,10 @@ for k = 1:length(single_files)
 	elseif regexpi(filename, '\.sms')
 		fprintf(1, 'Found Helicos SMS format reads: %s\n', filename);
 		
-		reads.Resource{S, 1} = absolutepath(full_path);
-		reads.Sequence.Format{S, 1} = 'SMS';
-		reads.Sequence.Paired{S, 1} = 'Single end';
-		reads.Sequence.Space{S, 1} = 'Nucleotide';
+		meta.Resource{S, 1} = absolutepath(full_path);
+		meta.Sequence.Format{S, 1} = 'SMS';
+		meta.Sequence.Paired{S, 1} = 'Single end';
+		meta.Sequence.Space{S, 1} = 'Nucleotide';
 		
 	elseif regexpi(filename, '\.bam')
 		fprintf(1, 'Found BAM format alignments: %s\n', filename);
@@ -286,20 +286,20 @@ for k = 1:length(single_files)
 	
 	continue;
 	
-	reads.Resource{S, 1} = [gen_uuid() '.gz'];
-	reads.Sequence.Format{S, 1} = 'Raw';
-	reads.Sequence.Paired{S, 1} = 'Single end';
+	meta.Resource{S, 1} = [gen_uuid() '.gz'];
+	meta.Sequence.Format{S, 1} = 'Raw';
+	meta.Sequence.Paired{S, 1} = 'Single end';
 
 	if color
-		reads.Sequence.Space{S, 1} = 'Colorspace';
+		meta.Sequence.Space{S, 1} = 'Colorspace';
 	else
-		reads.Sequence.Space{S, 1} = 'Nucleotide';
+		meta.Sequence.Space{S, 1} = 'Nucleotide';
 	end
 	
 	fprintf(1, '-> Storing reads in compressed format...\n');
 	[~, ~] = mkdir(ds_dir);
 	[status, ~] = unix(sprintf('gzip -c %s > %s', raw_file, ...
-		[ds_dir '/' reads.Resource{S}]));
+		[ds_dir '/' meta.Resource{S}]));
 	if status, error 'Gzip compression failed.'; end
 	
 	if ~strcmp(raw_file, extracted)
@@ -313,8 +313,8 @@ if S == 0
 end
 
 if ~isempty(platform)
-	reads.Platform = repmat({platform}, S, 1);
+	meta.Platform = repmat({platform}, S, 1);
 end
 
-metadata = reads;
+reads = realize(meta);
 
