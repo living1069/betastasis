@@ -105,23 +105,14 @@ data = textscan(fid, '%s %s %d %d %*d %*d %*f %*d %*d %*d %*d %s %*s %*s');
 fclose(fid);
 
 al = struct;
-if ismember(1, bcols)
-	al.ReadID = data{2};
-elseif ismember(2, bcols)
-	strands = data{5};
-	al.Strand = repmat(' ', length(strands), 1);
-	for k = 1:length(strands), al.Strand(k) = strands{k}; end
-elseif ismember(3, bcols)
-	al.Target = data{1};
-elseif ismember(4, bcols)
-	al.Offset = data{3};
-elseif ismember(5, bcols)
-	error 'Sequence information requested from Helisphere.';
-elseif ismember(6, bcols)
-	error 'Quality information requested from Helisphere.';
-elseif ismember(8, bcols)
-	error 'List of alignment mismatches requested from Helisphere.';
-end
+al.ReadID = data{2};
+
+strands = data{5};
+al.Strand = repmat(' ', length(strands), 1);
+for k = 1:length(strands), al.Strand(k) = strands{k}; end
+	
+al.Target = data{1};
+al.Offset = data{3};
 
 cd(pwd);
 
