@@ -88,17 +88,22 @@ for s = 1:S
 		pos = pos + run_lengths(r);
 	end
 	
-	if regexp(normalization, 'RPKM')
-		fprintf(1, ['Performing RPKM normalization on transcript ' ...
-		            'expression levels...\n']);
-		
-		transcript_kbp = zeros(length(transcriptome.Sequence), 1);
-		for k = 1:length(transcriptome.Sequence)
-			transcript_kbp(k) = length(transcriptome.Sequence{k}) / 1000;
+	if regexpi(normalization, 'RPKM')
+		if ~isnan(al.TotalReads)
+			fprintf(1, ['Performing RPKM normalization on transcript ' ...
+						'expression levels...\n']);
+			
+			transcript_kbp = zeros(length(transcriptome.Sequence), 1);
+			for k = 1:length(transcriptome.Sequence)
+				transcript_kbp(k) = length(transcriptome.Sequence{k}) / 1000;
+			end
+			
+			transcript_expr = transcript_expr ./ transcript_kbp / ...
+				(al.TotalReads / 1e6);
+		else
+			fprintf(1, ['Cannot perform RPKM normalization. No total read ' ...
+				'count information available.\n']);
 		end
-
-		transcript_expr = transcript_expr ./ transcript_kbp / ...
-			(al.TotalReads / 1e6);
 	end
 	
 	fprintf(1, ['Summarizing a gene expression profile from transcript ' ...

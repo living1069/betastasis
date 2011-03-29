@@ -53,6 +53,9 @@ setenv('HELICOS_TMPDIR', pipeline_config.TempDir);
 pwd = cd;
 cd(pipeline_config.TempDir);
 
+al = struct;
+al.TotalReads = NaN;
+
 flags = sprintf('--percent_error %d', 5 * max_mismatches);
 
 if ~isempty(report_alignments) && ~isempty(allow_alignments)
@@ -76,11 +79,22 @@ end
 filtered = tmp_pool.temp('.filtered.sms');
 
 % FIXME: Make the reads.Raw{1}.Paths{1} less magic.
-fprintf(1, '-> Discarding reads shorter than 20 bases...\n');
+fprintf(1, '-> Discarding reads shorter than 24 bases...\n');
 [status, out] = unix(sprintf(['%s/tools/helisphere/bin/filterSMS ' ...
-	'--minlen 20 --input_file %s --output_file %s'], ...
+	'--minlen 24 --input_file %s --output_file %s'], ...
 	ppath, reads.Raw{1}.Paths{1}, filtered));
 if status ~= 0, error('filterSMS failed:\n%s\n', out); end
+
+% Capture the total number of reads from filterSMS output.
+out = strread(out, '%s', 'delimiter', '\n');
+for k = 1:length(out)
+	tokens = regexp(out{k}, '(\d+) -> (\d+)', 'tokens');
+	if length(tokens) == 1
+		token = tokens{1};
+		if isnan(al.TotalReads), al.TotalReads = 0; end
+		al.TotalReads = al.TotalReads + str2double(token{1});
+	end
+end
 
 fprintf(1, '-> Invoking Helisphere with flags "%s".\n', flags);
 status = unix(sprintf(['%s/tools/helisphere/bin/indexDPgenomic %s ' ...
@@ -104,7 +118,8 @@ end
 data = textscan(fid, '%s %s %d %d %*d %*d %*f %*d %*d %*d %*d %s %*s %*s');
 fclose(fid);
 
-al = struct;
+al.TotalReads = NaN;
+
 al.ReadID = data{2};
 
 strands = data{5};
