@@ -1,0 +1,56 @@
+*{margin:0; padding:0; }
+body { font: 0.9em Sans-Serif; color: #444; background: white; line-height: 1.3em; min-width: 900px; }
+a { text-decoration: none; color: #088; }
+p  { margin: 10px 0 4px; }
+
+#header { height: 60px; width:100%; background: #080808 url(../images/bg.jpg) no-repeat center top; }
+
+#logo { float: left; margin: 20px 20px 20px 20px; letter-spacing: .2em; font-size: 1.9em; }
+#logo a { color: #eee; }
+
+h1 { letter-spacing: -0.04em; font-size: 1.8em; text-shadow: 1px 1px 1px #000; }
+h2 { font-size: 1.4em; margin: 0 0 20px; color: #088; }
+h3 { font-size: 1.2em; margin: 15px 0 3px 0; }
+h3 a { color: black; }
+
+#menu { clear: both; padding: 13px 0 0; margin: 0 0 0 20px; }
+#menu li { display: inline; font-size: 1.2em; }
+#menu li a { float: left; padding: 0 22px 0 0; margin: 0 22px 0 0; color: #ddd; border-right: 1px solid #505052; }
+#menu li.last a { border: 0; padding: 0; }
+#menu li a:hover { color: #fff; }
+#menu li a.current { font-weight: bold; color: #fff; }
+
+#main { float: left; width: 650px; margin: 20px; }
+ul { margin: 0 0 10px 20px; }
+
+#sidebar { position:absolute; left:700px; top:80px; }
+
+.sidebox { width: 240px; background: white; padding: 0px 11px 11px 11px; margin: 20px 0px 10px 0px; border: 1px solid #aaa; }
+	
+#footer { clear: both; height: 120px; padding: 20px 0; color: #888; border-top: 1px dotted #ccc; }
+#footer ul { float: left; width: 140px; }
+#footer ul li { padding: 0 0 3px; }
+#footer p { float: right; width: 400px; text-align: right; }
+
+.ui-button-text { font-size: 12px; }
+.ui-menu-item { font-size: 12px; }
+
+th { font-size: 80%; font-weight: bold; padding: .3em 1em; text-align: center; }
+td { font-size: 80%; padding: .3em 1em; text-align: center; }
+
+li.nested { margin-left: 20px; }
+
+.tooltip_label {
+    float: left;
+    display: block;
+    margin-right: 5px;
+}
+
+.tooltip_field {
+    float: right;
+    display: block;
+    width: 100%;
+    overflow: auto;
+    margin: 5px 0px;
+}
+ 
