@@ -1,10 +1,10 @@
 
 % PLOT_TRANSCRIPT_READS   Draw a quiver plot of alignments for an RNA transcript
 % 
-%    PLOT_TRANSCRIPT_READS(READS, TX_IDX, IMAGE_PREFIX, ...) aligns the
+%    PLOT_TRANSCRIPT_READS(READS, TX, IMAGE_PREFIX, ...) aligns the
 %    sequencing samples READS against the sequence of the RNA transcript
-%    TX_IDX, where TX_IDX is a transcript index retrieved using
-%    TRANSCRIPT_IDX(). The argument IMAGE_PREFIX is used to choose a filename
+%    TX, where TX is a transcript name (e.g. 'NM_005560') or index into 
+%    organism.Transcripts. IMAGE_PREFIX is used for choosing a filename
 %    for the PDF alignment plots that the function produces. The full filename
 %    for the PDF files will be of the form IMAGE_PREFIX_1.pdf, where the number
 %    at the end is the sample index in READS.
@@ -14,15 +14,21 @@
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
-function [] = plot_transcript_reads(reads, transcript_idx, image_prefix, ...
+function [] = plot_transcript_reads(reads, transcript, image_prefix, ...
 	varargin)
 	
 global organism;
 
+if ischar(transcript)
+	tx_idx = transcript_idx(transcript);
+elseif isnumeric(transcript)
+	tx_idx = transcript;
+end
+
 S = length(reads.Raw);
 
 for k = 1:S
-	tx_seq = organism.Transcripts.Sequence{transcript_idx};
+	tx_seq = organism.Transcripts.Sequence{tx_idx};
 	
 	al = align_reads(filter_query(reads, k), {tx_seq}, varargin{:}, ...
 		'MaxMismatches', 2, 'AllowAlignments', 1, ...
@@ -72,8 +78,8 @@ for k = 1:S
 	figure; hold all; xlim([0 length(tx_seq)]); ylim([-9 150]);
 	patch(x, y, 'k');
 	
-	tx_exons = organism.Transcripts.Exons{transcript_idx};
-	exon_pos = organism.Transcripts.ExonPos{transcript_idx};
+	tx_exons = organism.Transcripts.Exons{tx_idx};
+	exon_pos = organism.Transcripts.ExonPos{tx_idx};
 	for m = 1:length(tx_exons)
 		left = exon_pos(m, 1);
 		right = exon_pos(m, 2);
@@ -81,20 +87,19 @@ for k = 1:S
 	end
 	
 	if isempty(tx_exons)
-		fill([0 length(tx_seq) length(tx_seq) 0], [-5 -5 -2 -2], ...
-			[.9 .9 .9]);
+		fill([0 length(tx_seq) length(tx_seq) 0], [-5 -5 -2 -2], [.9 .9 .9]);
 	end
 	
-	cds = organism.Transcripts.CDS(transcript_idx, :);
+	cds = organism.Transcripts.CDS(tx_idx, :);
 	if ~any(isnan(cds))
 		fill([cds(1) cds(2) cds(2) cds(1)], [-4 -4 -3 -3], [.5 .5 .5]);
 	end
 	
 	gene_name = [' (' organism.Genes.Name{ ...
-		organism.Transcripts.Gene(transcript_idx)} ')'];
+		organism.Transcripts.Gene(tx_idx)} ')'];
 
 	title(sprintf('Quiver plot of reads for transcript %s%s\nin sample %s', ...
-		organism.Transcripts.Name{transcript_idx}, gene_name, ...
+		organism.Transcripts.Name{tx_idx}, gene_name, ...
 		reads.Meta.Sample.ID{k}), 'Interpreter', 'none');
 	xlabel('Read offset in transcript sequence');
 	ylabel('Number of overlapping reads');
