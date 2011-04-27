@@ -30,8 +30,6 @@ for k = 1:2:length(varargin)
 	end
 	
 	if strcmpi(varargin{k}, 'AllowAlignments')
-		fprintf(1, ['WARNING: AllowAlignments option not supported ' ...
-			'by Helisphere aligner.\n']);
 		allow_alignments = varargin{k+1};
 		continue;
 	end
@@ -58,16 +56,31 @@ al.TotalReads = NaN;
 
 flags = sprintf('--percent_error %d', 5 * max_mismatches);
 
-if ~isempty(report_alignments) && ~isempty(allow_alignments)
-	fprintf(1, ['WARNING: Specified AllowAlignments and ReportAlignments. ' ...
-		'Using only the AllowAlignments option.\n']);
-	report_alignments = [];
+if ~isempty(report_alignments) && ~isempty(allow_alignments) && ...
+	report_alignments < allow_alignments
+	fprintf(1, ['WARNING: ReportAlignments is higher than AllowAlignments.\n']);
+	report_alignments = allow_alignments;
 end
 
-% If the index name is specified as a relative path, prefix it with the
-% pipeline directory that holds all Helisphere indices.
-if index(1) ~= '/'
-	index = helisphere_index(index);
+% Determine the type of index that the user wishes to align against.
+if ischar(index)
+	% If the index name is specified as a relative path, prefix it with the
+	% pipeline directory that holds all Bowtie indices.
+	if index(1) ~= '/'
+		index = helisphere_index(index);
+	else
+		error 'Invalid Helisphere index.';
+	end
+else
+	tmp_root = ptemp;
+	fasta_tmp = [tmp_root '.fa'];
+	write_seq_fasta(index, fasta_tmp);
+	
+	index = tmp_root;
+
+	[status, ~] = unix(sprintf(['%s/tools/helisphere/bin/preprocessDB ' ...
+		'--reference_file %s --out_prefix %s'], ppath, fasta_tmp, index));
+	if status ~= 0, error 'Helisphere index construction failed.'; end
 end
 
 if isempty(output_file)
@@ -100,7 +113,15 @@ fprintf(1, '-> Invoking Helisphere with flags "%s".\n', flags);
 status = unix(sprintf(['%s/tools/helisphere/bin/indexDPgenomic %s ' ...
 	'--read_file %s --reference_file %s.fa --data_base %s --output_file %s'],...
 	ppath, flags, filtered, index, index, alignments_file));
-if status ~= 0, error('Helisphere read alignment failed:\n%s\n', out); end
+if status ~= 0, error('indexDPgenomic failed:\n%s\n', out); end
+
+if ~isempty(allow_alignments)
+	fprintf(1, '-> Discarding reads with too many alignments.\n');
+	status = unix(sprintf(['%s/tools/helisphere/bin/filterAlign %s ' ...
+		'--max_align %d --input_file %s --output_file %s'],...
+		ppath, allow_alignments, alignments_file, alignments_file));
+	if status ~= 0, error('filterAlign failed:\n%s\n', out); end
+end
 
 tab_al_tmp = regexprep(alignments_file, '\.bin$', '\.txt')
 
@@ -117,6 +138,8 @@ end
 
 data = textscan(fid, '%s %s %d %d %*d %*d %*f %*d %*d %*d %*d %s %*s %*s');
 fclose(fid);
+
+delete(tab_al_tmp);
 
 al.TotalReads = NaN;
 
