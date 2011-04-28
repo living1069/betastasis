@@ -31,8 +31,7 @@ for k = 1:S
 	tx_seq = organism.Transcripts.Sequence{tx_idx};
 	
 	al = align_reads(filter_query(reads, k), {tx_seq}, varargin{:}, ...
-		'MaxMismatches', 2, 'AllowAlignments', 1, ...
-		'Columns', 'strand,offset,sequence');
+		'MaxMismatches', 2, 'Columns', 'strand,offset,sequence');
 
 	strands = al.Strand;
 	offsets = al.Offset;
