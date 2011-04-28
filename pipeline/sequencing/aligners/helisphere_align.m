@@ -136,7 +136,7 @@ while 1
 	if regexp(line, '^Reference_ID.*'), break, end
 end
 
-data = textscan(fid, '%s %s %d %d %*d %*d %*f %*d %*d %*d %*d %s %*s %*s');
+data = textscan(fid, '%s %s %d %d %*d %*d %*f %*d %*d %*d %*d %s %*s %s');
 fclose(fid);
 
 delete(tab_al_tmp);
@@ -151,6 +151,10 @@ for k = 1:length(strands), al.Strand(k) = strands{k}; end
 	
 al.Target = data{1};
 al.Offset = data{3};
+
+% FIXME: We should probably differentiate between the read sequence and
+% reference sequence.
+al.Sequence = strrep(data{6}, '-', '');
 
 cd(pwd);
 
