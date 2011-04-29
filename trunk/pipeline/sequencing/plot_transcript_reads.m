@@ -96,10 +96,16 @@ for k = 1:S
 	
 	gene_name = [' (' organism.Genes.Name{ ...
 		organism.Transcripts.Gene(tx_idx)} ')'];
+		
+	if isfield(reads.Meta.Sample, 'ID')
+		sample_id = reads.Meta.Sample.ID{k};
+	else
+		sample_id = reads.Meta.Sample.Filename{k};
+	end
 
 	title(sprintf('Quiver plot of reads for transcript %s%s\nin sample %s', ...
-		organism.Transcripts.Name{tx_idx}, gene_name, ...
-		reads.Meta.Sample.ID{k}), 'Interpreter', 'none');
+		organism.Transcripts.Name{tx_idx}, gene_name, sample_id), ...
+		'Interpreter', 'none');
 	xlabel('Read offset in transcript sequence');
 	ylabel('Number of overlapping reads');
 	saveas(gcf, [image_prefix '_quiver_' num2str(k) '.pdf']);
