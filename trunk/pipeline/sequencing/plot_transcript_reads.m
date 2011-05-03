@@ -27,15 +27,38 @@ end
 
 S = length(reads.Raw);
 
-for k = 1:S
-	tx_seq = organism.Transcripts.Sequence{tx_idx};
-	
-	al = align_reads(filter_query(reads, k), {tx_seq}, varargin{:}, ...
-		'MaxMismatches', 2, 'Columns', 'strand,offset,sequence');
+if isfield(reads.Meta.Sample, 'ID')
+	[~, uniq_samples] = unique(reads.Meta.Sample.ID);
+else
+	uniq_samples = 1:S;
+end
 
-	strands = al.Strand;
-	offsets = al.Offset;
-	sequences = al.Sequence;
+tx_seq = organism.Transcripts.Sequence{tx_idx};
+
+% We iterate through the samples first, and then we iterate through their
+% technical replicates.
+for s = 1:length(uniq_samples)
+	if isfield(reads.Meta.Sample, 'ID')
+		fprintf(1, 'Plotting reads for sample %s...\n',reads.Meta.Sample.ID{s});
+		replicates = find(strcmp(reads.Meta.Sample.ID{uniq_samples(s)}, ...
+			reads.Meta.Sample.ID));
+	else
+		replicates = s;
+	end
+	
+	strands = '';
+	offsets = [];
+	sequences = {};
+	
+	for r = replicates'
+		fprintf(1, '-> Channel %s...\n', reads.Meta.Sample.Filename{r});
+		al = align_reads(filter_query(reads, r), {tx_seq}, varargin{:}, ...
+			'MaxMismatches', 2, 'Columns', 'strand,offset,sequence');
+
+		strands = cat(1, strands, al.Strand);
+		offsets = cat(1, offsets, al.Offset);
+		sequences = cat(1, sequences, al.Sequence);
+	end
 	
 	read_count_dist = zeros(1, length(tx_seq));
 	x = zeros(7, length(offsets));
@@ -62,17 +85,17 @@ for k = 1:S
     end
 	
 %	figure; bar(1:length(read_count_dist), read_count_dist);
-%	title(sprintf('Read distribution in sample %s', reads.Meta.Sample.ID{k}),...
+%	title(sprintf('Read distribution in sample %s', reads.Meta.Sample.ID{s}),...
 %		'Interpreter', 'none');
 %	xlabel('Feature sequence offset'); ylabel('Number of overlapping reads');
-%	saveas(gcf, [image_prefix '_' num2str(k) '.pdf']);
+%	saveas(gcf, [image_prefix '_' num2str(s) '.pdf']);
 	
 %	figure; bar(1:length(read_count_dist), ...
 %		conv(read_count_dist, ones(1, 500) / 500, 'same'));
 %	title(sprintf('Smoothed read distribution in sample %s', ...
-%		reads.Meta.Sample.ID{k}));
+%		reads.Meta.Sample.ID{s}));
 %	xlabel('Feature sequence offset'); ylabel('Number of overlapping reads');
-%	saveas(gcf, [image_prefix '_smoothed_' num2str(k) '.pdf']);
+%	saveas(gcf, [image_prefix '_smoothed_' num2str(s) '.pdf']);
 	
 	figure; hold all; xlim([0 length(tx_seq)]); ylim([-9 150]);
 	patch(x, y, 'k');
@@ -98,9 +121,9 @@ for k = 1:S
 		organism.Transcripts.Gene(tx_idx)} ')'];
 		
 	if isfield(reads.Meta.Sample, 'ID')
-		sample_id = reads.Meta.Sample.ID{k};
+		sample_id = reads.Meta.Sample.ID{s};
 	else
-		sample_id = reads.Meta.Sample.Filename{k};
+		sample_id = reads.Meta.Sample.Filename{s};
 	end
 
 	title(sprintf('Quiver plot of reads for transcript %s%s\nin sample %s', ...
@@ -108,6 +131,6 @@ for k = 1:S
 		'Interpreter', 'none');
 	xlabel('Read offset in transcript sequence');
 	ylabel('Number of overlapping reads');
-	saveas(gcf, [image_prefix '_quiver_' num2str(k) '.pdf']);
+	saveas(gcf, [image_prefix '_' num2str(s) '.pdf']);
 end
 
