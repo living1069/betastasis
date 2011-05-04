@@ -14,7 +14,7 @@
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
-function [] = plot_transcript_reads(reads, transcript, image_prefix, ...
+function stats = plot_transcript_reads(reads, transcript, image_prefix, ...
 	varargin)
 	
 global organism;
@@ -35,6 +35,9 @@ end
 
 tx_seq = organism.Transcripts.Sequence{tx_idx};
 
+stats.TotalReads = zeros(1, length(uniq_samples));
+stats.AlignedReads = zeros(1, length(uniq_samples));
+
 % We iterate through the samples first, and then we iterate through their
 % technical replicates.
 for s = 1:length(uniq_samples)
@@ -52,12 +55,18 @@ for s = 1:length(uniq_samples)
 	
 	for r = replicates'
 		fprintf(1, '-> Channel %s...\n', reads.Meta.Sample.Filename{r});
-		al = align_reads(filter_query(reads, r), {tx_seq}, varargin{:}, ...
-			'MaxMismatches', 2, 'Columns', 'strand,offset,sequence');
+		al = align_reads(filter_query(reads, r), 'transcripts', ...
+			'MaxMismatches', 2, 'AllowAlignments', 1, ...
+			'Columns', 'target,strand,offset,sequence', varargin{:});
+			
+		stats.TotalReads(s) = stats.TotalReads(s) + al.TotalReads;
+		stats.AlignedReads(s) = stats.AlignedReads(s) + al.AlignedReads;
 
-		strands = cat(1, strands, al.Strand);
-		offsets = cat(1, offsets, al.Offset);
-		sequences = cat(1, sequences, al.Sequence);
+		keep = strcmp(organism.Transcripts.Name{tx_idx}, al.Target);
+		
+		strands = cat(1, strands, al.Strand(keep));
+		offsets = cat(1, offsets, al.Offset(keep));
+		sequences = cat(1, sequences, al.Sequence(keep));
 	end
 	
 	read_count_dist = zeros(1, length(tx_seq));
