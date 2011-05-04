@@ -53,6 +53,8 @@ cd(pipeline_config.TempDir);
 
 al = struct;
 al.TotalReads = NaN;
+al.FilteredReads = NaN;
+al.AlignedReads = NaN;
 
 flags = sprintf('--percent_error %d', 5 * max_mismatches);
 
@@ -104,20 +106,28 @@ for k = 1:length(out)
 	tokens = regexp(out{k}, '(\d+) -> (\d+)', 'tokens');
 	if length(tokens) == 1
 		token = tokens{1};
+		
 		if isnan(al.TotalReads), al.TotalReads = 0; end
 		al.TotalReads = al.TotalReads + str2double(token{1});
+		
+		if isnan(al.FilteredReads), al.FilteredReads = 0; end
+		al.FilteredReads = al.FilteredReads + str2double(token{2});
+		
+		fprintf(1, '-> %d / %d (%.1f%%) reads remain after filtering.\n', ...
+			al.FilteredReads, al.TotalReads, ...
+			al.FilteredReads / al.TotalReads * 100);
 	end
 end
 
 fprintf(1, '-> Invoking Helisphere with flags "%s".\n', flags);
-status = unix(sprintf(['%s/tools/helisphere/bin/indexDPgenomic %s ' ...
+[status, out] = unix(sprintf(['%s/tools/helisphere/bin/indexDPgenomic %s ' ...
 	'--read_file %s --reference_file %s.fa --data_base %s --output_file %s'],...
 	ppath, flags, filtered, index, index, alignments_file));
 if status ~= 0, error('indexDPgenomic failed:\n%s\n', out); end
 
 if ~isempty(allow_alignments)
 	fprintf(1, '-> Discarding reads with too many alignments.\n');
-	status = unix(sprintf(['%s/tools/helisphere/bin/filterAlign ' ...
+	[status, out] = unix(sprintf(['%s/tools/helisphere/bin/filterAlign ' ...
 		'--max_align %d --input_file %s --output_file %s'],...
 		ppath, allow_alignments, alignments_file, alignments_file));
 	if status ~= 0, error('filterAlign failed:\n%s\n', out); end
@@ -141,9 +151,10 @@ fclose(fid);
 
 delete(tab_al_tmp);
 
-al.TotalReads = NaN;
-
 al.ReadID = data{2};
+al.AlignedReads = length(unique(al.ReadID));  % FIXME: Slow?
+fprintf(1, '-> Found alignment for %d (%.1f%%) reads.\n', ...
+	al.AlignedReads, al.AlignedReads / al.TotalReads * 100);
 
 strands = data{5};
 al.Strand = repmat(' ', length(strands), 1);
