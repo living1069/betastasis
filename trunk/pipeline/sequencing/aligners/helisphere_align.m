@@ -123,7 +123,7 @@ if ~isempty(allow_alignments)
 	if status ~= 0, error('filterAlign failed:\n%s\n', out); end
 end
 
-tab_al_tmp = regexprep(alignments_file, '\.bin$', '\.txt')
+tab_al_tmp = regexprep(alignments_file, '\.bin$', '\.txt');
 
 [status, out] = unix(sprintf(['%s/tools/helisphere/bin/align2txt ' ...
 	'--full_reference --tab --input_file %s'], ppath, alignments_file));
