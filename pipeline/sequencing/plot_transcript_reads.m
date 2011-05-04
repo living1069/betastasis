@@ -39,7 +39,7 @@ tx_seq = organism.Transcripts.Sequence{tx_idx};
 % technical replicates.
 for s = 1:length(uniq_samples)
 	if isfield(reads.Meta.Sample, 'ID')
-		fprintf(1, 'Plotting reads for sample %s...\n',reads.Meta.Sample.ID{s});
+		fprintf(1, 'Plotting reads for sample %s...\n', uniq_samples{s});
 		replicates = find(strcmp(reads.Meta.Sample.ID{uniq_samples(s)}, ...
 			reads.Meta.Sample.ID));
 	else
