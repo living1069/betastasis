@@ -42,9 +42,14 @@ stats.AlignedReads = zeros(1, length(uniq_samples));
 % technical replicates.
 for s = 1:length(uniq_samples)
 	if isfield(reads.Meta.Sample, 'ID')
-		fprintf(1, 'Plotting reads for sample %s...\n', uniq_samples{s});
-		replicates = find(strcmp(reads.Meta.Sample.ID{uniq_samples(s)}, ...
-			reads.Meta.Sample.ID));
+		sample_id = reads.Meta.Sample.ID{uniq_samples(s)};
+	else
+		sample_id = reads.Meta.Sample.Filename{s};
+	end
+	
+	if isfield(reads.Meta.Sample, 'ID')
+		fprintf(1, 'Plotting reads for sample %s...\n', sample_id);
+		replicates = find(strcmp(sample_id, reads.Meta.Sample.ID));
 	else
 		replicates = s;
 	end
@@ -129,12 +134,6 @@ for s = 1:length(uniq_samples)
 	gene_name = [' (' organism.Genes.Name{ ...
 		organism.Transcripts.Gene(tx_idx)} ')'];
 		
-	if isfield(reads.Meta.Sample, 'ID')
-		sample_id = reads.Meta.Sample.ID{s};
-	else
-		sample_id = reads.Meta.Sample.Filename{s};
-	end
-
 	title(sprintf('Quiver plot of reads for transcript %s%s\nin sample %s', ...
 		organism.Transcripts.Name{tx_idx}, gene_name, sample_id), ...
 		'Interpreter', 'none');
