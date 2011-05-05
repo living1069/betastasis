@@ -133,6 +133,8 @@ if ~isempty(allow_alignments)
 		'--max_align %d --input_file %s --output_file %s'],...
 		ppath, allow_alignments, alignments_file, filtered_alignments_file));
 	if status ~= 0, error('filterAlign failed:\n%s\n', out); end
+else
+	filtered_alignments_file = alignments_file;
 end
 
 tab_al_tmp = regexprep(filtered_alignments_file, '\.bin$', '\.txt');
