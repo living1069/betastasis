@@ -153,7 +153,7 @@ delete(tab_al_tmp);
 
 al.ReadID = data{2};
 al.AlignedReads = length(unique(al.ReadID));  % FIXME: Slow?
-fprintf(1, '-> Found alignment for %d (%.1f%%) reads.\n', ...
+fprintf(1, '-> Found alignments for %d (%.1f%%) reads.\n', ...
 	al.AlignedReads, al.AlignedReads / al.TotalReads * 100);
 
 strands = data{5};
