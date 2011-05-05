@@ -156,7 +156,7 @@ for s = 1:S
 
 
 	% Render the quiver plot.
-	figure; hold all; xlim([0 length(tx_seq)]); ylim([-9 100]);
+	figure; hold all; xlim([0 length(tx_seq)]); ylim([-9 150]);
 	patch(x, y, 'k');
 	
 	exon_pos = organism.Transcripts.ExonPos{tx_idx};
