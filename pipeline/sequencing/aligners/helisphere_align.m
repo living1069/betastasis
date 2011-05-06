@@ -124,10 +124,13 @@ fprintf(1, '-> Invoking Helisphere with flags "%s".\n', flags);
 	'--read_file %s --reference_file %s.fa --data_base %s --output_file %s'],...
 	ppath, flags, filtered, index, index, alignments_file));
 if status ~= 0, error('indexDPgenomic failed:\n%s\n', out); end
-
-filtered_alignments_file = strrep(alignments_file, '.bin', '.filtered.bin');
 	
+alignments_file
+
 if ~isempty(allow_alignments)
+	filtered_alignments_file = strrep(alignments_file, '.bin', '.filtered.bin');
+	allow_alignments
+	
 	fprintf(1, '-> Discarding reads with too many alignments.\n');
 	[status, out] = unix(sprintf(['%s/tools/helisphere/bin/filterAlign ' ...
 		'--max_align %d --input_file %s --output_file %s'],...
@@ -137,11 +140,15 @@ else
 	filtered_alignments_file = alignments_file;
 end
 
+filtered_alignments_file
+
 tab_al_tmp = regexprep(filtered_alignments_file, '\.bin$', '\.txt');
 
 [status, out] = unix(sprintf(['%s/tools/helisphere/bin/align2txt ' ...
 	'--full_reference --tab --input_file %s'], ppath, alignments_file));
 if status ~= 0, error('align2txt failed:\n%s\n', out); end
+	
+tab_al_tmp
 
 fid = fopen(tab_al_tmp);
 while 1
@@ -153,9 +160,9 @@ end
 data = textscan(fid, '%s %s %d %d %*d %*d %*f %*d %*d %*d %*d %s %*s %s');
 fclose(fid);
 
-safe_delete(alignments_file);
-safe_delete(filtered_alignments_file);
-safe_delete(tab_al_tmp);
+%safe_delete(alignments_file);
+%safe_delete(filtered_alignments_file);
+%safe_delete(tab_al_tmp);
 
 al.ReadID = data{2};
 al.AlignedReads = length(unique(al.ReadID));  % FIXME: Slow?
