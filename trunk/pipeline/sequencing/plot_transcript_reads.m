@@ -27,6 +27,7 @@ elseif isnumeric(transcript)
 end
 
 tx_exons = organism.Transcripts.Exons{tx_idx};
+tx_exon_pos = organism.Transcripts.ExonPos{tx_idx};
 
 if isfield(reads.Meta.Sample, 'ID')
 	[~, uniq_samples] = unique(reads.Meta.Sample.ID);
@@ -91,14 +92,14 @@ for s = 1:S
 	% Calculate the number of reads aligned to exons and exon junctions.
 	[ordered_offsets, order] = sort(offsets);
 	ex = 1;
-	ex_pos = exons.Position(tx_exons(ex), :);
+	ex_pos = tx_exon_pos(ex, :);
 	for m = 1:length(ordered_offsets)
 		while 1
 			read_pos = [ordered_offsets(m), ...
 				ordered_offsets(m) + length(sequences{order(m)}) - 1];
 			if read_pos(1) > ex_pos(2)
 				ex = ex + 1;
-				ex_pos = exons.Position(tx_exons(ex), :);
+				ex_pos = tx_exon_pos(ex, :);
 			elseif read_pos(2) > ex_pos(2)
 				stats.JunctionReads(ex, s) = stats.JunctionReads(ex, s) + 1;
 				break;
