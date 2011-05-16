@@ -50,7 +50,7 @@ for t = 1:length(txs)
 	if ~any(isnan(cds))
 		tx_seq = upper(organism.Transcripts.Sequence{tx});
 		fprintf(1, '- CDS [%d..%d], %s..%s\n', cds(1), cds(2), ...
-			tx_seq(cds(1):cds(1)+2), tx_seq(cds(2):cds(2)+2));
+			tx_seq(cds(1):cds(1)+2), tx_seq(cds(2)-2:cds(2)));
 	end
 	
 	for x = 1:length(tx_exons)
