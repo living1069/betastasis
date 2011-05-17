@@ -1,7 +1,9 @@
-function seq = gene_region(id, region, window)
+function seq = tx_region(id, region, window)
 
 global organism;
 genes = organism.Genes;
+transcripts = organism.Transcripts;
+exons = organism.Exons;
 chromosomes = organism.Chromosomes;
 
 if numel(window) ~= 2 || ~isnumeric(window) || window(1) > window(2)
@@ -11,27 +13,44 @@ end
 if isnumeric(id)
 	idx = id;
 else
-	idx = gene_idx(id);
+	idx = transcript_idx(id);
 	na = find(isnan(idx));
 	for k = 1:length(na)
-		fprintf(1, 'Could not find gene %s.\n', id{na(k)});
+		fprintf(1, 'Could not find transcript %s.\n', id{na(k)});
 	end
 end
 
 valid = find(~isnan(idx));
+gene_idx = transcripts.Gene(idx);
 
 window = repmat(window, length(idx), 1);
 base = nan(length(idx), 1);
 
-if strcmpi(region, 'TSS') || strcmpi(region, 'start')
-	neg = genes.Strand(idx(valid)) == '-';
+if strcmpi(region, 'TSS')
+	neg = genes.Strand(gene_idx) == '-';
 	window(valid(neg), :) = -window(valid(neg), end:-1:1);
-	base(valid) = genes.Position(idx(valid), 1);
-	base(valid(neg)) = genes.Position(idx(valid), 2);
+
+	for k = 1:length(idx)
+		if ~valid(k), continue, end
+		
+		tx = idx(k);
+		ex = transcripts.Exons{tx};
+		g = transcripts.Gene(tx);
+		
+		genes.Name{g}
+		
+		if genes.Strand(g) == ' '
+			error('Gene %s is in unknown strand.', genes.Name{g});
+		elseif genes.Strand(g) == '+'
+			base(k) = min(exons.Position(ex, 1));
+		elseif genes.Strand(g) == '-'
+			base(k) = max(exons.Position(ex, 2));
+		end
+	end
 end
 
 chr = nan(length(idx), 1);
-chr(valid) = genes.Chromosome(idx(valid), 1);
+chr(valid) = genes.Chromosome(gene_idx, 1);
 
 seq = cell(length(idx), 1);
 for k = 1:length(seq)
