@@ -15,29 +15,24 @@ if isnumeric(id)
 else
 	idx = transcript_idx(id);
 	na = find(isnan(idx));
-	for k = 1:length(na)
-		fprintf(1, 'Could not find transcript %s.\n', id{na(k)});
-	end
+	for k = na', fprintf(1, 'Could not find transcript %s.\n', id{k}); end
 end
 
-valid = find(~isnan(idx));
-gene_idx = transcripts.Gene(idx);
+valid = ~isnan(idx);
+gene_idx = transcripts.Gene(idx(valid));
 
 window = repmat(window, length(idx), 1);
 base = nan(length(idx), 1);
+minus = false(length(idx), 1);
 
 if strcmpi(region, 'TSS')
-	neg = genes.Strand(gene_idx) == '-';
-	window(valid(neg), :) = -window(valid(neg), end:-1:1);
+	minus(valid) = genes.Strand(gene_idx) == '-';
+	window(valid & minus, :) = -window(valid & minus, end:-1:1);
 
-	for k = 1:length(idx)
-		if ~valid(k), continue, end
-		
+	for k = find(valid)'
 		tx = idx(k);
 		ex = transcripts.Exons{tx};
 		g = transcripts.Gene(tx);
-		
-		genes.Name{g}
 		
 		if genes.Strand(g) == ' '
 			error('Gene %s is in unknown strand.', genes.Name{g});
@@ -52,15 +47,13 @@ end
 chr = nan(length(idx), 1);
 chr(valid) = genes.Chromosome(gene_idx, 1);
 
-seq = cell(length(idx), 1);
-for k = 1:length(seq)
-	seq{k} = '';
-	if isnan(base(k)), continue, end
-		
+seq = repmat({''}, length(idx), 1);
+for k = find(valid)'
 	start_offset = max(base(k) + window(k, 1), 1);
 	end_offset = min(base(k) + window(k, 2), chromosomes.Length(chr(k)));
 	
 	seq{k} = chromosomes.Sequence{chr(k)}(start_offset:end_offset);
+	if minus(k), seq{k} = seqrcomplement(seq{k}); end
 end
 
 if ischar(id)
