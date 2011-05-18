@@ -1,3 +1,8 @@
+
+% GENE_REGION     Retrieve genomic sequence close to a gene feature
+%
+%   SEQ = GENE_REGION(
+
 function seq = gene_region(id, region, window)
 
 global organism;
@@ -13,35 +18,32 @@ if isnumeric(id)
 else
 	idx = gene_idx(id);
 	na = find(isnan(idx));
-	for k = 1:length(na)
-		fprintf(1, 'Could not find gene %s.\n', id{na(k)});
-	end
+	for k = na', fprintf(1, 'Could not find gene %s.\n', id{k}); end
 end
 
-valid = find(~isnan(idx));
+valid = ~isnan(idx);
 
 window = repmat(window, length(idx), 1);
 base = nan(length(idx), 1);
+minus = false(length(idx), 1);
 
 if strcmpi(region, 'TSS') || strcmpi(region, 'start')
-	neg = genes.Strand(idx(valid)) == '-';
-	window(valid(neg), :) = -window(valid(neg), end:-1:1);
+	minus(valid) = genes.Strand(idx(valid)) == '-';
+	window(valid & minus, :) = -window(valid & minus, end:-1:1);
 	base(valid) = genes.Position(idx(valid), 1);
-	base(valid(neg)) = genes.Position(idx(valid), 2);
+	base(valid & minus) = genes.Position(idx(valid), 2);
 end
 
 chr = nan(length(idx), 1);
 chr(valid) = genes.Chromosome(idx(valid), 1);
 
-seq = cell(length(idx), 1);
-for k = 1:length(seq)
-	seq{k} = '';
-	if isnan(base(k)), continue, end
-		
+seq = repmat({''}, length(idx), 1);
+for k = find(valid)'
 	start_offset = max(base(k) + window(k, 1), 1);
 	end_offset = min(base(k) + window(k, 2), chromosomes.Length(chr(k)));
 	
 	seq{k} = chromosomes.Sequence{chr(k)}(start_offset:end_offset);
+	if minus(k), seq{k} = seqrcomplement(seq{k}); end
 end
 
 if ischar(id)
