@@ -34,13 +34,17 @@ if strcmpi(region, 'TSS')
 		ex = transcripts.Exons{tx};
 		g = transcripts.Gene(tx);
 		
+		if isempty(ex), valid(k) = false; continue; end
+			
 		if genes.Strand(g) == ' '
-			error('Gene %s is in unknown strand.', genes.Name{g});
+			valid(k) = false;
 		elseif genes.Strand(g) == '+'
 			base(k) = min(exons.Position(ex, 1));
 		elseif genes.Strand(g) == '-'
 			base(k) = max(exons.Position(ex, 2));
 		end
+		
+		if isnan(base(k)), valid(k) = false; end
 	end
 end
 
