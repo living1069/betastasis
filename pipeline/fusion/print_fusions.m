@@ -1,4 +1,4 @@
-function [] = print_fusions(fusions, varargin)
+function [] = print_fusions(rearrangements, varargin)
 
 global organism;
 genes = organism.Genes;
@@ -10,6 +10,7 @@ min_anchor_len = 10;
 blacklist = {};
 only_unique = false;
 report_exon_seq = false;
+barplot_dir = '';
 
 % Organism specific genes that are blacklisted by default.
 if strcmpi(organism.Name, 'Homo sapiens')
@@ -35,6 +36,11 @@ for k = 1:2:length(varargin)
 		continue;
 	end
 	
+	if strcmpi(varargin{k}, 'BarplotDir')
+		barplot_dir = varargin{k+1};
+		continue;
+	end
+	
 	%if strcmpi(varargin{k}, 'OnlyUnique')
 	%	only_unique = varargin{k+1};
 	%	continue;
@@ -48,10 +54,7 @@ for k = 1:2:length(varargin)
 	error('Unrecognized option "%s".', varargin{k});
 end
 
-if isstruct(fusions)
-	fusions = { fusions };
-end
-
+fusions = rearrangements.Fusions;
 S = length(fusions);
 
 joint_fusions = {};
@@ -278,6 +281,28 @@ for k = 1:length(order)
 				if sr == 0, continue, end
 				fprintf(1, '    * reads in sample %d: %d\n', s, sr);
 			end
+		end
+		
+		if ~isempty(barplot_dir)
+			[~, ~] = mkdir(barplot_dir);
+			figure('PaperType', 'A5', 'PaperPosition', [.15 .15 .7 .7], ...
+				'PaperUnits', 'normalized', 'PaperOrientation', 'landscape');
+			
+			for s = 1:S, sr(s) = sum(gfusion.ReadSamples{p} == s); end
+			shading flat; bar(sr, 'black');
+			
+			title(sprintf('%s:%s', ...
+				genes.Name{exons.Gene(gfusion.Exons(p, 1))}, ...
+				genes.Name{exons.Gene(gfusion.Exons(p, 2))}), ...
+				'Interpreter', 'none');
+			ylabel('Supporting reads'); xlim([.5 (S + 0.5)]);
+			ylim([0 max(35, round(max(sr)*1.1))]);
+			
+			set(gca, 'xticklabel', rearrangements.Meta.Sample.ID);
+			rotateticklabel(gca, 90);
+			saveas(gcf, sprintf('%s/%s-%s.pdf', barplot_dir, ...
+				genes.Name{exons.Gene(gfusion.Exons(p, 1))}, ...
+				genes.Name{exons.Gene(gfusion.Exons(p, 2))}));
 		end
 	end
 end
