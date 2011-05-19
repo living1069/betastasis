@@ -39,7 +39,7 @@ S = length(uniq_samples);
 
 tx_seq = organism.Transcripts.Sequence{tx_idx};
 
-stats.Samples = uniq_samples;
+stats.Samples = reads.Meta.Sample.ID(uniq_samples);
 
 stats.TotalReads = zeros(1, S);
 stats.AlignedReads = zeros(1, S);
