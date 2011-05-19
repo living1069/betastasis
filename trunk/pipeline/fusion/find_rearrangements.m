@@ -3,7 +3,7 @@
 % fusion gene and alternative splicing events.
 %
 % Inputs:
-%     reads - RNA-seq reads that are to be used for discovering rearrangements.
+%     reads - RNA-seq reads that are to be used for discovering tag_junctions.
 %         The reads can be given as a filename, a cell array of filenames,
 %         or a pipeline-specific data structure.
 %     paired_tag_len - Length of the start and end tags.
@@ -12,12 +12,10 @@
 
 function [rearrangements, tag_rearrangements] = find_rearrangements(reads, ...
 	paired_tag_len, varargin)
-
+	
 global organism;
-exons = organism.Exons;
 
 prior_rearrangements = [];
-max_read_len = 70;
 
 drop_args = false(length(varargin), 1);
 for k = 1:2:length(varargin)
@@ -29,29 +27,25 @@ for k = 1:2:length(varargin)
 end
 varargin = varargin(~drop_args);
 
+S = length(reads.Raw);
 
-seq_files = seq_resource_files(reads);
+rearrangements.Fusions = cell(1, S);
+rearrangements.AltSplicings = cell(1, S);
 
-rearrangements.Fusions = cell(1, length(seq_files));
-rearrangements.AltSplicings = cell(1, length(seq_files));
+tag_rearrangements.Fusions = cell(1, S);
+tag_rearrangements.AltSplicings = cell(1, S);
 
-tag_rearrangements.Fusions = cell(1, length(seq_files));
-tag_rearrangements.AltSplicings = cell(1, length(seq_files));
+unaligned = {};
 
-unaligned_read_files = cell(length(seq_files), 1);
-for k = 1:length(seq_files)
-	unaligned_read_files{k} = ptemp;
+for s = 1:S
+	extracted = extract_reads(filter_query(reads, s));
 	
-	fprintf(1, 'Finding unaligned transcriptome reads for sample #%d...\n', k);
-	al = align_reads(seq_files{k}, 'transcripts', 'MaxMismatches', 2, ...
-		'UnalignedFile', unaligned_read_files{k});
+	fprintf(1, 'Finding unaligned transcriptome reads for sample #%d...\n', s);
+	[al, unaligned{s}] = align_reads(extracted, 'transcripts', ...
+		'MaxMismatches', 0, 'Columns', '');
 	
-	fprintf(1, '%d / %d (%.2f%%) of reads aligned to transcriptome.\n', ...
-		al.AlignedReads, al.TotalReads, al.AlignedReads / al.TotalReads * 100);
-		
-	[tag_rearrangements.Fusions{k}, tag_rearrangements.AltSplicings{k}] = ...
-		find_tag_rearrangements(unaligned_read_files{k}, paired_tag_len, ...
-		exons);
+	[tag_rearrangements.Fusions{s}, tag_rearrangements.AltSplicings{s}] = ...
+		find_tag_rearrangements(unaligned{s}, paired_tag_len);
 end
 
 fprintf(1, 'Pooling rearrangements for validation...\n');
@@ -65,24 +59,17 @@ if nargin == 4
 		{ total_tag_alt_splicings, prior_rearrangements.AltSplicings{:} });
 end
 
-for k = 1:length(seq_files)
-	rearrangements.Fusions{k} = validate_junctions(unaligned_read_files{k}, ...
-		total_tag_fusions, exons, max_read_len);
-	rearrangements.AltSplicings{k} = validate_junctions( ...
-		unaligned_read_files{k}, total_tag_alt_splicings, exons, max_read_len);
-	safe_delete(unaligned_read_files{k});
+for s = 1:S
+	rearrangements.Fusions{s} = validate_junctions( ...
+		unaligned{s}, total_tag_fusions);
+	rearrangements.AltSplicings{s} = validate_junctions( ...
+		unaligned{s}, total_tag_alt_splicings);
 end
 
-if isfield(reads, 'Meta')
-	rearrangements.Meta = reads.Meta;
-else
-	rearrangements.Meta = struct;
-end
-
+rearrangements.Meta = reads.Meta;
 rearrangements.Meta.Type = 'Genetic rearrangements';
 rearrangements.Meta.Organism = organism.Name;
-rearrangements.Meta.PairedTagLength = ...
-	ones(length(seq_files), 1) * paired_tag_len;
+rearrangements.Meta.PairedTagLength = ones(S, 1) * paired_tag_len;
 	
 
 
@@ -94,42 +81,21 @@ rearrangements.Meta.PairedTagLength = ...
 
 
 function [tag_fusions, tag_alt_splicings] = ...
-	find_tag_rearrangements(unaligned_reads, paired_tag_len, exons)
-
-[color, quality] = seq_read_type(unaligned_reads);
-if quality, error 'Reads with quality information are not supported.'; end
-
-split_reads_tmp = ptemp;
-alignments_tmp = ptemp;
-
-color_option = 'nucleotide';
-if color, color_option = 'color'; end
+	find_tag_rearrangements(unaligned, paired_tag_len)
+	
+global organism;
+exons = organism.Exons;
 
 fprintf(1, 'Splitting unaligned reads into start and end tags...\n');
-[status, ~] = unix(sprintf( ...
-	'%s/sources/sequencing/split_reads_into_tag_pairs.py %s %d %s > %s', ...
-	ppath, unaligned_reads, paired_tag_len, color_option, split_reads_tmp));
-if status ~= 0, error 'Read splitting failed.'; end
-
+split = split_reads(unaligned, paired_tag_len);
 	
-fprintf(1, 'Aligning split reads into the human exome using Bowtie...\n');
-al = align_reads(split_reads_tmp, 'exons', 'AllowAlignments', 3, ...
+fprintf(1, 'Aligning split reads to the exome using Bowtie...\n');
+al = align_reads(split, 'exons', 'AllowAlignments', 3, ...
 	'ReportAlignments', 3, 'MaxMismatches', 0, ...
 	'Columns', 'read,strand,target,offset');
-fprintf(1, '%d / %d (%.2f%%) of all tags aligned to exome.\n', ...
-	al.AlignedReads, al.TotalReads, al.AlignedReads / al.TotalReads * 100);
-
-safe_delete(split_reads_tmp);
-
-	
-
 
 read_ids = al.ReadID;
 exon_indices = str2double(al.Target);
-
-
-
-
 
 fprintf(1, 'Searching for rearrangement events...\n');
 run_ends = [ find(strcmp(read_ids(1:end-1), read_ids(2:end)) == 0); ...
@@ -150,10 +116,10 @@ progress = Progress;
 for r = 1:length(run_starts)
 	id = read_ids{run_starts(r)};
 	
-	if ~strcmp('~2', id(end-1:end)), continue, end
+	if ~strcmp('/2', id(end-1:end)), continue, end
 	
-	if read_id_to_run.isKey([id(1:end-2) '~1'])
-		l = read_id_to_run([id(1:end-2) '~1']);
+	if read_id_to_run.isKey([id(1:end-2) '/1'])
+		l = read_id_to_run([id(1:end-2) '/1']);
 		left_run = run_starts(l):run_ends(l);
 		right_run = run_starts(r):run_ends(r);
 		
@@ -282,15 +248,22 @@ end
 
 
 
-function [] = build_junction_index(index_filename, rearrangements, color, ...
-	exons, max_read_len)
 
-fasta_fname = ptemp;
-fasta_file = fopen(fasta_fname, 'W');
 
-for k = 1:size(rearrangements.Exons, 1)
-	left_exon = rearrangements.Exons(k, 1);
-	right_exon = rearrangements.Exons(k, 2);
+function validated = validate_junctions(unaligned, tag_junctions)
+	
+global organism;
+exons = organism.Exons;
+
+max_read_len = 100;
+
+junctions = struct;
+junctions.Name = {};
+junctions.Sequence = {};
+
+for k = 1:size(tag_junctions.Exons, 1)
+	left_exon = tag_junctions.Exons(k, 1);
+	right_exon = tag_junctions.Exons(k, 2);
 	
 	left_exon_seq = exons.Sequence{left_exon};
 	right_exon_seq = exons.Sequence{right_exon};
@@ -302,61 +275,18 @@ for k = 1:size(rearrangements.Exons, 1)
 		right_exon_seq = right_exon_seq(1:max_read_len);
 	end
 	
-	fprintf(fasta_file, '>%d,%d\n', left_exon, right_exon);
-	fprintf(fasta_file, '%s%s\n', left_exon_seq, right_exon_seq);
+	junctions.Name{end+1, 1} = sprintf('%d,%d', left_exon, right_exon);
+	junctions.Sequence{end+1, 1} = [left_exon_seq right_exon_seq];
 end
-
-fclose(fasta_file);
-
-color_option = '';
-index_suffix = '';
-if color
-	color_option = '-C';
-	index_suffix = '_colorspace';
-end
-
-[status, ~] = unix(sprintf('%s/tools/bowtie/bowtie-build %s %s %s%s', ...
-	ppath, color_option, fasta_fname, index_filename, index_suffix));
-
-if status ~= 0, error 'Bowtie index construction failed.'; end
-
-safe_delete(fasta_fname);
-
-
-
-
-
-
-
-
-function validated = validate_junctions(unaligned_reads, tag_junctions, ...
-	exons, max_read_len)
-
-junction_index_tmp = ptemp;
-
-[color, ~] = seq_read_type(unaligned_reads);
-
-build_junction_index(junction_index_tmp, tag_junctions, color, exons, ...
-	max_read_len);
 
 fprintf(1, 'Aligning full reads against candidate junctions...\n');
-[alignments_tmp, out] = bowtie_align(unaligned_reads, junction_index_tmp, ...
-	'-p4 -m3 -k3 -v2 -B1 --suppress 6,7,8');
+al = align_reads(unaligned, junctions, 'AllowAlignments', 3, ...
+	'ReportAlignments', 3, 'MaxMismatches', 0, ...
+	'Columns', 'read,target,offset,sequence');
 
-fprintf(1, '%s', out);
-system(['rm ' junction_index_tmp '*']);
-
-fprintf(1, 'Reading aligned reads into memory...\n');
-alignments_file = fopen(alignments_tmp);
-data = textscan(alignments_file, '%s %*s %s %d %s', 'Delimiter', '\t');
-fclose(alignments_file);
-
-safe_delete(alignments_tmp);
-
-read_ids = data{1};
-junction_exons = data{2};
-read_offsets = data{3};
-read_sequences = data{4};
+read_ids = al.ReadID;
+junction_exons = al.Target;
+read_sequences = al.Sequence;
 
 valid = false(length(read_ids), 1);
 breakpoint_offsets = zeros(length(read_ids), 1);
@@ -370,7 +300,7 @@ for k = 1:length(junction_exons)
 	% Only reads that have at least 5 nucleotides on both sides of the junction
 	% count towards validation.
 	len = length(read_sequences{k});
-	offset = read_offsets(k);
+	offset = al.Offset(k);
 	if offset <= left_len - 5 && offset + len > left_len + 5
 		valid(k) = true;
 	end
@@ -380,7 +310,7 @@ end
 
 %read_ids = read_ids(valid);
 junction_exons = junction_exons(valid);
-%read_offsets = read_offsets(valid);
+%al.Offset = al.Offset(valid);
 breakpoint_offsets = breakpoint_offsets(valid);
 read_sequences = read_sequences(valid);
 
