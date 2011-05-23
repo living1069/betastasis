@@ -234,22 +234,22 @@ for k = 1:length(single_files)
 	
 	S = S + 1;
 	meta.Sample.Filename{S, 1} = filename;
+	meta.Sequence.Paired{S, 1} = 'Single end';
 	
 	raw_file = [tmp '.raw'];
 	
 	if regexpi(filename, '\.(fa|fasta|csfasta|csfastq|fastq|fq)')
 		fprintf(1, 'Found single end FASTA reads: %s\n', filename);
 		
-		fprintf(1, '-> Discarding headers and quality...\n');
-		[status, out] = unix(sprintf([ppath ...
-			'/sources/sequencing/transform/fasta_to_raw.py %s > %s'], ...
-			extracted, raw_file));
-		if status ~= 0
-			error('fasta_to_raw.py returned an error:\n%s', out);
-		end
+		[color, ~] = seq_read_type(full_path);
 		
-		[color, ~] = seq_read_type(raw_file);
-		meta.Sequence.Format{S, 1} = 'Raw';
+		meta.Resource{S, 1} = absolutepath(full_path);
+		meta.Sequence.Format{S, 1} = 'FASTA';
+		if color
+			meta.Sequence.Space{S, 1} = 'Color';
+		else
+			meta.Sequence.Space{S, 1} = 'Nucleotide';
+		end
 		
 	elseif regexpi(filename, '\.raw')
 		fprintf(1, 'Found raw reads: %s\n', filename);
@@ -264,7 +264,6 @@ for k = 1:length(single_files)
 		
 		meta.Resource{S, 1} = absolutepath(full_path);
 		meta.Sequence.Format{S, 1} = 'SMS';
-		meta.Sequence.Paired{S, 1} = 'Single end';
 		meta.Sequence.Space{S, 1} = 'Nucleotide';
 		
 	elseif regexpi(filename, '\.bam')
@@ -276,35 +275,16 @@ for k = 1:length(single_files)
 			extracted, raw_file));
 		if status ~= 0, error('samtools view returned an error:\n%s', out); end
 		
+		meta.Resource{S, 1} = absolutepath(raw_file);
+		meta.Sequence.Format{S, 1} = 'Raw';
+		meta.Sequence.Space{S, 1} = 'Nucleotide';
+		
 	else
 		error 'Unrecognized file format.';
 	end
 	
-	if ~strcmp(extracted, full_path)
-		safe_delete(extracted);
-	end
-	
-	continue;
-	
-	meta.Resource{S, 1} = [gen_uuid() '.gz'];
-	meta.Sequence.Format{S, 1} = 'Raw';
-	meta.Sequence.Paired{S, 1} = 'Single end';
-
-	if color
-		meta.Sequence.Space{S, 1} = 'Colorspace';
-	else
-		meta.Sequence.Space{S, 1} = 'Nucleotide';
-	end
-	
-	fprintf(1, '-> Storing reads in compressed format...\n');
-	[~, ~] = mkdir(ds_dir);
-	[status, ~] = unix(sprintf('gzip -c %s > %s', raw_file, ...
-		[ds_dir '/' meta.Resource{S}]));
-	if status, error 'Gzip compression failed.'; end
-	
-	if ~strcmp(raw_file, extracted)
-		safe_delete(raw_file);
-	end
+	if ~strcmp(extracted, full_path), safe_delete(extracted); end
+	if ~strcmp(raw_file, extracted), safe_delete(raw_file); end
 end
 
 if S == 0
