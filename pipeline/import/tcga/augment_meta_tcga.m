@@ -19,6 +19,7 @@ for k = 1:length(files)
 		if exist(clin_dir)
 			[tmp_patients, tmp_samples, tmp_misc] = ...
 				read_tcga_clinical_data(clin_dir);
+				
 			tcga_patients = cat_structs(tcga_patients, tmp_patients);
 			tcga_samples = cat_structs(tcga_samples, tmp_samples);
 			tcga_misc = cat_structs(tcga_misc, tmp_misc);
