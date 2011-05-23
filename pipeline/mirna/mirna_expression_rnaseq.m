@@ -9,23 +9,13 @@
 %    of mismatches allowed while aligning reads against microRNA transcripts.
 %    Defaults to 0 mismatches.
 %
-%    MIRNA_EXPRESSION_RNASEQ(..., 'Trim', LEN) tells the function to trim all
-%    reads to a length of LEN nucleotides. Nucleotides are trimmed from the %    end of the reads. Defaults to trimming reads to 18 bases.
-%
-%    MIRNA_EXPRESSION_RNASEQ(..., 'LengthFilter', [MIN_LEN]) tells the function
-%    to filter out all reads shorter than MIN_LEN before alignment. Defaults
-%    to no filtering.
-%
-%    MIRNA_EXPRESSION_RNASEQ(..., 'LengthFilter', [MIN MAX]) tells the function
-%    to filter out all reads outside the length range [MIN MAX]. Defaults to
-%    no filtering.
-%
 %    MIRNA_EXPRESSION_RNASEQ(..., 'Normalization', NORM) tells the function
 %    to normalize the produced miRNA expression values using the normalization
 %    method NORM. Valid selections include 'rpkm' and 'none' (the default).
-% 
 
-function expr = mirna_expression_rnaseq(reads, varargin)
+% Author: Matti Annala <matti.annala@tut.fi>
+
+function [mature_expr, pre_expr] = mirna_expression_rnaseq(reads, varargin)
 
 global organism;
 mirnas = organism.miRNA;
@@ -34,21 +24,10 @@ pre_mirnas = organism.pre_miRNA;
 max_mismatches = 0;
 normalization = 'none';
 trim_len = 18;
-filter_len = [];
 
 for k = 1:2:length(varargin)
 	if strcmpi(varargin{k}, 'MaxMismatches')
 		max_mismatches = varargin{k+1};
-		continue;
-	end
-	
-	if strcmpi(varargin{k}, 'Trim')
-		trim_len = varargin{k+1};
-		continue;
-	end
-	
-	if strcmpi(varargin{k}, 'LengthFilter')
-		filter_len = varargin{k+1};
 		continue;
 	end
 	
@@ -67,58 +46,59 @@ for k = 1:2:length(varargin)
 	error('Unrecognized option "%s".', varargin{k});
 end
 
-seq_files = seq_resource_files(reads);
-
-% Figure out what kind of data we're dealing with.
-[color, quality] = seq_read_type(seq_files{1});
-if quality, error 'FASTQ files not supported yet.'; end
+S = length(reads.Raw);
 
 pre_mirna_name_to_idx = containers.Map(pre_mirnas.Name, ...
 	num2cell(1:length(pre_mirnas.Name)));
-
-expr = struct;
-expr.miRNA = zeros(length(mirnas.Name), length(seq_files));
-expr.pre_miRNA = zeros(length(pre_mirnas.Name), length(seq_files));
-
-expr.Meta = struct;
-if isstruct(reads), expr.Meta = reads.Meta; end
-
-expr.Meta.Type = 'miRNA expression';
-expr.Meta.Organism = organism.Name;
-expr.Meta.miRNAVersion = organism.miRNAVersion;
-expr.Meta.Normalization = repmat({normalization}, length(seq_files), 1);
-expr.Meta.MismatchesAllowed = ones(length(seq_files), 1) * max_mismatches;
-expr.Meta.TotalSeqReads = zeros(length(seq_files), 1);
-
-for seq_file = 1:length(seq_files)
-	fprintf(1, 'Aligning reads to miRBase using Bowtie...\n');
-	al = align_reads(seq_files{seq_file}, 'pre_mirnas', ...
-		'MaxMismatches', max_mismatches, 'AllowAlignments', 10, ...
-		'Trim', trim_len, 'LengthFilter', filter_len, ...
-		'Columns', 'read,ref,offset,sequence');
 	
-	expr.Meta.TotalSeqReads(seq_file) = al.TotalReads;
+mirna_lengths = zeros(length(mirnas.Sequence), 1);
+for k = 1:length(mirna_lengths)
+	mirna_lengths(k) = length(mirnas.Sequence{k});
+end
 
-	read_ids = al.ReadID;
+mature_expr.Mean = zeros(length(mirnas.Name), S);
+pre_expr.Mean = zeros(length(pre_mirnas.Name), S);
+
+mature_expr.Meta = reads.Meta;
+mature_expr.Meta.Type = 'miRNA expression';
+mature_expr.Meta.Organism = organism.Name;
+mature_expr.Meta.DateCreated = repmat({datestr(now)}, S, 1);
+mature_expr.Meta.Normalization = repmat({normalization}, S, 1);
+mature_expr.Meta.MismatchesAllowed = ones(S, 1) * max_mismatches;
+mature_expr.Meta.TotalSeqReads = zeros(S, 1);
+
+pre_expr.Meta = mature_expr.Meta;
+pre_expr.Meta.Type = 'pre-miRNA expression';
+
+for s = 1:length(reads.Raw)
+	fprintf(1, 'Calculating microRNA expression levels for sample %s:\n', ...
+		reads.Meta.Sample.Filename{s});
+	
+	extracted = extract_reads(filter_query(reads, s));
+	
+	trimmed = trim_reads(extracted, trim_len);
+	
+	fprintf(1, '-> Aligning reads to miRBase using Bowtie...\n');
+	al = align_reads(trimmed, 'pre_mirnas', ...
+		'MaxMismatches', max_mismatches, 'AllowAlignments', 10, ...
+		'Columns', 'ref,offset,sequence');
+	
+	mature_expr.Meta.TotalSeqReads(s) = al.TotalReads;
+
 	match_names = al.Target;
 	read_offsets = al.Offset;
-	read_sequences = al.Sequence;
 
-	read_lengths = zeros(length(read_sequences), 1);
-	for k = 1:length(read_sequences)
-		read_lengths(k) = length(read_sequences{k});
-	end
-	clear read_sequences;
-
-	mirna_lengths = zeros(length(mirnas.Sequence), 1);
-	for k = 1:length(mirna_lengths)
-		mirna_lengths(k) = length(mirnas.Sequence{k});
+	read_lengths = zeros(length(al.Sequence), 1);
+	for k = 1:length(al.Sequence)
+		read_lengths(k) = length(al.Sequence{k});
 	end
 
-	fprintf(1, 'Summarizing miRNA expression levels...\n');
-
+	fprintf(1, '-> Summarizing miRNA expression levels...\n');
+	
+	pre_idx = cell2mat(pre_mirna_name_to_idx.values(match_names));
+	
 	for k = 1:length(match_names)
-		p = pre_mirna_name_to_idx(match_names{k});
+		p = pre_idx(k);
 		
 		% Check if the read is aligned to a spot within one of the mature miRNA
 		% sequences. If it is, we assume that the read comes from the mature
@@ -128,37 +108,28 @@ for seq_file = 1:length(seq_files)
 		found_mirna_match = 0;
 		for m = 1:pre_mirnas.MatureCount(p)
 			idx = pre_mirnas.Matures(p, m);
-			if read_offsets(k) + 1 >= pre_mirnas.MatureOffsets(p, m) && ...
-			   read_offsets(k) + 1 + read_lengths(k) <= ...
+			if read_offsets(k) >= pre_mirnas.MatureOffsets(p, m) && ...
+			   read_offsets(k) + read_lengths(k) <= ...
 			   pre_mirnas.MatureOffsets(p, m) + mirna_lengths(idx)
-				expr.miRNA(idx, seq_file) = expr.miRNA(idx, seq_file) + 1;
+				mature_expr.Mean(idx, s) = mature_expr.Mean(idx, s) + 1;
 				found_mirna_match = 1;
 				break;
 			end
 		end
 			
 		if found_mirna_match == 0
-			expr.pre_miRNA(p, seq_file) = expr.pre_miRNA(p, seq_file) + 1;
+			pre_expr.Mean(p, s) = pre_expr.Mean(p, s) + 1;
 		end
 	end
 	
-	if strcmp('none', normalization)
-		continue;
-	end
+	if strcmp('none', normalization), continue, end
 
-	fprintf(1, 'Performing RPKM normalization on pre-miRNA expression levels...\n');
-	pre_mirna_kbp = zeros(length(pre_mirnas.Sequence), 1);
-	for k = 1:length(pre_mirnas.Sequence)
-		pre_mirna_kbp(k) = length(pre_mirnas.Sequence{k}) / 1000;
-	end
-
-	expr.pre_miRNA(:, seq_file) = expr.pre_miRNA(:, seq_file) ./ ...
-		pre_mirna_kbp / (reads_processed / 1e6);
+	fprintf(1, '-> Normalizing pre-miRNA expression levels using RPKM...\n');
+	pre_expr.Mean(:, s) = pre_expr.Mean(:, s) / (reads_processed / 1e6);
 
 	% We don't normalize mature miRNA by transcript length, since their
 	% lengths are so uniform.
-	fprintf(1, ['Performing RPKM normalization on mature miRNA expression ' ...
-				'levels...\n']);
-	expr.miRNA(:, seq_file) = expr.miRNA(:, seq_file) / (reads_processed / 1e6);
+	fprintf(1, '-> Normalizing mature miRNA expression levels using RPKM...\n');
+	mature_expr.Mean(:, s) = mature_expr.Mean(:, s) / (reads_processed / 1e6);
 end
 
