@@ -41,7 +41,10 @@ misc = struct;
 for k = 1:length(data)
 	token = tokens{k}; col_name = token{1};
 	if length(col_name) <= 63
+		%fprintf(1, 'Adding field %s\n', col_name);
 		misc = setfield(misc, col_name, replace_nulls(data{k}));
+	else
+		%fprintf(1, 'Field name too long: %s\n', col_name);
 	end
 end
 
@@ -49,9 +52,18 @@ S = length(misc.bcr_patient_barcode);
 
 patients = struct;
 patients.ID = misc.bcr_patient_barcode;
-patients.Gender = capitalize(misc.gender);
-patients.Status = capitalize(misc.vital_status);
-patients.Race = capitalize(misc.race);
+
+if isfield(misc, 'gender')
+	patients.Gender = capitalize(misc.gender);
+end
+
+if isfield(misc, 'vital_status')
+	patients.Status = capitalize(misc.vital_status);
+end
+
+if isfield(misc, 'race')
+	patients.Race = capitalize(misc.race);
+end
 
 patients.AgeAtDiagnosis = nan(length(patients.ID), 1);
 patients.AgeAtDeath = nan(length(patients.ID), 1);
@@ -85,22 +97,24 @@ for k = 1:length(patients.ID)
 	end
 end
 
-patients.SurvivalTime = nan(length(patients.ID), 1);
-patients.Censored = nan(length(patients.ID), 1);
-for k = 1:length(patients.SurvivalTime)
-	if strcmp('Deceased', patients.Status{k})
-		% Here we could try to rule out patients who died of other causes
-		% by checking if they died on the day of their last followup, but
-		% I don't think that's a reliable approach. There's many patients
-		% for whom death occurs just a couple of days after their last
-		% followup.
-		patients.SurvivalTime(k) = round(365 * ...
-			(patients.AgeAtDeath(k) - patients.AgeAtDiagnosis(k)));
-		patients.Censored(k) = 0;
-	else
-		patients.SurvivalTime(k) = round(365 * ...
-			(patients.AgeAtLastFollowup(k) - patients.AgeAtDiagnosis(k)));
-		patients.Censored(k) = 1;
+if isfield(patients, 'Status')
+	patients.SurvivalTime = nan(length(patients.ID), 1);
+	patients.Censored = nan(length(patients.ID), 1);
+	for k = 1:length(patients.SurvivalTime)
+		if strcmp('Deceased', patients.Status{k})
+			% Here we could try to rule out patients who died of other causes
+			% by checking if they died on the day of their last followup, but
+			% I don't think that's a reliable approach. There's many patients
+			% for whom death occurs just a couple of days after their last
+			% followup.
+			patients.SurvivalTime(k) = round(365 * ...
+				(patients.AgeAtDeath(k) - patients.AgeAtDiagnosis(k)));
+			patients.Censored(k) = 0;
+		else
+			patients.SurvivalTime(k) = round(365 * ...
+				(patients.AgeAtLastFollowup(k) - patients.AgeAtDiagnosis(k)));
+			patients.Censored(k) = 1;
+		end
 	end
 end
 
@@ -117,23 +131,10 @@ if isfield(misc, 'anatomic_organ_subdivision')
 end
 
 samples.Type = regexprep(samples.Type, '\(De Nova\) ', '');
-patients.Race = regexprep(patients.Race, ' or african american', '');
 
-field_filters = { ...
-	'bcr_patient_barcode', 'race', 'gender', 'days_to', 'age',
-};
-
-fields = fieldnames(misc);
-for k = 1:length(fields)
-	for f = 1:length(field_filters)
-		if regexp(fields{k}, field_filters{f})
-			misc = rmfield(misc, fields{k});
-			break;
-		end
-	end
+if isfield(patients, 'Race')
+	patients.Race = regexprep(patients.Race, ' or african american', '');
 end
-
-
 
 patient_id_to_idx = containers.Map(patients.ID, ...
 	num2cell(1:length(patients.ID)));
@@ -234,7 +235,6 @@ for k = 1:length(drugs.bcr_patient_barcode)
 	end
 end
 
-return;
 
 
 
@@ -246,7 +246,6 @@ for k = 1:length(cellstr)
 	str(1) = upper(str(1));
 	cellstr{k} = str;
 end
-return;
 
 
 
@@ -256,5 +255,4 @@ for k = 1:length(cellstr)
 		cellstr{k} = '-';
 	end
 end
-return;
 
