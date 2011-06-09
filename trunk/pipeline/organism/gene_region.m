@@ -32,6 +32,8 @@ if strcmpi(region, 'TSS') || strcmpi(region, 'start')
 	window(valid & minus, :) = -window(valid & minus, end:-1:1);
 	base(valid) = genes.Position(idx(valid), 1);
 	base(valid & minus) = genes.Position(idx(valid), 2);
+	
+	valid(isnan(base)) = false;
 end
 
 chr = nan(length(idx), 1);
