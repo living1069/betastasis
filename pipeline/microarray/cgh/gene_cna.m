@@ -9,30 +9,56 @@
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
-function gene_cna = gene_cna(segments, cgh_probesets)
+function gene_cna = gene_cna(segments, varargin)
 
 global organism;
 genes = organism.Genes;
 
-cna = cn_seg_expand(segments, cgh_probesets);
+probesets = [];
+min_region = 0;
+
+for k = 1:2:length(varargin)
+	if strcmpi(varargin{k}, 'Probesets')
+		probesets = varargin{k+1}; continue;
+	end
+	
+	if strcmpi(varargin{k}, 'MinRegion')
+		min_region = varargin{k+1};
+		continue;
+	end
+	
+	error('Unrecognized option "%s".', varargin{k});
+end
+
+if isempty(probesets) && isfield(segments, 'Meta')
+	probesets = platform(segments.Meta.Platform{1}, 'cgh_probesets');
+end
+
+cna = cn_seg_expand(segments, probesets);
 
 gene_cna = nan(length(organism.Genes.Name), size(cna, 2));
 
 progress = Progress;
 
-for g = 1:length(organism.Genes.Name)
-	if any(isnan(organism.Genes.Position(g, :))), continue, end
+for g = 1:length(genes.Name)
+	if any(isnan(genes.Position(g, :))), continue, end
+		
+	gene_span = genes.Position(g, :);
+	if gene_span(2) - gene_span(1) < min_region
+		d = min_region - (gene_span(2) - gene_span(1));
+		gene_span(1) = gene_span(1) - round(d / 2);
+		gene_span(2) = gene_span(2) + round(d / 2);
+	end
 	
 	% Find all probes that target the gene we're interested in.
-	idx = find(cgh_probesets.Chromosome == genes.Chromosome(g) & ...
-		cgh_probesets.Offset >= genes.Position(g, 1) & ...
-		cgh_probesets.Offset <= genes.Position(g, 2));
+	idx = find(probesets.Chromosome == genes.Chromosome(g) & ...
+		probesets.Offset >= gene_span(1) & probesets.Offset <= gene_span(2));
 	if isempty(idx), continue, end
 	if any(idx ~= (idx(1):idx(end))')
 		error 'Probesets are not properly ordered.';
 	end
 	
 	gene_cna(g, :) = median(cna(idx, :), 1);
-	progress.update(g / length(organism.Genes.Name));
+	progress.update(g / length(genes.Name));
 end
 
