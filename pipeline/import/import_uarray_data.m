@@ -67,77 +67,77 @@ import_method = '';
 
 fprintf(1, 'Loading microarray probe definitions...\n');
 
-if strcmpi(platform, 'Agilent 244K TCGA custom 1')
+if strcmpi(platform, 'MDA custom aCGH')
+	import_method = 'agilent_dual';
+	probes = load([ppath '/platforms/mda_custom_acgh/probes']);
+elseif strcmpi(platform, 'Agilent Human GE')
+	import_method = 'agilent_dual';
+	probes = load([ppath '/platforms/agilent_human_ge_v1/probes']);
+elseif strcmpi(platform, 'Agilent Human GE v2')
+	import_method = 'agilent_dual';
+	probes = load([ppath '/platforms/agilent_human_ge_v2/probes']);
+elseif strcmpi(platform, 'Agilent 244K TCGA custom 1')
 	import_method = 'agilent_dual';
 	probes = load([ppath '/platforms/agilent_244k_tcga_custom_01/probes']);
-	probes = probes.agilent_244k_tcga_custom_01_probes;
 elseif strcmpi(platform, 'Agilent 244K TCGA custom 2')
 	import_method = 'agilent_dual';
 	probes = load([ppath '/platforms/agilent_244k_tcga_custom_02/probes']);
-	probes = probes.agilent_244k_tcga_custom_02_probes;
 elseif strcmpi(platform, 'Agilent 244K TCGA custom 3')
 	import_method = 'agilent_dual';
 	probes = load([ppath '/platforms/agilent_244k_tcga_custom_03/probes']);
-	probes = probes.agilent_244k_tcga_custom_03_probes;
 elseif strcmpi(platform, 'Agilent HG CGH 244A')
 	import_method = 'agilent_dual';
 	probes = load([ppath '/platforms/agilent_hg_cgh_244a/probes']);
-	probes = probes.agilent_hg_cgh_244a_probes;
 elseif strcmpi(platform, 'Agilent G3 Human CGH 1M')
 	import_method = 'agilent_dual';
 	probes = load([ppath '/platforms/agilent_g3_cgh_1m/probes']);
-	probes = probes.agilent_g3_cgh_1m_probes;
 elseif strcmpi(platform, 'Agilent Human miRNA 8x15K')
 	import_method = 'agilent_single';
 	probes = load([ppath '/platforms/agilent_human_mirna_8x15k/probes']);
-	probes = probes.agilent_human_mirna_8x15k_probes;
 elseif strcmpi(platform, 'Agilent Human miRNA 8x15K v2')
 	import_method = 'agilent_single';
 	probes = load([ppath '/platforms/agilent_human_mirna_8x15k_v2/probes']);
-	probes = probes.agilent_human_mirna_8x15k_v2_probes;
+elseif strcmpi(platform, 'Agilent Human miRNA 8x15K v3')
+	import_method = 'agilent_single';
+	probes = load([ppath '/platforms/agilent_human_mirna_8x15k_v3/probes']);
 elseif strcmpi(platform, 'Affymetrix HG U133A')
 	import_method = 'affy_cel';
 	probes = load([ppath '/platforms/affy_hg_u133a/probes']);
-	probes = probes.affy_hg_u133a_probes;
 elseif strcmpi(platform, 'Affymetrix U95A v2')
 	import_method = 'affy_cel';
 	probes = load([ppath '/platforms/affy_u95a_v2/probes']);
-	probes = probes.probes;
 elseif strcmpi(platform, 'Affymetrix U95B')
 	import_method = 'affy_cel';
 	probes = load([ppath '/platforms/affy_u95b/probes']);
-	probes = probes.probes;
 elseif strcmpi(platform, 'Affymetrix U95C')
 	import_method = 'affy_cel';
 	probes = load([ppath '/platforms/affy_u95c/probes']);
-	probes = probes.probes;
 elseif strcmpi(platform, 'Affymetrix HT HG U133A')
 	import_method = 'affy_cel';
 	probes = load([ppath '/platforms/affy_ht_hg_u133a/probes']);
-	probes = probes.affy_ht_hg_u133a_probes;
 elseif strcmpi(platform, 'Affymetrix HG U133 Plus 2.0')
 	import_method = 'affy_cel';
 	probes = load([ppath '/platforms/affy_hg_u133_plus_2/probes']);
-	probes = probes.affy_hg_u133_plus_2_probes;
 elseif strcmpi(platform, 'Affymetrix Human Exon 1.0 ST')
 	import_method = 'affy_cel';
 	probes = load([ppath '/platforms/affy_huex_1_0_st/probes']);
-	probes = probes.affy_huex_1_0_st_probes;
 elseif strcmpi(platform, 'Affymetrix GW SNP 6')
 	import_method = 'affy_cel';
 	probes = load([ppath '/platforms/affy_gw_snp_6/probes']);
-	probes = probes.affy_gw_snp_6_probes;
 elseif strcmpi(platform, 'Affymetrix Human Mapping 250K Sty')
 	import_method = 'affy_cel';
 	probes = load([ppath '/platforms/affy_mapping_250k_sty/probes']);
-	probes = probes.probes;
+elseif strcmpi(platform, 'Merja siru')
+	import_method = 'affy_cel';
+	probes = load([ppath '/platforms/merja_siru/probes']);
 elseif strcmpi(platform, 'Affymetrix Human Mapping 250K Nsp')
 	import_method = 'affy_cel';
 	probes = load([ppath '/platforms/affy_mapping_250k_nsp/probes']);
-	probes = probes.probes;
 else
 	error 'Unrecognized array platform specified.';
 end
+
+probes = probes.probes;
 
 uarray_regexp = '^(.+)\.(cel|txt)(\.bz2|\.gz)?$';
 compressed_regexp = '^(.+)(\.bz2|\.gz)?$';
