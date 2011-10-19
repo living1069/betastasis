@@ -33,6 +33,9 @@ for d = 1:D
 	samples_found = sample_map.isKey(samples);
 	sample_indices = cell2mat(sample_map.values(samples(samples_found)));
 	
+	fmatrix
+	m
+	
 	fmatrix.Features = cat(1, fmatrix.Features, m.Features);
 	fmatrix.Data(F+1:F+length(m.Features), :) = nan(length(m.Features), S);
 	fmatrix.Data(F+1:F+length(m.Features), samples_found) = ...
@@ -40,4 +43,6 @@ for d = 1:D
 		
 	F = F + length(m.Features);
 end
+
+% FIXME: Add support for merging replicated feature fields.
 
