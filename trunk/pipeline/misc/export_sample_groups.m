@@ -1,5 +1,8 @@
 function [] = export_sample_groups(path, varargin)
 
+[~, dir] = path_strip_dir(path);
+[~, ~] = mkdir(dir);
+
 fid = fopen(path, 'W');
 fprintf(fid, '{\n');
 
@@ -13,6 +16,10 @@ for k = 1:2:length(varargin)
 		sample_ids = sample_ids.Sample.ID;
 	elseif isfield(sample_ids, 'Meta')
 		sample_ids = sample_ids.Meta.Sample.ID;
+	end
+	
+	if isempty(sample_ids)
+		error('Empty sample group "%s".', varargin{k});
 	end
 	
 	for s = 1:length(sample_ids)-1
