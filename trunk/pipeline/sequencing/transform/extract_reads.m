@@ -1,29 +1,19 @@
 function extracted = extract_reads(reads)
 
-S = length(reads.Raw);
+S = length(reads.url);
 
-extracted = struct;
-extracted.Meta = reads.Meta;
-extracted.Raw = {};
+tmp = temporary('extract_reads');
+extracted = reads;
+
+read_files = seq_filenames(reads);
 
 for s = 1:S
-	read_files = reads.Raw{s}.Paths;
-	
-	extracted.Raw{s} = FilePool;
-	
-	for f = 1:length(read_files)
-		% Check if the reads even need to be extracted.
-		if strcmpi(read_files{f}(end-2:end), '.gz')
-			extracted_file = extracted.Raw{s}.temp(sprintf('%d', f));
-			[status, out] = unix(sprintf('gunzip -c %s > %s', ...
-				read_files{f}, extracted_file));
-			if status ~= 0
-				error('gunzip returned an error:\n%s', out);
-			end
-		else
-			% FIXME: Maybe this should instead somehow inherit the
-			% temp/static status.
-			extracted.Raw{s}.static(read_files{f});
+	if rx(reads.format{s}, 'gzip')
+		extracted.format{s} = strrep(extracted.format{s}, ' (gzip)', '');
+		extracted.url{s} = [tmp reads.meta.sample_id{s}];
+		pipe_files = seq_filenames(filter(extracted, s));
+		for f = 1:length(read_files{s})
+			decompress_pipe(read_files{s}{f}, pipe_files{1}{f});
 		end
 	end
 end
