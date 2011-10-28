@@ -1,36 +1,39 @@
 function split = split_reads(reads, tag_len)
 
+tmp = temporary('split_reads');
+
+S = length(reads.url);
+
 extracted = extract_reads(reads);
+split = extracted;
 
-S = length(reads.Raw);
-
-split = struct;
-split.Meta = reads.Meta;
-split.Raw = {};
+read_files = seq_filenames(extracted);
 
 for s = 1:S
-	read_files = extracted.Raw{s}.Paths;
-	
-	if isempty(regexpi(extracted.Meta.Sequence.Paired, 'single')) || ...
-		length(read_files) ~= 1
-		error 'Reads do not look single end.';
+	if ~rx(reads.paired{s}, 'single')
+		error 'Reads are not single end.';
 	end
 	
-	split.Raw{s} = FilePool;
+	if ~rx(reads.format{s}, 'FASTA')
+		error 'Only FASTA reads can be split at the moment.';
+	end
 	
-	for f = 1:length(read_files)
-		left_split = split.Raw{s}.temp('1');
-		right_split = split.Raw{s}.temp('2');
+	split.url{s} = [tmp reads.meta.sample_id{s}];
+	
+	for f = 1:length(read_files{s})
 		
-		[status, out] = unix(sprintf( ...
-			'%s/sources/sequencing/transform/split_raw_reads.py %s %d %s %s',...
-			ppath, read_files{f}, tag_len, left_split, right_split));
+		left_split = [split.url{s} '_1.fa'];
+		right_split = [split.url{s} '_2.fa'];
+		
+		[status, out] = unix(sprintf(['%s/sources/sequencing/transform/' ...
+			'split_fasta_reads.py %s %d %s %s'], ...
+			ppath, read_files{s}{f}, tag_len, left_split, right_split));
 		if status ~= 0
-			error('split_raw_reads.py returned an error:\n%s', out);
+			error('split_fasta_reads.py returned an error:\n%s', out);
 		end
 	end
 	
-	split.Meta.Sequence.Paired{s} = 'Paired end';
+	split.paired{s} = 'Paired';
 end
 
 
