@@ -13,8 +13,8 @@ function ProbesetVis(container) {
 	self = this;
 
 	this.draw = function(data, options) {
-        var width = options.width;
-        var height = options.height;
+        this.width = options.width;
+        this.height = options.height;
 
 		this.transcripts = [];
 		this.tx_names = [];
