@@ -10,6 +10,11 @@ var MutationMapContainer = Ext.extend(Object, {
         Ext.apply(this, {contentEl:container});
     },
 
+    logo: {
+       url: "https://betastasis.googlecode.com/files/logo.png",
+       label: "Betastasis Mutation map"
+    },
+
     draw: function(data, options) {
         console.log("org.betastasis.visualizations.mutation_map.MutationMapContainer(" + data + "," + options + ")");
 
