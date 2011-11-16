@@ -13,8 +13,8 @@ function ProbesetVis(container) {
 	self = this;
 
 	this.draw = function(data, options) {
-        var w = options.width;
-        var h = options.height;
+        var width = options.width;
+        var height = options.height;
 
 		this.transcripts = [];
 		this.tx_names = [];
@@ -30,7 +30,7 @@ function ProbesetVis(container) {
 				longest_tx);
 		}
 		
-		x = pv.Scale.linear(0, longest_tx).range(0, w);
+		x = pv.Scale.linear(0, longest_tx).range(0, width);
 		
 		var y_base = 0;
 
@@ -135,11 +135,11 @@ function ProbesetVis(container) {
 	this.updateData = function() {
 		if (container == undefined) return;
 		
-		vis.width(w + 3)
+		vis.width(width + 3)
 			.height(tx_label_y[tx_label_y.length-1] + 40)
 			.canvas(container);
 		
-		ivis.width(w).left(3);
+		ivis.width(width).left(3);
 		
 		zoom_panel.cursor('crosshair')
 			.events("all")
@@ -187,7 +187,7 @@ function ProbesetVis(container) {
 		x_ticks
 			.data(function() {
 				var x_min = pv.min(x.domain()), x_max = pv.max(x.domain());
-				if (x_max - x_min < w / 20) {
+				if (x_max - x_min < width / 20) {
 					return pv.range(Math.round(x_min), Math.round(x_max));
 				} else {
 					return x.ticks();
@@ -200,7 +200,7 @@ function ProbesetVis(container) {
 		
 		function transform() {
 			var t = this.transform().invert();
-			x.domain(t.x / w * longest_tx, (t.k + t.x / w) * longest_tx);
+			x.domain(t.x / width * longest_tx, (t.k + t.x / width) * longest_tx);
 			ivis.render();
 		}
 
