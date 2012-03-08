@@ -1,44 +1,44 @@
-function meta = import_tcga_level3_mirna_expr(filename, dataset)
+function expr = import_tcga_level3_mirna_expr(files)
 
-global organism;
-mirnas = organism.miRNA;
-
-fid = fopen(filename);
-data = textscan(fid, '%s %s %f', 'Headerlines', 1, ...
-	'Delimiter', '\t', 'ReturnOnError', 0, 'TreatAsEmpty', 'NA');
-fclose(fid);
-
-samples = data{1};
-mirna = data{2};
-mirna_expr = data{3};
-
-expr.Meta.Type = 'miRNA expression';
-expr.Meta.Sample.ID = unique(samples);
-S = length(expr.Meta.Sample.ID);
-expr.Meta.Platform = repmat({'Agilent Human miRNA 8x15K'}, S, 1);
-
-expr.Mean = nan(length(mirnas.Name), S);
-
-sample_to_idx = containers.Map(expr.Meta.Sample.ID, ...
-	num2cell(1:S));
-
-for s = 1:S
-	lines = find(strcmp(expr.Meta.Sample.ID{s}, samples));
-	
-	midx = mirna_idx(mirna(lines));
-	valid = ~isnan(midx);
-	
-	expr.Mean(midx(valid), s) = mirna_expr(lines(valid));
+if nargin < 1
+	files = find_files('.*_mirna_expression_analysis.txt');
 end
 
-expr.Mean = 2.^expr.Mean;
+expr.meta.type = 'miRNA expression';
+expr.meta.sample_id = {};
+expr.mean = [];
+expr.rows.mirna_symbol = {};
+expr.scale = {};
 
-fprintf(1, 'Expression values not found for %d miRNA.\n', ...
-	sum(any(isnan(expr.Mean), 2)));
+for f = 1:length(files)
+	fid = fopen(files{f});
+	data = textscan(fid, '%s %s %f', 'Headerlines', 1, ...
+		'Delimiter', '\t', 'ReturnOnError', 0, 'TreatAsEmpty', 'NA');
+	fclose(fid);
 	
-create_dataset(dataset, expr);
-augment_meta_tcga(dataset);
+	samples = data{1};
+	mirna = data{2};
+	log_expr = data{3};
 
-
-
+	[~, sample_starts] = unique(samples, 'first');
+	S = length(sample_starts);
+	sample_starts = [sample_starts; length(samples)+1];
+	
+	for s = 1:length(sample_starts)-1
+		expr.meta.sample_id{end+1} = samples{s};
+		expr.scale{s} = 'Log-2';
+		
+		lines = sample_starts(s):sample_starts(s+1)-1;
+		if isempty(expr.rows.mirna_symbol)
+			expr.rows.mirna_symbol = mirna(lines);
+		else
+			% Check that gene names match between samples.
+			if any(~strcmp(expr.rows.mirna_symbol, mirna(lines)))
+				error 'MicroRNA names don''t match between samples.';
+			end
+		end
+		
+		expr.mean(:, length(expr.meta.sample_id)) = log_expr(lines);
+	end
+end
 
