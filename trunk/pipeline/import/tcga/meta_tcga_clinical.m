@@ -51,16 +51,15 @@ clinical = permute_struct_fields(clinical, indices);
 % back to their original states.
 clinical.patient_id(missing) = patient_ids(missing);
 
-for k = 1:length(meta.sample_id)
-	meta.sample_type{k} = parse_sample_type(clinical.sample_type{k}, ...
-		meta.sample_id{k});
-end
-
 fields = fieldnames(clinical);
 for k = 1:length(fields)
 	eval(['meta.' fields{k} ' = clinical.' fields{k} ''';']);
 end
 
+for k = 1:length(meta.sample_id)
+	meta.sample_type{k} = parse_sample_type(clinical.sample_type{k}, ...
+		meta.sample_id{k});
+end
 
 
 
@@ -82,59 +81,35 @@ elseif regexpi(sample_id, 'Promega.*Ref')
 end
 
 if length(sample_id) < 15 || ~strcmp(sample_id(1:4), 'TCGA')
-	samples_type = '-';
+	sample_type = '-';
 	return;
 end
 
 typecode = str2double(sample_id(14:15));
-if typecode == 1
-	if strcmp(sample_type, '-')
-		sample_type = 'Solid tumor';
-	else
-		sample_type = [sample_type ', solid tumor'];
-	end
-elseif typecode == 2
-	if strcmp(sample_type, '-')
-		sample_type = 'Recurrent solid tumor';
-	else
-		sample_type = [sample_type ', recurrent solid tumor'];
-	end
-elseif typecode == 3
-	if strcmp(sample_type, '-')
-		sample_type = 'Primary blood derived cancer';
-	else
-		sample_type = [sample_type ', primary blood derived cancer'];
-	end
-elseif typecode == 4
-	if strcmp(sample_type, '-')
-		sample_type = 'Recurrent blood derived cancer';
-	else
-		sample_type = [sample_type ', recurrent blood derived cancer'];
-	end
-elseif typecode == 6
-	if strcmp(sample_type, '-')
-		sample_type = 'Metastatic tumor';
-	else
-		sample_type = [sample_type ', metastatic tumor'];
-	end
-elseif typecode == 10
-	sample_type = 'Normal blood';
-elseif typecode == 11
-	if strcmp(sample_type, '-')
-		sample_type = 'Adjacent normal tissue';
-	else
-		sample_type = [sample_type ', adjacent normal tissue'];
-	end
-elseif typecode == 12
-	sample_type = 'Buccal smear';
-elseif typecode == 13
-	sample_type = 'EBV immortalized normal';
-elseif typecode == 20
-	sample_type = 'Normal cell line';
-else
-	fprintf(1, 'Unknown tissue type %d in TCGA data.', typecode);
-	sample_type = '-';
+
+typecode_map = containers.Map('KeyType', 'double', 'ValueType', 'char');
+typecode_map(1) = 'Solid tumor';
+typecode_map(2) = 'Recurrent solid tumor';
+typecode_map(3) = 'Primary blood derived cancer';
+typecode_map(4) = 'Recurrent blood derived cancer';
+typecode_map(6) = 'Metastatic tumor';
+typecode_map(10) = 'Normal blood';
+typecode_map(11) = 'Adjacent normal tissue';
+typecode_map(12) = 'Buccal smear';
+typecode_map(13) = 'EBV immortalized normal';
+typecode_map(20) = 'Normal cell line';
+
+if ~typecode_map.isKey(typecode)
+	fprintf('Unknown tissue type %d in TCGA data.', typecode);
+	return;
 end
+
+if ~strcmp(sample_type, '-')
+	sample_type = [typecode_map(typecode) ', ' sample_type];
+else
+	sample_type = typecode_map(typecode);
+end
+
 
 
 

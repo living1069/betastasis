@@ -1,6 +1,6 @@
 function data = read_uarray_sample_agilent(sample_file, probes, channels)
 
-N = length(probes.Sequence);
+N = length(probes.sequence);
 
 if nargin < 3, channels = {}; end
 
@@ -16,7 +16,7 @@ while 1
 	line = fgetl(fid);
 	if line == -1, break, end
 	if length(line) < 8, continue, end
-	
+		
 	if strcmp(line(1:8), 'FEPARAMS')
 		[rows, cols] = parse_uarray_size(fid, line);
 	elseif strcmp(line(1:8), 'FEATURES')
@@ -34,11 +34,11 @@ data = zeros(N, length(channels));
 for k = 1:length(cdata)
 	raw = cdata{k};
 	for p = 1:N
-		data(p, k) = raw(probes.YPos(p), probes.XPos(p));
+		data(p, k) = raw(probes.ypos(p), probes.xpos(p));
 	end
 end
 
-return;
+
 
 
 
@@ -78,8 +78,8 @@ data = textscan(line, parse_format, 'Delimiter', '\t', 'BufSize', 16384);
 rows = data{1};
 cols = data{2};
 
-%fprintf(1, 'Microarray has %d rows and %d columns.\n', rows, cols);
-return;
+
+
 
 
 
@@ -187,4 +187,3 @@ for c = 1:length(channels)
 	channel_data{c} = raw;
 end
 
-return;

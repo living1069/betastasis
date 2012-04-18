@@ -36,6 +36,12 @@ fclose(fid);
 
 % Filter out variants with a non-sufficient quality.
 valid = str2double(data{6}) > variant_phred_threshold;
+
+% FIXME: Add support for variants with multiple mutated alleles.
+for k = 1:length(valid)
+	valid(k) = valid(k) && all(data{4}{k} ~= ',') && all(data{5}{k} ~= ',');
+end
+
 for k = 1:length(data), data{k} = data{k}(valid); end
 V = sum(valid);
 
@@ -51,6 +57,10 @@ variants.Alleles = cell(V, 1);
 variants.OverlapGenes = cell(V, 1);
 variants.ReferenceSeq = cell(V, 1);
 variants.Consequences = cell(V, 1);
+
+variants.COSMIC_Annotated = false(V, 1);
+variants.COSMIC_PubMed = cell(V, 1);
+
 variants.Genotype = nan(V, S);
 variants.TotalReads = nan(V, S);
 
@@ -97,14 +107,25 @@ for k = 1:V
 		genes.Position(genes_in_chr{chr(k)}, 2) >= pos(k))';
 	variants.OverlapGenes{k} = genes_in_chr{chr(k)}(inside_gene{k});
 	
-	seq = lower(chromosomes.Sequence{chr(k)}(pos(k)-20:pos(k)+20));
-	seq(21) = upper(seq(21));
-	variants.ReferenceSeq{k} = seq;
-	
-	variants.Consequences{k} = snv_consequence(sprintf('chr%s:%d:%s', ...
+	[variants.Consequences{k}, variants.ReferenceSeq{k}] = ...
+		snv_consequence(sprintf('chr%s:%d:%s', ...
 		chromosomes.Name{chr(k)}, pos(k), variants.Alleles{k}));
 end
 
 
+
+% Check if the variant is annotated in the COSMIC database for cancer mutations.
+variant_str = cell(V, 1);
+for v = 1:V
+	variant_str{v} = sprintf('chr%s:%d', ...
+		chromosomes.Name{variants.Chromosome(v)}, variants.Position(v));
+end
+
+cosmic = import_cosmic(['~/organisms/homo_sapiens/cosmic_v56/' ...
+	'CosmicCompleteExportIncFus_v56_151111.tsv']);
+
+found = cosmic.map.isKey(variant_str);
+variants.COSMIC_Annotated(found) = true;
+variants.COSMIC_PubMed(found) = cosmic.map.values(variant_str(found));
 
 

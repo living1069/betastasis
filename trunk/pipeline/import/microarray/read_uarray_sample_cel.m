@@ -14,11 +14,11 @@ function sample = read_uarray_sample_cel(cel_file, probes)
 N = length(probes.Sequence);
 
 sample = struct;
-sample.Mean = zeros(N, 1, 'single');
+sample.mean = zeros(N, 1, 'single');
 	
 cel = affyread(cel_file);
 
 idx = probes.YPos * cel.Cols + probes.XPos + 1;
-sample.Mean = cel.Probes(idx, 3);
+sample.mean = cel.Probes(idx, 3);
 %sample.Stdev = cel.Probes(idx, 4);
 
