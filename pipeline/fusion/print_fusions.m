@@ -31,14 +31,16 @@ for k = 1:2:length(varargin)
 		continue;
 	end
 	
-	if strcmpi(varargin{k}, 'NegativeSamples')
-		negative_samples = varargin{k+1};
-		drop_args(k:k+1) = true;
-		continue;
-	end
-	
 	if strcmpi(varargin{k}, 'Groups')
 		groups = varargin{k+1};
+		for g = 1:2:length(groups)
+			if ~ischar(groups{g}), error 'Invalid group format.'; end
+			if islogical(groups{g+1})
+				groups{g+1} = find(groups{g+1});
+			elseif ~isnumeric(groups{g+1})
+				error 'Invalid group format.';
+			end
+		end
 		drop_args(k:k+1) = true;
 		continue;
 	end
@@ -46,7 +48,7 @@ end
 varargin = varargin(~drop_args);
 
 
-fusions = rearrangements.Fusions;
+fusions = rearrangements.fusions;
 S = length(fusions);
 
 joint_fusions = filter_fusions(rearrangements, varargin{:});
@@ -55,8 +57,8 @@ joint_fusions = filter_fusions(rearrangements, varargin{:});
 
 % Check if the given gene expression data matches with our fusion data.
 if ~isempty(gene_expr)
-	[found, idx] = ismember(rearrangements.Meta.Sample.ID, ...
-		gene_expr.Meta.Sample.ID);
+	[found, idx] = ismember(rearrangements.meta.sample_id, ...
+		gene_expr.meta.sample_id);
 	if any(~found) || length(idx) ~= S
 		error 'Expression data does not match with rearrangement samples.';
 	end
@@ -64,8 +66,8 @@ if ~isempty(gene_expr)
 end
 
 if ~isempty(exon_expr)
-	[found, idx] = ismember(rearrangements.Meta.Sample.ID, ...
-		exon_expr.Meta.Sample.ID);
+	[found, idx] = ismember(rearrangements.meta.sample_id, ...
+		exon_expr.meta.sample_id);
 	if any(~found) || length(idx) ~= S
 		error 'Expression data does not match with rearrangement samples.';
 	end
@@ -87,11 +89,6 @@ if ~isempty(exon_expr)
 	
 	for f = 1:length(joint_fusions)
 		gfusion = joint_fusions{f};
-		
-		if gfusion.Genes(1) ~= gene_idx('TMPRSS2') || ...
-			gfusion.Genes(2) ~= gene_idx('ERG')
-			continue;
-		end
 		
 		% Sort the gene exons based on their order within the gene.
 		exons_5p_gene = find(exons.Gene == gfusion.Genes(1));
@@ -321,11 +318,11 @@ end
 if ~isempty(gene_expr), fprintf(fid, 'DE1\tDE2\t'); end
 if ~isempty(exon_expr), fprintf(fid, '5p5p\t5p3p\t3p5p\t3p3p\t'); end
 for s = 1:S
-	if isfield(rearrangements.Meta.Sample, 'Type')
-		fprintf(fid, '%s (%s)\t', rearrangements.Meta.Sample.Type{s}, ...
-			rearrangements.Meta.Sample.ID{s});
+	if isfield(rearrangements.meta, 'sample_type')
+		fprintf(fid, '%s (%s)\t', rearrangements.meta.sample_type{s}, ...
+			rearrangements.meta.sample_id{s});
 	else
-		fprintf(fid, '%s\t', rearrangements.Meta.Sample.ID{s});
+		fprintf(fid, '%s\t', rearrangements.meta.sample_id{s});
 	end
 end
 fprintf(fid, '\n');
