@@ -20,6 +20,8 @@ for s = 1:S
 			
 		probe_offsets = probesets.Offset(chr_probes(chr, 1):chr_probes(chr, 2));
 		chr_segs = segs.Chromosome{chr, s};
+		if isempty(chr_segs), continue, end
+		
 		for seg = 1:length(chr_segs.Start)
 			seg_probes = chr_probes(chr, 1) - 1 + ...
 				find(probe_offsets >= chr_segs.Start(seg) & ...

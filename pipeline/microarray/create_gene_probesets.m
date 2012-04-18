@@ -39,10 +39,10 @@
 function probesets = create_gene_probesets(probes, varargin)
 
 global organism;
-genome = organism.Genes;
-transcriptome = organism.Transcripts;
+genes = organism.Genes;
+transcripts = organism.Transcripts;
 
-include_genes = true(length(genome.Name), 1);
+include_genes = true(length(genes.Name), 1);
 require_every_transcript = true;
 min_probes_per_probeset = 4;
 max_mismatches = 0;
@@ -95,13 +95,13 @@ fprintf(1, 'Aligning probes to transcripts using Bowtie...\n');
 
 fprintf(1, 'Constructing gene expression probesets based on alignments...\n');
 
-transcript_map = containers.Map(transcriptome.Name, ...
-	num2cell(1:length(transcriptome.Name)));
+transcript_map = containers.Map(transcripts.Name, ...
+	num2cell(1:length(transcripts.Name)));
 
 probesets = struct;
-probesets.Gene = genome.Name;
-probesets.ProbeCount = zeros(length(genome.Name), 1);
-probesets.Probes = zeros(length(genome.Name), 10);
+probesets.gene = genes.Name;
+probesets.probecount = zeros(length(genes.Name), 1);
+probesets.probes = zeros(length(genes.Name), 1);
 
 % Read the Bowtie alignments into Matlab.
 alignments_file = fopen(alignments_tmp);
@@ -109,12 +109,12 @@ data = textscan(alignments_file, '%d %*s %s %d');
 fclose(alignments_file);
 
 probe_indices = data{1};
-transcripts = data{2};
+tx_id = data{2};
 offsets = data{3};
 
 % Map the transcript names found in the Bowtie alignments file into transcript
 % indices. It is faster to map them all in one go, rather than inside the loop.
-transcript_indices = cell2mat(transcript_map.values(transcripts));
+transcript_indices = cell2mat(transcript_map.values(tx_id));
 
 % Find sequential lines that indicate multiple alignments for one probe.
 % These are identified by looking at the probe ID column.
@@ -124,9 +124,9 @@ run_lengths = diff([0; run_ends]);
 
 if ~isempty(report_dir)
 	report = struct;
-	report.TxProbePosition = cell(length(organism.Transcripts.Name), 1);
-	report.TxProbeAccepted = cell(length(organism.Transcripts.Name), 1);
-	report.TxProbeSeq = cell(length(organism.Transcripts.Name), 1);
+	report.TxProbePosition = cell(length(transcripts.Name), 1);
+	report.TxProbeAccepted = cell(length(transcripts.Name), 1);
+	report.TxProbeSeq = cell(length(transcripts.Name), 1);
 	
 	for k = 1:length(report.TxProbeSeq)
 		report.TxProbeSeq{k} = {};
@@ -147,7 +147,7 @@ for r = 1:length(run_lengths)
 	
 	% Determine a set of genes so that at least one of the target transcripts
 	% belongs to each gene in the set.
-	probe_target_genes = unique(transcriptome.Gene(probe_target_transcripts));
+	probe_target_genes = unique(transcripts.Gene(probe_target_transcripts));
 	
 	if require_every_transcript
 		% For each potential target gene, check if the probe targets every
@@ -156,7 +156,7 @@ for r = 1:length(run_lengths)
 		for g = 1:length(probe_target_genes)
 			idx = probe_target_genes(g);
 			if isempty(setdiff( ...
-				genome.Transcripts(idx, 1:genome.TranscriptCount(idx)), ...
+				genes.Transcripts(idx, 1:genes.TranscriptCount(idx)), ...
 				probe_target_transcripts))
 				
 				matched_genes(end + 1) = idx;
@@ -174,10 +174,10 @@ for r = 1:length(run_lengths)
 	if allow_nonspecific_hits || length(matched_genes) == 1
 		for g = 1:length(matched_genes)
 			idx = matched_genes(g);
-			probe_num = probesets.ProbeCount(idx);
+			probe_num = probesets.probecount(idx);
 			if probe_num < 40
-				probesets.Probes(idx, probe_num + 1) = probe_indices(pos);
-				probesets.ProbeCount(idx) = probe_num + 1;
+				probesets.probes(idx, probe_num + 1) = probe_indices(pos);
+				probesets.probecount(idx) = probe_num + 1;
 				probe_accepted = true;
 			end
 		end
@@ -199,20 +199,19 @@ for r = 1:length(run_lengths)
 end
 
 if any(~include_genes)
-	probesets.Probes(~include_genes, :) = 0;
-	probesets.ProbeCount(~include_genes) = 0;
+	probesets.probes(~include_genes, :) = 0;
+	probesets.probecount(~include_genes) = 0;
 end
 
 if min_probes_per_probeset > 0
 	fprintf(1, 'Filtering out probesets with less than %d probes...\n', ...
 		min_probes_per_probeset);
-	probesets.ProbeCount(probesets.ProbeCount < min_probes_per_probeset) = 0;
-	probesets.Probes(probesets.ProbeCount < min_probes_per_probeset, :) = 0;
+	probesets.probecount(probesets.probecount < min_probes_per_probeset) = 0;
+	probesets.probes(probesets.probecount < min_probes_per_probeset, :) = 0;
 end
 
-probesets.Type = 'Gene expression';
-probesets.Organism = organism.Name;
-%probesets.GenomeVersion = organism.GenomeVersion;
+probesets.type = 'Gene expression';
+probesets.organism = organism.Name;
 
 % Remove temporary files.
 safe_delete(probes_fasta_tmp);
@@ -227,7 +226,7 @@ if ~isempty(report_dir)
 	fid = fopen([report_dir '/genelist.json'], 'w');
 	fprintf(fid, '{ "genes": [ ');
 	
-	for g = 1:length(organism.Genes.Name)
+	for g = 1:length(genes.Name)
 		plot_probe_reads(report, g, report_dir);
 		if g == 1 
 			fprintf(fid, '"%s"', organism.Genes.Name{g});

@@ -15,31 +15,13 @@ function segments = cgh_segment_rcbs(test, ref, probesets, varargin)
 
 global organism;
 
-normal_threshold = 0.2;
-sample_purity = 0.7;
-significance = 1e-8;
-detect_gender = false;
+significance = 0.01;
 
 for k = 1:2:length(varargin)
-	if strcmpi(varargin{k}, 'NormalThreshold')
-		normal_threshold = varargin{k+1};
-		continue;
-	end
-	
-	if strcmpi(varargin{k}, 'Significance')
+	if rx(varargin{k}, 'significance')
 		significance = varargin{k+1};
 		continue;
 	end
-	
-	if strcmpi(varargin{k}, 'SamplePurity')
-		sample_purity = varargin{k+1};
-		continue;
-	end
-	
-	%if strcmpi(varargin{k}, 'DetectGender')
-	%	detect_gender = varargin{k+1};
-	%	continue;
-	%end
 	
 	error('Unrecognized option "%s".', varargin{k});
 end
@@ -50,7 +32,7 @@ offset = probesets.Offset;
 
 S = size(logratios, 2);
 
-tmp = ptemp
+tmp = ptemp;
 
 r_script = [tmp '.Rscript'];
 
@@ -65,16 +47,15 @@ fprintf(fid, [ ...
 	'writeMat("' [tmp '.mat'] '", chr = segmented.cna$output$chrom, segstart = segmented.cna$output$loc.start, segend = segmented.cna$output$loc.end, segmean = segmented.cna$output$seg.mean)\n']);
 fclose(fid);
 
-
-ploidy = cgh_ploidy(test, ref);
-
-
 segments = struct;
-segments.Chromosome = cell(length(organism.Chromosomes.Name), S);
+segments.chromosome = cell(length(organism.Chromosomes.Name), S);
 
 progress = Progress;
 
 for s = 1:S
+	fprintf('Performing circular binary segmentation for sample %s...\n', ...
+		test.meta.sample_id{s});
+		
 	lr = logratios(:, s);
 	save([tmp '.mat'], 'lr', 'chr', 'offset', '-v6');
 	
@@ -87,32 +68,20 @@ for s = 1:S
 	for c = 1:length(organism.Chromosomes.Name)
 		chr_segs = (results.chr == c);
 		seg = struct;
-		
-		if ~isnan(ploidy(c, s))
-			seg.Start = results.segstart(chr_segs);
-			seg.End = results.segend(chr_segs);
-		
-			lr = results.segmean(chr_segs);
-			seg.CNA = ploidy(c, s) * 2.^lr - ploidy(c, s);
-			seg.CNA(seg.CNA < - 2) = -2;
-			
-			% Filter out segments below the normal threshold.
-			seg.CNA(abs(seg.CNA) < normal_threshold) = 0;
-		end
-		
-		segments.Chromosome{c, s} = seg;
+		seg.start = results.segstart(chr_segs);
+		seg.end = results.segend(chr_segs);
+		seg.logratio = results.segmean(chr_segs);
+		segments.chromosome{c, s} = seg;
 	end
 		
 	progress.update(s / S);
 end
 
-segments.Meta = test.Meta;
-segments.Meta.Ref = ref.Meta;
-segments.Meta.Organism = probesets.Organism;
-segments.Meta.Type = 'Copy number segments';
-segments.Meta.SegmentationMethod = repmat({'CBS (R)'}, S, 1);
-segments.Meta.SamplePurity = sample_purity;
-segments.Meta.NormalThreshold = normal_threshold;
-segments.Meta.Ref = rmfield(segments.Meta.Ref, 'Type');
-segments.Meta.Ref = rmfield(segments.Meta.Ref, 'Platform');
+segments.meta = test.meta;
+segments.meta.ref = ref.meta;
+segments.meta.organism = probesets.Organism;
+segments.meta.type = 'aCGH logratio segments';
+segments.meta.segmentation_method = repmat({'CBS (R)'}, S, 1);
+segments.meta.ref = rmfield(segments.meta.ref, 'type');
+segments.meta.ref = rmfield(segments.meta.ref, 'platform');
 
