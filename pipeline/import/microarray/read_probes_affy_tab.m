@@ -49,9 +49,10 @@ end
 data = textscan(fid, parse_format);
 fclose(fid);
 
-probes = struct('XPos', data{2}, ...
-                'YPos', data{3}, ...
-				'Sequence', { lower(data{4}) });
+probes = struct;
+probes.XPos = data{2};
+probes.YPos = data{3};
+probes.Sequence = lower(data{4});
 
 fprintf(1, 'Found %d probes.\n', length(probes.Sequence));
 
@@ -60,24 +61,20 @@ if nargout > 1
 	probeset_map = containers.Map(probeset_names, ...
 		num2cell(1:length(probeset_names)));
 					
-	probesets = struct('Name', { probeset_names }, ...
-					   'ProbeCount', zeros(length(probeset_names), 1), ...
-					   'Probes', zeros(length(probeset_names), 10));
+	probesets = struct;
+	probesets.Name = probeset_names;
+	probesets.ProbeCount = zeros(length(probeset_names), 1);
+	probesets.Probes = zeros(length(probeset_names), 10);
 
 	fprintf(1, 'Reading probesets from file...\n');
-	progress = Progress;
 
-	probeset_names = data{1};
-
-	N = length(probeset_names);
-	for k = 1:N
-		ps = probeset_map(probeset_names{k});
-		probenum = probesets.ProbeCount(ps);
+	ps_idx = cell2mat(probeset_map.values(data{1}));
+	for k = 1:length(ps_idx)
+		p = ps_idx(k);
+		probenum = probesets.ProbeCount(p);
 		if probenum >= 20, continue, end
-		probesets.Probes(ps, probenum + 1) = k;
-		probesets.ProbeCount(ps) = probenum + 1;
-		
-		progress.update(k / N);
+		probesets.Probes(p, probenum + 1) = k;
+		probesets.ProbeCount(p) = probenum + 1;
 	end
 end
 

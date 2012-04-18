@@ -1,4 +1,4 @@
-function gtf = read_ucsc_exon_gtf_new(filepath)
+function gtf = read_ucsc_exon_gtf(filepath)
 
 global organism;
 genes = organism.Genes;
@@ -32,6 +32,9 @@ for f = 1:length(info)
 		%fprintf(1, 'Unknown transcript %s.\n', token{1});
 		continue;
 	end
+	
+	% Put exons in natural order.
+	gtf.Exons{tx_idx}
 	
 	gtf.Exons{tx_idx}(end+1, :) = position(f, :);
 	if strand{f} == '-'

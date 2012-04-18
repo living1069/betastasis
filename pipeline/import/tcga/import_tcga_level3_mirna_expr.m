@@ -5,6 +5,7 @@ if nargin < 1
 end
 
 expr.meta.type = 'miRNA expression';
+expr.meta.tcga_barcode = {};
 expr.meta.sample_id = {};
 expr.mean = [];
 expr.rows.mirna_symbol = {};
@@ -25,7 +26,8 @@ for f = 1:length(files)
 	sample_starts = [sample_starts; length(samples)+1];
 	
 	for s = 1:length(sample_starts)-1
-		expr.meta.sample_id{end+1} = samples{s};
+		expr.meta.tcga_barcode{end+1} = samples{s};
+		expr.meta.sample_id{end+1} = samples{s}(1:15);
 		expr.scale{s} = 'Log-2';
 		
 		lines = sample_starts(s):sample_starts(s+1)-1;

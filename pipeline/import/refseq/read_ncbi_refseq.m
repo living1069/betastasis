@@ -16,6 +16,7 @@ function refseq = read_ncbi_refseq(filepath)
 
 genes = struct;
 genes.Name = cell(50000, 1);
+genes.FullName = cell(50000, 1);
 genes.Synonyms = cell(50000, 1);
 genes.EntrezID = cell(50000, 1);
 genes.TranscriptCount = zeros(50000, 1);
@@ -165,6 +166,13 @@ while 1
 				break;
 			end
 			
+			tokens = regexp(line, '/note="(.+)"', 'tokens');
+			if length(tokens) == 1
+				tokens = tokens{1};
+				genes.FullName{gene_idx} = tokens{1};
+				break;
+			end
+			
 			if length(line) < 10 || any(line(1:10) ~= ' ')
 				parse_mode = 0;
 				continue;
@@ -198,6 +206,7 @@ fclose(rna_gbff);
 
 % Squeeze any preallocated space out of the data structures.
 genes.Name = genes.Name(1:gene_count);
+genes.FullName = genes.FullName(1:gene_count);
 genes.Synonyms = genes.Synonyms(1:gene_count);
 genes.EntrezID = genes.EntrezID(1:gene_count);
 genes.TranscriptCount = genes.TranscriptCount(1:gene_count);
@@ -233,6 +242,7 @@ end
 
 % Sort the genes in alphabetical order.
 [genes.Name, order] = sort(genes.Name);
+genes.FullName = genes.FullName(order);
 genes.Synonyms = genes.Synonyms(order);
 genes.EntrezID = genes.EntrezID(order);
 genes.TranscriptCount = genes.TranscriptCount(order);
@@ -299,6 +309,9 @@ exons.Sequence = exons.Sequence(keep_exons, :);
 for t = 1:length(transcripts.Name)
 	transcripts.Exons{t} = exon_map(transcripts.Exons{t});
 end
+
+% Finally, we sort the exons based on their name.
+
 	
 % Compile the genes, transcripts and exons into one data structure.
 refseq.Genes = genes;
