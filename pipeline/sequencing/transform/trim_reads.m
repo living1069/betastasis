@@ -1,27 +1,51 @@
 function trimmed = trim_reads(reads, trim_len)
 
-fprintf(1, '-> Trimming reads to a length of %d bases...\n', trim_len);
+use_pipes = true;
+tmp = temporary('trim_reads');
 
-extracted = extract_reads(reads);
+S = length(reads.url);
 
-S = length(reads.Raw);
+fprintf('-> Trimming reads to a length of %d bases...\n', trim_len);
 
-trimmed = struct;
-trimmed.Meta = reads.Meta;
-trimmed.Raw = {};
+if any(~rx(reads.format, 'FASTA'))
+	error 'Only FASTA reads can be trimmed at the moment.';
+end
+
+trimmed = reads;
 
 for s = 1:S
-	read_files = extracted.Raw{s}.Paths;
+	inputs = {};
+	outputs = {};
 	
-	color = ~isempty(regexpi(reads.Meta.Sequence.Space{s}, 'color'));
+	trimmed.url{s} = [tmp reads.meta.sample_id{s}];
+	trimmed.format{s} = 'FASTA';
 	
-	trimmed.Raw{s} = FilePool;
+	if rx(reads.paired{s}, 'paired')
+		inputs = strcat(reads.url{s}, {'_1.fa', '_2.fa'});
+		outputs = strcat(trimmed.url{s}, {'_1.fa', '_2.fa'});
+	else
+		inputs = {[reads.url{s} '.fa']};
+		outputs = {[trimmed.url{s} '.fa']};
+	end
 	
-	for f = 1:length(read_files)
-		trimmed_file = trimmed.Raw{s}.temp(sprintf('%d', f));
+	if rx(reads.format{s}, 'gzip')
+		for k = 1:length(inputs)
+			inputs{k} = sprintf('<(gunzip -c %s)', [inputs{k} '.gz']);
+		end
+	end
+	
+	if use_pipes
+		for k = 1:length(outputs)
+			unix(['mkfifo ' outputs{k}]);
+		end
+	end
+	
+	color = rx(reads.space{s}, 'color');
+	
+	for k = 1:length(inputs)
 		[status, out] = unix(sprintf( ...
-			'%s/sources/sequencing/transform/trim_raw_reads.py %s %d > %s', ...
-			ppath, read_files{f}, trim_len+1*color, trimmed_file));
+			'%s/sources/sequencing/transform/trim_fasta_reads.py %s %d > %s &', ...
+			ppath, inputs{k}, trim_len+1*color, outputs{k}));
 		if status ~= 0
 			error('trim_reads.py returned an error:\n%s', out);
 		end

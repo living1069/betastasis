@@ -17,30 +17,25 @@ def main():
 	tags_5p = open(sys.argv[3], 'w')
 	tags_3p = open(sys.argv[4], 'w')
 	
-	read_id = 0
-
 	while 1:
 		str = fasta.readline()
 		if str == '': break
-		if str[0] in '#>': continue
+		if str[0] == '#': continue
+		if str[0] == '>':
+			header = str[:-1]
+			continue
 		
-		if len(str) < 2 * tag_length + 5: continue
+		if len(str) < 2 * tag_length + 2: continue
 		
 		if color == -1:
 			color = (str[1] in '0123.')
 		
-		read_id += 1
-		
 		if color:
-			tags_5p.write('>%d/1\n' % read_id)
-			tags_5p.write(str[0:tag_length+1] + '\n')
-			tags_3p.write('>%d/2\n' % read_id)
-			tags_3p.write('T' + str[-tag_length-1:])
+			tags_5p.write('%s/1\n%s\n' % (header, str[0:tag_length+1]))
+			tags_3p.write('%s/2\nT%s\n' % (header, str[-tag_length-1:]))
 		else:
-			tags_5p.write('>%d/1\n' % read_id)
-			tags_5p.write(str[0:tag_length] + '\n')
-			tags_3p.write('>%d/2\n' % read_id)
-			tags_3p.write(str[-tag_length-1:])
+			tags_5p.write('%s/1\n%s\n' % (header, str[0:tag_length]))
+			tags_3p.write('%s/2\n%s\n' % (header, str[-tag_length-1:]))
 	
 	tags_5p.close()
 	tags_3p.close()
