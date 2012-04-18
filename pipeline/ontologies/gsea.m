@@ -1,3 +1,15 @@
+
+% GSEA     Perform gene set enrichment analysis based on expression data
+%
+%    GSEA(A, B, GSETS) calculates enrichment scores for the gene sets GSETS
+%    based on the differential expression between datasets A and B. Permutation
+%    tests are performed by permuting the class labels A and B.
+%
+%    GSEA(A, [], GSETS) calculates enrichment scores using data in A without
+%    the reference B.
+
+% Author: Matti Annala <matti.annala@tut.fi>
+
 function [] = gsea(A, B, gsets, varargin)
 
 if ~isempty(B) && size(A, 1) ~= size(B, 1)
@@ -11,7 +23,7 @@ if isnumeric(gsets)
 	gsets.genes = { genes };
 end
 
-gset_size = [0 Inf];
+gset_size = [1 Inf];
 permutations = 10000;
 significance = 0.001;
 early_termination = 1e-9;
@@ -176,7 +188,7 @@ if terminated_early
 else
 	if escore >= 0
 		pval = sum(perm_escores > escore) / length(perm_escores);
-	elseif escore < 0
+	else
 		pval = sum(perm_escores < escore) / length(perm_escores);
 	end
 	pval = max(pval, 1 / permutations);
