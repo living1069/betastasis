@@ -47,14 +47,8 @@ if ~isfield(data, 'Meta') || ~isfield(data.Meta, 'Type') || ...
 	merged = data;
 end
 
-% We must make sure that we don't merge samples with unknown sample IDs. The
-% simplest way to ensure this is to give these samples temporary unique IDs.
-for s = 1:length(data.Meta.Sample.ID)
-	unique_id = 1;
-	if strcmp(data.Meta.Sample.ID{s}, '-') || length(data.Meta.Sample.ID{s})==0
-		data.Meta.Sample.ID{s} = sprintf('__temp_%d', unique_id);
-		unique_id = unique_id + 1;
-	end
+if any(strcmp('-', data.Meta.Sample.ID))
+	error 'merge_replicates() requires that all samples have an ID.';
 end
 
 [uniq_samples, ~, groups] = unique(data.Meta.Sample.ID);
@@ -77,6 +71,7 @@ end
 	
 if strcmp(data.Meta.Type, 'Microarray probe intensities') || ...
 	strcmp(data.Meta.Type, 'Gene expression') || ...
+	strcmp(data.Meta.Type, 'Exon expression') || ...
 	strcmp(data.Meta.Type, 'miRNA expression')
 	
 	progress = Progress;
@@ -109,6 +104,18 @@ elseif strcmp(data.Meta.Type, 'Mutations')
 		merged.Mutations = merged.Mutations(:, groups);
 	end
 	
+elseif strcmp(data.Meta.Type, 'Copy number segments')
+	merged.Meta = rmfield(merged.Meta, 'Ref');
+	
+	for r = 1:length(replicates)
+		rep = replicates{r};
+		merged.Chromosome(:, r) = data.Chromosome(:, rep(1));
+	end
+	
+	if ~collapse
+		merged.Chromosome = merged.Chromosome(:, groups);
+	end
+
 else
 	error 'Dataset is of an unrecognized type. Cannot merge replicates.';
 end
