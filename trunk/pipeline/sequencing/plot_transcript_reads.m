@@ -29,8 +29,10 @@ end
 tx_exons = organism.Transcripts.Exons{tx_idx};
 tx_exon_pos = organism.Transcripts.ExonPos{tx_idx};
 
-if isfield(reads.Meta.Sample, 'ID')
-	[~, uniq_samples] = unique(reads.Meta.Sample.ID);
+sample_id = reads.Meta.Sample.ID;
+
+if isfield(sample_id, 'ID')
+	[~, uniq_samples] = unique(sample_id);
 else
 	uniq_samples = 1:length(reads.Raw);
 end
@@ -39,7 +41,7 @@ S = length(uniq_samples);
 
 tx_seq = organism.Transcripts.Sequence{tx_idx};
 
-stats.Samples = reads.Meta.Sample.ID(uniq_samples);
+stats.Samples = sample_id(uniq_samples);
 
 stats.TotalReads = zeros(1, S);
 stats.AlignedReads = zeros(1, S);
@@ -50,34 +52,34 @@ stats.JunctionReads = zeros(length(tx_exons) - 1, S);
 % We iterate through the samples first, and then we iterate through their
 % technical replicates.
 for s = 1:S
-	if isfield(reads.Meta.Sample, 'ID')
-		sample_id = reads.Meta.Sample.ID{uniq_samples(s)};
-	else
-		sample_id = reads.Meta.Sample.Filename{s};
-	end
-	
-	if isfield(reads.Meta.Sample, 'ID')
-		fprintf(1, 'Plotting reads for sample %s...\n', sample_id);
-		replicates = find(strcmp(sample_id, reads.Meta.Sample.ID));
-	else
-		replicates = s;
-	end
+	fprintf(1, 'Plotting reads for sample %s...\n', sample_id{s});
+	replicates = find(strcmp(sample_id{s}, sample_id));
 	
 	strands = '';
 	offsets = [];
 	sequences = {};
 	
+	if 1
+		index.Name = { organism.Transcripts.Name{tx_idx} };
+		index.Sequence = { organism.Transcripts.Sequence{tx_idx} };
+	else
+		index = 'transcripts';
+	end
+	
 	% If we have technical replicates (multiple sequenced channels) from a
 	% particular sample, we combine the alignments from all the replicates and
 	% then plot them together for that sample.
 	for r = replicates'
-		fprintf(1, '-> Channel %s...\n', reads.Meta.Sample.Filename{r});
-		al = align_reads(filter_query(reads, r), 'transcripts', ...
+		if length(replicates) > 1
+			fprintf(1, '-> Channel %s...\n', reads.Meta.Sample.Filename{r});
+		end
+		
+		al = align_reads(filter_query(reads, r), index, ...
 			'MaxMismatches', 2, ...
 			'Columns', 'target,strand,offset,sequence', varargin{:});
 			
-		stats.TotalReads(s) = stats.TotalReads(s) + al.TotalReads;
-		stats.AlignedReads(s) = stats.AlignedReads(s) + al.AlignedReads;
+		stats.TotalReads(s) = stats.TotalReads(s) + sum(al.TotalReads);
+		stats.AlignedReads(s) = stats.AlignedReads(s) + sum(al.AlignedReads);
 
 		keep = strcmp(organism.Transcripts.Name{tx_idx}, al.Target);
 		
@@ -117,17 +119,30 @@ for s = 1:S
 	
 	
 	% Calculate arrow positions.
-	read_count_dist = zeros(1, length(tx_seq));
 	x = zeros(7, length(offsets));
 	y = zeros(7, length(offsets));
+	
+	offsets = offsets(randperm(length(offsets)));
+	
+	read_coverage = false(1000, length(tx_seq));
+	
+	highest_level = -Inf;
 
 	for m = 1:length(offsets)
 		span = offsets(m):offsets(m)+length(sequences{m})-1;
-		read_count_dist(span) = read_count_dist(span) + 1;
 		
-		level = max(read_count_dist(span));
+		c = 1;
+		while any(read_coverage(c, span))
+			c = c + 1;
+		end
+		
+		read_coverage(c, span) = true;
+		
+		level = c;
+		highest_level = max(highest_level, level);
+		
 		len = length(sequences{m});
-		dx = length(read_count_dist) / 800;
+		dx = length(tx_seq) / 800;
 		dy = 150 / 800; 
 		
 		arrow_x = [0; 0; len-dx; len-dx; len; len-dx; len-dx];
@@ -141,23 +156,11 @@ for s = 1:S
 		y(:, m) = arrow_y + level;
     end
 	
-%	figure; bar(1:length(read_count_dist), read_count_dist);
-%	title(sprintf('Read distribution in sample %s', reads.Meta.Sample.ID{s}),...
-%		'Interpreter', 'none');
-%	xlabel('Feature sequence offset'); ylabel('Number of overlapping reads');
-%	saveas(gcf, [image_prefix '_' num2str(s) '.pdf']);
-	
-%	figure; bar(1:length(read_count_dist), ...
-%		conv(read_count_dist, ones(1, 500) / 500, 'same'));
-%	title(sprintf('Smoothed read distribution in sample %s', ...
-%		reads.Meta.Sample.ID{s}));
-%	xlabel('Feature sequence offset'); ylabel('Number of overlapping reads');
-%	saveas(gcf, [image_prefix '_smoothed_' num2str(s) '.pdf']);
-	
 
 
 	% Render the quiver plot.
-	figure; hold all; xlim([0 length(tx_seq)]); ylim([-9 150]);
+	ymax = max(150, highest_level + 10);
+	figure; hold all; xlim([0 length(tx_seq)]); ylim([-9 ymax]);
 	patch(x, y, 'k');
 	
 	exon_pos = organism.Transcripts.ExonPos{tx_idx};
@@ -180,7 +183,7 @@ for s = 1:S
 		organism.Transcripts.Gene(tx_idx)} ')'];
 		
 	title(sprintf('Quiver plot of reads for transcript %s%s\nin sample %s', ...
-		organism.Transcripts.Name{tx_idx}, gene_name, sample_id), ...
+		organism.Transcripts.Name{tx_idx}, gene_name, sample_id{s}), ...
 		'Interpreter', 'none');
 	xlabel('Read offset in transcript sequence');
 	ylabel('Number of overlapping reads');

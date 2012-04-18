@@ -39,21 +39,16 @@ for k = 1:2:length(varargin)
 end
 varargin = varargin(~drop_args);
 
-if ~isfield(reads, 'Raw')
+if ~isfield(reads, 'meta') || ~strcmpi(reads.meta.type, 'Sequence reads')
 	error 'Reads must be passed as a dataset.';
-end
-if length(reads.Raw) ~= 1
-	error 'align_reads() can only be called one sample at a time.';
 end
 
 if isempty(aligner)
-	if regexpi(reads.Meta.Sequence.Format{1}, 'SMS')
-		align = @helisphere_align;
-	else
-		align = @bowtie_align2;
-	end
+	align = @bowtie_align;
 elseif strcmpi(aligner, 'bowtie')
-	align = @bowtie_align2;
+	align = @bowtie_align;
+elseif strcmpi(aligner, 'bowtie2')
+	align = @bowtie2_align;
 elseif strcmpi(aligner, 'helisphere')
 	align = @helisphere_align;
 elseif strcmpi(aligner, 'gassst')
