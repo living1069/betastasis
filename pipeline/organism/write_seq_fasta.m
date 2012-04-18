@@ -16,19 +16,21 @@ function [] = write_seq_fasta(transcripts, filename)
 
 output = fopen(filename, 'W');
 
-if isfield(transcripts, 'Name')
-	for k = 1:length(transcripts.Name)
-		fprintf(output, '>%s\n%s\n', transcripts.Name{k}, ...
-			transcripts.Sequence{k});
+if isfield(transcripts, 'name')
+	for k = 1:length(transcripts.name)
+		fprintf(output, '>%s\n%s\n', transcripts.name{k}, ...
+			transcripts.sequence{k});
 	end
-elseif isfield(transcripts, 'Sequence')
-	for k = 1:length(transcripts.Sequence)
-		fprintf(output, '>%d\n%s\n', k, transcripts.Sequence{k});
+elseif isfield(transcripts, 'sequence')
+	for k = 1:length(transcripts.sequence)
+		fprintf(output, '>%d\n%s\n', k, transcripts.sequence{k});
 	end
 elseif iscellstr(transcripts)
 	for k = 1:length(transcripts)
 		fprintf(output, '>%d\n%s\n', k, transcripts{k});
 	end
+else
+	error 'Sequence structure is of unrecognized type.';
 end
 
 fclose(output);
