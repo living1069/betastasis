@@ -39,6 +39,13 @@ if nargin < 3
     end
 end
 
+% Already absolute path, no need to do anything.
+if rel_path(1) == '/'
+	abs_path = rel_path;
+	return;
+end
+	
+
 %build absolute path
 file = java.io.File([act_path filesep rel_path]);
 abs_path = char(file.getCanonicalPath());
