@@ -220,7 +220,7 @@ while 1
 	data = textscan(line, '%s', -1, 'Delimiter', '\t');
 	data = data{1};
 
-	regulator = find(strcmp(data{k}, feature_names));
+	regulator = find(strcmp(data{1}, feature_names));
 	for k = 2:2:length(data)
 		L = L + 1;
 		links.Genes(L, :) = [regulator find(strcmp(data{k}, feature_names))];
