@@ -1,46 +1,32 @@
-function segments = cgh_segment_cbs(samples, refs, probesets, varargin)
+function segments = cgh_segment_cbs(test, ref, probesets, varargin)
 
 global organism;
 
-smooth_window_size = 9;
-
-normal_threshold = 0.2;
-sample_purity = 0.7;
+smooth_window_size = 0;
 significance = 0.005;
-drop_sex_chromosomes = true;
-show_segments = false;
+segment_chr = 1:24;
 
 for k = 1:2:length(varargin)
-	if strcmpi(varargin{k}, 'SmoothWindowSize')
+	if rx(varargin{k}, 'segm.*chrom')
+		segment_chr = varargin{k+1};
+		continue;
+	end
+	
+	if rx(varargin{k}, 'smooth.*win.*size')
 		smooth_window_size = varargin{k+1};
 		continue;
 	end
 	
-	if strcmpi(varargin{k}, 'NormalThreshold')
-		normal_threshold = varargin{k+1};
-		continue;
-	end
-	
-	if strcmpi(varargin{k}, 'Significance')
+	if rx(varargin{k}, 'significance')
 		significance = varargin{k+1};
 		continue;
 	end
 	
-	if strcmpi(varargin{k}, 'SamplePurity')
-		sample_purity = varargin{k+1};
-		continue;
-	end
-	
-	if strcmpi(varargin{k}, 'SexChromosomes')
-		drop_sex_chromosomes = ~varargin{k+1};
-		continue;
-	end
-
 	error('Unrecognized option "%s".', varargin{k});
 end
 
-A = samples.Mean;
-B = refs.Mean;
+A = test.mean;
+B = ref.mean;
 
 if any(size(A) ~= size(B))
 	error 'The sample and reference matrices must have equal dimensions.';
@@ -56,18 +42,22 @@ end
 
 logratios = log2(cnv);
 
-for chr = 1:24
+for chr = segment_chr
 	idx = find(probesets.Chromosome == chr);
-	chr_range(chr, :) = [min(idx) max(idx)];
+	ps_in_chr(chr, :) = [min(idx) max(idx)];
 end
 
-for chr = 1:24
-	a = chr_range(chr, 1); b = chr_range(chr, 2);
-	logratios(a:b, :) = medfilt2(logratios(a:b, :), [smooth_window_size 1]);
+if smooth_window_size > 0
+	for chr = segment_chr
+		a = ps_in_chr(chr, 1); b = ps_in_chr(chr, 2);
+		logratios(a:b, :) = medfilt2(logratios(a:b, :), [smooth_window_size 1]);
+	end
 end
 
 segments = struct;
-segments.Chromosome = cell(length(organism.Chromosomes.Name), size(A, 2));
+segments.chromosome = cell(length(organism.Chromosomes.Name), size(A, 2));
+
+ps_to_segment = find(ismember(probesets.Chromosome, segment_chr));
 
 for s = 1:size(A, 2)
 	% Normalize logratios by moving the highest peak to zero on the x-axis.
@@ -82,41 +72,23 @@ for s = 1:size(A, 2)
 	
 	logratios(:, s) = logratios(:, s) - normal_level;
 
-	
-	
-	
 	fprintf(1, 'Performing CBS segmentation on sample %s [%d/%d]...\n', ...
-		samples.Meta.Sample.ID{s}, s, size(A, 2));
+		test.meta.sample_id{s}, s, size(A, 2));
 	
-	N = length(probesets.ProbeCount);
-		
 	% Prepare the data structure that the Matlab CBS function requires.
 	cbs_data = struct;
-	cbs_data.Chromosome = probesets.Chromosome;
-	cbs_data.GenomicPosition = probesets.Offset;
-	cbs_data.Log2Ratio = logratios;
+	cbs_data.Chromosome = probesets.Chromosome(ps_to_segment);
+	cbs_data.GenomicPosition = probesets.Offset(ps_to_segment);
+	cbs_data.Log2Ratio = logratios(ps_to_segment, s);
 	
 	seg = cghcbs(cbs_data, 'StoppingRule', true, 'Alpha', significance);
 	for k = 1:length(seg.SegmentData)
-		segments.Chromosome{k, s} = seg.SegmentData(k);
+		segments.chromosome{segment_chr(k), s} = seg.SegmentData(k);
 	end
 end
 
-segments.Meta = samples.Meta;
-segments.Meta.Type = probesets.Type;
-segments.Meta.SegmentationMethod = 'Circular binary segmentation';
-segments.Meta.Organism = probesets.Organism;
-segments.Meta.Platform = repmat({segments.Meta.Platform}, ...
-	size(samples.Mean, 2), 1);
-
-	
-	
-	
-	
-	
-	
-
-
-
-
+segments.meta = test.meta;
+segments.meta.type = probesets.Type;
+segments.meta.segmentation_method = 'Circular binary segmentation';
+segments.meta.organism = probesets.Organism;
 

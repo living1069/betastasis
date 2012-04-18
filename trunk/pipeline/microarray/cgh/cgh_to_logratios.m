@@ -3,31 +3,33 @@ function logratios = cgh_to_logratios(test, ref, probesets, varargin)
 
 global organism;
 
-A = test.Mean;
-if isempty(ref), ref.Mean = ones(size(A)); end
-B = ref.Mean;
+A = test.mean;
+if isempty(ref), ref.mean = ones(size(A)); end
+B = ref.mean;
 
 S = size(A, 2);
 
 smooth_window_size = 5;
 render_histograms = false;
 normal_level = nan(S, 1);
+%detrend = false;
 
 for k = 1:2:length(varargin)
 	if strcmpi(varargin{k}, 'SmoothWindowSize') || ...
 		strcmpi(varargin{k}, 'Smooth')
-		smooth_window_size = varargin{k+1};
-		continue;
+		smooth_window_size = varargin{k+1}; continue;
+	end
+	
+	if strcmpi(varargin{k}, 'Detrend')
+		detrend = varargin{k+1}; continue;
 	end
 	
 	if strcmpi(varargin{k}, 'RenderHistograms')
-		render_histograms = varargin{k+1};
-		continue;
+		render_histograms = varargin{k+1}; continue;
 	end
 	
 	if strcmpi(varargin{k}, 'NormalLevel')
-		normal_level = varargin{k+1};
-		continue;
+		normal_level = varargin{k+1}; continue;
 	end
 	
 	error('Unrecognized option "%s".', varargin{k});
@@ -41,13 +43,27 @@ if length(normal_level) ~= S
 	error 'Length of the zero level argument must equal the amount of samples.';
 end
 
-cnv = zeros(length(probesets.ProbeCount), S);
-for k = 1:length(probesets.ProbeCount)
-	probes = probesets.Probes(k, 1:probesets.ProbeCount(k));
-	cnv(k, :) = median(A(probes, :), 1) ./ median(B(probes, :), 1);
+logratios = log2(A ./ B);
+
+%if detrend
+%	probes = platform(test.Meta.Platform{1}, 'probes');
+%	logratios = spatial_detrend(logratios, 'Probes', probes, ...
+%		'ForceMedian', 0, 'WindowSize', 9, 'LogScale', true);
+%end
+
+% Transform the probe logratios into probeset logratios. If an array has probes
+% with identical sequences, average the logratios across them.
+if all(probesets.ProbeCount == 1)
+	ps_logr = logratios(probesets.Probes(:, 1), :);
+else
+	ps_logr = zeros(length(probesets.ProbeCount), S);
+	for k = 1:length(probesets.ProbeCount)
+		probes = probesets.Probes(k, 1:probesets.ProbeCount(k));
+		ps_logr(k, :) = median(logratios(probes, :), 1);
+	end
 end
 
-logratios = log2(cnv);
+logratios = ps_logr;
 
 % Replace negative infinities with the smallest non-infinite value.
 logratios(logratios == -Inf) = NaN;
@@ -63,6 +79,10 @@ if smooth_window_size > 0
 	end
 end
 
+%if detrend, return, end
+
+
+	
 smoothed = conv2(logratios, ones(15, 1) / 15, 'same');
 
 for s = 1:S
@@ -72,7 +92,8 @@ for s = 1:S
 	end
 	
 	% Normalize logratios by moving the highest peak to zero on the x-axis.
-	bins = -5:0.05:max(smoothed(:, s));
+	bins = quantile(smoothed(:, s), 0.2)-0.1: ...
+		0.02:quantile(smoothed(:, s)+0.1, 0.8);
 	n = hist(smoothed(:, s), bins);
 	
 	if render_histograms

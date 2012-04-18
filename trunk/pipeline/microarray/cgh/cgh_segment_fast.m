@@ -257,8 +257,8 @@ segments.Meta.Organism = probesets.Organism;
 segments.Meta.Type = 'Copy number segments';
 segments.Meta.SegmentationMethod = ...
 	repmat({'Multiscale difference of medians'}, S, 1);
-segments.Meta.SamplePurity = sample_purity;
-segments.Meta.NormalThreshold = normal_threshold;
+segments.Meta.SamplePurity = repmat(sample_purity, S, 1);
+segments.Meta.NormalThreshold = repmat(normal_threshold, S, 1);
 
 if isstruct(ref) && isfield(ref, 'Meta')
 	segments.Meta.Ref = ref.Meta;

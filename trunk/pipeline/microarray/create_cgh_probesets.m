@@ -2,34 +2,26 @@ function probesets = create_cgh_probesets(probes)
 
 global organism;
 
+tmp = temporary('create_cgh_probesets');
+
 probesets = struct;
 probesets.Type = 'Copy number';
 probesets.Organism = organism.Name;
-probesets.GenomeVersion = organism.GenomeVersion;
-
-fprintf(1, 'Writing probe sequences to a temporary file...\n');
-probes_fasta_tmp = ptemp();
-write_seq_fasta(probes, probes_fasta_tmp);
 
 fprintf(1, 'Aligning probes to genomic locations using Bowtie...\n');
-[alignments_tmp, ~] = bowtie_align(probes_fasta_tmp, 'genome', ...
-	'-v0 -m1 --suppress 5,6,7,8');
+write_seq_fasta(probes, [tmp 'probes.fa']);
+alignments = bowtie_align(import_reads(tmp), 'genome', '-v0 -m1');
 
 fprintf(1, 'Constructing copy number probesets based on alignments...\n');
 
-alignments_file = fopen(alignments_tmp);
-data = textscan(alignments_file, '%d %*s %s %d');
-fclose(alignments_file);
-
-probe_indices = data{1};
-chromosomes = data{2};
-offsets = data{3};
-clear data;
+al = all_alignments(alignments);
+probe_indices = str2double(al.read);
+chromosomes = al.target;
+offsets = al.offset;
 
 probeset_map = containers.Map;
 
-progress = 0;
-fprintf(1, 'Progress: 00%%');
+progress = Progress;
 
 for k = 1:length(probe_indices)
 	probeset_name = [ chromosomes{k} '_' num2str(offsets(k)) ];
@@ -39,14 +31,8 @@ for k = 1:length(probe_indices)
 	
 	probeset_map(probeset_name) = cat(2, probeset_map(probeset_name), ...
 		{ probe_indices(k) });
-	
-	if floor(k / length(probe_indices) * 100) > progress
-		progress = floor(k / length(probe_indices) * 100);
-		fprintf(1, '\b\b\b%02d%%', progress);
-	end
+	progress.update(k / length(probe_indices));
 end
-
-fprintf(1, '\n');
 
 probeset_names = probeset_map.keys();
 
@@ -94,7 +80,4 @@ probesets.Chromosome = ordered_chromosome;
 probesets.Offset = ordered_offset;
 probesets.ProbeCount = ordered_probecount;
 probesets.Probes = ordered_probes;
-
-safe_delete(probes_fasta_tmp);
-safe_delete(alignments_tmp);
 

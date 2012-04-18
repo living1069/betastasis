@@ -30,9 +30,6 @@ function gene_lr = gene_cgh_logratios(samples, refs, probesets, varargin)
 global organism;
 genes = organism.Genes;
 
-if isstruct(samples), samples = samples.Mean; end
-if isstruct(refs), refs = refs.Mean; end
-
 min_region = 0;
 
 for k = 1:2:length(varargin)
@@ -44,26 +41,28 @@ for k = 1:2:length(varargin)
 	error('Unrecognized option "%s".', varargin{k});
 end
 
-if any(size(samples) ~= size(refs))
+if any(size(samples.mean) ~= size(refs.mean))
 	error 'The sample and reference matrices must have equal dimensions.';
 end
 
-S = size(samples, 2);
+S = size(samples.mean, 2);
 
 cnv = zeros(length(probesets.ProbeCount), S);
 for k = 1:length(probesets.ProbeCount)
 	probes = probesets.Probes(k, 1:probesets.ProbeCount(k));
-	cnv(k, :) = median(samples(probes, :) ./ refs(probes, :), 1);
+	cnv(k, :) = median(samples.mean(probes, :) ./ refs.mean(probes, :), 1);
 end
 
 logratios = log2(cnv);
 
-gene_lr = nan(length(organism.Genes.Name), size(samples, 2));
+gene_lr.mean = nan(length(genes.Name), S);
 
 progress = Progress;
 
-for g = 1:length(organism.Genes.Name)
-	if any(isnan(organism.Genes.Position(g, :))), continue, end
+for g = 1:length(genes.Name)
+	progress.update(g / length(genes.Name));
+	
+	if any(isnan(genes.Position(g, :))), continue, end
 		
 	gene_span = genes.Position(g, :);
 	if gene_span(2) - gene_span(1) < min_region
@@ -74,11 +73,13 @@ for g = 1:length(organism.Genes.Name)
 	
 	% Find all probes that target the gene we're interested in.
 	idx = find(probesets.Chromosome == genes.Chromosome(g) & ...
-		probesets.Offset >= gene_span(1) & ...
-		probesets.Offset <= gene_span(2));
+		probesets.Offset >= gene_span(1) & probesets.Offset <= gene_span(2));
 	if isempty(idx), continue, end
 	
-	gene_lr(g, :) = median(logratios(idx, :), 1);
-	progress.update(g / length(organism.Genes.Name));
+	gene_lr.mean(g, :) = median(logratios(idx, :), 1);
 end
+
+gene_lr.meta = samples.meta;
+gene_lr.meta.type = 'Gene copy number (logratio)';
+gene_lr.meta.ref = rmfield(refs.meta, 'type');
 

@@ -31,11 +31,18 @@ function [] = cgh_logratio_track(samples, refs, probesets, track_file, varargin)
 global organism;
 
 range = [];
+show_channels = false;
 
 drop_args = false(length(varargin), 1);
 for k = 1:2:length(varargin)
 	if strcmpi(varargin{k}, 'Range')
 		range = varargin{k+1};
+		drop_args(k:k+1) = true;
+		continue;
+	end
+	
+	if strcmpi(varargin{k}, 'ShowChannels')
+		show_channels = varargin{k+1};
 		drop_args(k:k+1) = true;
 		continue;
 	end
@@ -51,17 +58,7 @@ fprintf(fid, ...
 	'#track maxHeightPixels=500:400:300 graphType=points viewLimits=-2:2\n');
 fprintf(fid, 'Chromosome\tStart\tEnd\tFeature');
 
-if isfield(samples.Meta, 'Sample') && isfield(samples.Meta.Sample, 'ID')
-	for s = 1:S
-		fprintf(fid, '\t%s', samples.Meta.Sample.ID{s});
-	end
-else
-	fprintf(1, ['WARNING: Sample IDs not available. Using surrogate names ' ...
-	            'based on sample indices instead.\n']);
-	for s = 1:S
-		fprintf(fid, '\t%d', s);
-	end
-end
+for s = 1:S, fprintf(fid, '\t%s', samples.meta.sample_id{s}); end
 fprintf(fid, '\n');
 
 % Check if the user only wished to write logratio tracks for a small window
@@ -91,7 +88,8 @@ for k = probeset_range(1):probeset_range(2)
 	fprintf(fid, '\t%f', logratios(k, :));
 	fprintf(fid, '\n');
 	
-	progress.update((k - probeset_range(1)) / (probeset_range(2) - probeset_range(1)));
+	progress.update((k - probeset_range(1)) / ...
+		(probeset_range(2) - probeset_range(1)));
 end
 
 fclose(fid);

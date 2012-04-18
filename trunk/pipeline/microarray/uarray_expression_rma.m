@@ -19,49 +19,59 @@
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
-function expr = uarray_expression_rma(samples, probesets)
+function expr = uarray_expression_rma(samples, probesets, varargin)
 
 global organism;
 
-if ~strcmpi(samples.Meta.Type, 'Microarray probe intensities')
-	error 'First argument to the function must consist of probe intensities.';
+background_adjustment = false;
+quantile_normalize = true;
+
+for k = 1:2:length(varargin)
+	if rx(varargin{k}, 'background.*adj')
+		background_adjustment = varargin{k+1};
+		continue;
+	end
+	
+	if rx(varargin{k}, 'normalize')
+		quantile_normalize = varargin{k+1};
+		continue;
+	end
+	
+	error('Unrecognized option "%s".', varargin{k});
 end
 
-S = size(samples.Mean, 2);
-
-if ~iscellstr(samples.Meta.Platform)
-	samples.Meta.Platform = repmat({samples.Meta.Platform}, S, 1);
+if ~background_adjustment && isfield(samples.meta, 'platform') && ...
+	any(rx(samples.meta.platform, 'affy'))
+	fprintf(1, ['WARNING: Affymetrix array detected but no background ' ...
+		'adjustment requested.\n']);
 end
 
-platform = samples.Meta.Platform{1};
-
+S = size(samples.mean, 2);
 
 
 	
 	
-if any(any(samples.Mean <= 0))
+if any(any(samples.mean <= 0))
 	fprintf(1, ['Data contains zero or negative intensities. ' ...
 		'Replacing with the lowest positive intensity...\n']);
-	samples.Mean(samples.Mean <= 0) = Inf;
-	samples.Mean(samples.Mean == Inf) = min(min(samples.Mean));
+	samples.mean(samples.mean <= 0) = Inf;
+	samples.mean(samples.mean == Inf) = min(min(samples.mean));
 end
 
-if any(any(isnan(samples.Mean))) || any(any(samples.Mean == Inf))
+if any(any(isnan(samples.mean))) || any(any(samples.mean == Inf))
 	error 'Probe intensity data contains NaN or Inf values.';
 end
 
 
 	
 	
-if regexp(platform, 'Agilent')
-	fprintf(1, 'Skipping background adjustment on Agilent microarray...\n');
-else
+if background_adjustment
 	fprintf(1, 'Performing RMA background adjustment on samples...\n');
-	samples.Mean = rmabackadj(samples.Mean);
+	samples.mean = rmabackadj(samples.mean);
 	
 	% Sometimes RMA background adjustment introduces Inf or NaN values in data.
 	% Check for such samples, and warn the user about them.
-	bad = find(any(isnan(samples.Mean), 1) | any(samples.Mean == Inf, 1));
+	bad = find(any(isnan(samples.mean), 1) | any(samples.mean == Inf, 1));
 	if length(bad) > 0
 		bad_str = sprintf('%d', bad(1));
 		for k = 2:length(bad)
@@ -75,34 +85,35 @@ end
 
 
 
+if quantile_normalize
+	fprintf(1, ...
+		'Normalizing probe intensities using quantile normalization...\n');
 
-fprintf(1, 'Normalizing probe intensities using quantile normalization...\n');
+	progress = Progress;
 
-progress = Progress;
+	%sketch_cols = 1:floor((size(samples.mean, 2)-1)/S):size(samples.mean, 2);
+	sketch_mean = zeros(size(samples.mean, 1), 1);
 
-%sketch_cols = 1:floor((size(samples.Mean, 2)-1)/S):size(samples.Mean, 2);
-sketch_mean = zeros(size(samples.Mean, 1), 1);
+	S = size(samples.mean, 2);
 
-S = size(samples.Mean, 2);
-
-for s = 1:S
-	[sorted, samples.Mean(:, s)] = sort(samples.Mean(:, s), 'descend');
-	sketch_mean = sketch_mean + sorted / S;
-	progress.update(0.7 * s/S);
+	for s = 1:S
+		[sorted, samples.mean(:, s)] = sort(samples.mean(:, s), 'descend');
+		sketch_mean = sketch_mean + sorted / S;
+		progress.update(0.7 * s/S);
+	end
+	for s = 1:S
+		samples.mean(samples.mean(:, s), s) = sketch_mean;
+		progress.update(0.7 + 0.3 * s/S);
+	end
 end
-for s = 1:S
-	samples.Mean(samples.Mean(:, s), s) = sketch_mean;
-	progress.update(0.7 + 0.3 * s/S);
-end
-
 
 
 
 
 fprintf(1, 'Summarizing expression data using RMA summarization...\n');
 
-expr = struct( ...
-	'Mean', zeros(length(probesets.ProbeCount), size(samples.Mean, 2)));
+expr = struct;
+expr.mean = zeros(length(probesets.ProbeCount), size(samples.mean, 2));
 
 % Reorder the probes so that the probes of each probeset are placed contiguously
 % in the vector. The probe index vector therefore has the following form:
@@ -122,27 +133,17 @@ for ps = 1:length(probesets.ProbeCount)
 	k = k + pc;
 end
 
-rma_ordered_sample_data = samples.Mean(probe_reordering, :);
+rma_ordered_sample_data = samples.mean(probe_reordering, :);
 summary = rmasummary(probe_indices, rma_ordered_sample_data, ...
 	'Output', 'natural');
-
+	
 % Set the expression of empty probesets to NaN.
-expr.Mean(:, :) = NaN;
-expr.Mean(find(probesets.ProbeCount ~= 0), :) = summary;
-if isfield(samples, 'Meta')
-	expr.Meta = samples.Meta;
-	expr.Meta.Type = probesets.Type;
-	expr.Meta.SummarizationMethod = repmat({'RMA'}, size(samples.Mean, 2), 1);
-	expr.Meta.Organism = probesets.Organism;
-	
-	if isfield(probesets, 'GenomeVersion')
-		expr.Meta.GenomeVersion = probesets.GenomeVersion;
-	elseif isfield(probesets, 'miRNAVersion')
-		expr.Meta.miRNAVersion = probesets.miRNAVersion;
-	end
-	
-	if isfield(samples.Meta, 'Platform')
-		expr.Meta.Platform = samples.Meta.Platform;
-	end
+expr.mean(:, :) = NaN;
+expr.mean(find(probesets.ProbeCount ~= 0), :) = summary;
+if isfield(samples, 'meta')
+	expr.meta = samples.meta;
+	expr.meta.type = probesets.Type;
+	expr.meta.summarization_method = repmat({'RMA'}, size(samples.mean, 2), 1);
+	expr.meta.organism = probesets.Organism;
 end
 
