@@ -10,12 +10,19 @@ end
 if isfield(expr, 'Mean'), expr = expr.Mean; end
 if isfield(ref, 'Mean'), ref = ref.Mean; end
 
-whos expr ref;	
+if any(any(expr <= 0)) || any(any(ref <= 0))
+	fprintf(1, 'Non-positive expression values found. Adding background...\n');
+	expr = expr - min(min(expr)) + 1;
+	ref = ref - min(min(ref)) + 1;
+end
+	
+log_expr = log2(expr);
+log_ref = log2(ref);
 
-[~, p] = ttest2(expr', ref');
+[~, p] = ttest2(log_expr', log_ref');
 
-expr_mean = nanmean(expr, 2);
-ref_mean = nanmean(ref, 2);
+expr_mean = nanmean(log_expr, 2);
+ref_mean = nanmean(log_ref, 2);
 
 sig = find((p <= p_threshold)' & ...
 	max([expr_mean ref_mean], [], 2) > abs_threshold);
@@ -23,10 +30,9 @@ sig = find((p <= p_threshold)' & ...
 [~, order] = sort(p(sig), 'ascend');
 sig = sig(order);
 
-fprintf(1, 'Differentially expressed features:\n');
-for k = 1:length(sig)
-	fprintf(1, '- %s, p-value %g (%.2f vs %.2f)\n', ...
-		features.Name{sig(k)}, p(sig(k)), ...
-		expr_mean(sig(k)), ref_mean(sig(k)));
+fprintf(1, 'Feature\tp-value\tTest expr\tRef expr\n');
+for k = sig'
+	fprintf(1, '%s\t%g\t%.2f\t%.2f\n', ...
+		features.Name{k}, p(k), expr_mean(k), ref_mean(k));
 end
 
