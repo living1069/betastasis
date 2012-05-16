@@ -1,7 +1,9 @@
 function [row_perm, col_perm] = better_cluster(data, varargin)
 
+cluster_rows = true;
 dist_metric = 'euclidean';
 linkage_method = 'average';
+color_map = redgreencmap(256);
 clim = [];
 
 if ~isempty(varargin)
@@ -20,6 +22,16 @@ if ~isempty(varargin)
 			linkage_method = varargin{k+1};
 			continue;
 		end
+		
+		if rx(varargin{k}, 'color')
+			color_map = varargin{k+1};
+			continue;
+		end
+		
+		if rx(varargin{k}, 'cluster.*rows')
+			cluster_rows = varargin{k+1};
+			continue;
+		end
 
 		error('Unrecognized option "%s".', varargin{k});
 	end
@@ -27,17 +39,22 @@ end
 
 % First we cluster by columns.
 figure;
+d = pdist(data', dist_metric);
 clust = linkage(pdist(data', dist_metric), linkage_method);
 [~, ~, col_perm] = dendrogram(clust, 0, 'ColorThreshold', 'default');
 data = data(:, col_perm);
 saveas(gcf, '~/cluster_column_dendro.pdf');
 
 % Then we cluster by rows.
-figure;
-clust = linkage(pdist(data, dist_metric), linkage_method);
-[~, ~, row_perm] = dendrogram(clust, 0, 'ColorThreshold', 'default');
-data = data(row_perm, :);
-saveas(gcf, '~/cluster_row_dendro.pdf');
+if cluster_rows
+	figure;
+	clust = linkage(pdist(data, dist_metric), linkage_method);
+	[~, ~, row_perm] = dendrogram(clust, 0, 'ColorThreshold', 'default');
+	data = data(row_perm, :);
+	saveas(gcf, '~/cluster_row_dendro.pdf');
+else
+	row_perm = 1:size(data, 1);
+end
 
 
 
@@ -62,7 +79,7 @@ saveas(gcf, '~/cluster_row_dendro.pdf');
 
 %imwrite(data / numel(data) * 255, jet, '~/cluster.png', 'png');
 
-figure; colormap(redgreencmap(256));
+figure; colormap(color_map);
 if isempty(clim)
 	imagesc(data);
 else

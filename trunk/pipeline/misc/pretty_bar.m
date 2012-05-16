@@ -7,7 +7,11 @@ elseif iscellstr(labels)
 	set(gca, 'XTick', 1:length(labels), 'XTickLabel', labels);
 	xlim([0.5, length(labels)+0.5]);
 	if any(cellfun(@length, labels) > 2)
-		rotateticklabel(gca, 45);
+		if length(labels) > 20
+			rotateticklabel(gca, 90);
+		else
+			rotateticklabel(gca, 45);
+		end
 	end
 end
 

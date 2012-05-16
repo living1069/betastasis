@@ -4,17 +4,19 @@ figure('PaperType', 'a4');
 set(gca, 'Units', 'normalized', 'OuterPosition', [0 0 1 1]);
 data = data(:)';
 
-if nargin == 1, color_method = 'redgreen'; end
+if nargin == 1, color_method = 'green-black-red'; end
 
-if regexpi(color_method, 'primary')
-	im = zeros(1, length(data), 3);
-	im(1, data == 0 | data == 3, 1) = 1;
-	im(1, data == 1 | data == 3, 2) = 1;
-	im(1, data == 2, 3) = 1;
+if iscell(color_method)
+	for k = 1:max(data)
+		im(1, data == k, :) = repmat(color_method{k}, sum(data == k), 1);
+	end
+	im(1, isnan(data), :) = repmat([.9 .9 .9], sum(isnan(data)), 1);
 	image(im);
 else
-	if regexpi(color_method, 'redgreen')
+	if regexpi(color_method, 'green-black-red')
 		colormap(redgreencmap(256));
+	elseif regexpi(color_method, 'green-yellow-red')
+		colormap(hsv2rgb([(1/3:-1/3/255:0)', ones(256, 2)]));
 	elseif regexpi(color_method, 'gray')
 		colormap(gray);
 	elseif regexpi(color_method, 'hsv')
