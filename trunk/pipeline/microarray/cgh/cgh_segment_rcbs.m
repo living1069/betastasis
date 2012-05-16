@@ -27,13 +27,10 @@ for k = 1:2:length(varargin)
 end
 
 logratios = cgh_to_logratios(test, ref, probesets, 'Smooth', 0);
-chr = probesets.Chromosome;
-offset = probesets.Offset;
 
 S = size(logratios, 2);
 
-tmp = ptemp;
-
+tmp = temporary('rcbs');
 r_script = [tmp '.Rscript'];
 
 fid = fopen(r_script, 'W');
@@ -43,8 +40,8 @@ fprintf(fid, [ ...
 	'data = readMat("' [tmp '.mat'] '")\n' ...
 	'cna = CNA(data$lr, data$chr, data$offset, data.type = "logratio")\n' ...
 	'smoothed.cna = smooth.CNA(cna)\n' ...
-	'segmented.cna = segment(smoothed.cna, verbose = 1)\n' ...
-	'writeMat("' [tmp '.mat'] '", chr = segmented.cna$output$chrom, segstart = segmented.cna$output$loc.start, segend = segmented.cna$output$loc.end, segmean = segmented.cna$output$seg.mean)\n']);
+	sprintf('seg.cna = segment(smoothed.cna, alpha=%f)\n', significance), ...
+	'writeMat("' [tmp '.mat'] '", chr = seg.cna$output$chrom, segstart = seg.cna$output$loc.start, segend = seg.cna$output$loc.end, segmean = seg.cna$output$seg.mean)\n']);
 fclose(fid);
 
 segments = struct;
@@ -56,11 +53,12 @@ for s = 1:S
 	fprintf('Performing circular binary segmentation for sample %s...\n', ...
 		test.meta.sample_id{s});
 		
+	chr = probesets.Chromosome;
+	offset = probesets.Offset;
 	lr = logratios(:, s);
 	save([tmp '.mat'], 'lr', 'chr', 'offset', '-v6');
 	
-	[status, out] = unix(sprintf('/worktmp/R/bin/R CMD BATCH %s ~/out.txt', ...
-		r_script));
+	[status, out] = unix(sprintf('R CMD BATCH %s ~/out.txt', r_script));
 	if status ~= 0, error 'R CBS segmentation failed.'; end
 	
 	results = load([tmp '.mat']);
@@ -78,10 +76,6 @@ for s = 1:S
 end
 
 segments.meta = test.meta;
-segments.meta.ref = ref.meta;
-segments.meta.organism = probesets.Organism;
-segments.meta.type = 'aCGH logratio segments';
+segments.meta.type = 'aCGH segments (logratio)';
 segments.meta.segmentation_method = repmat({'CBS (R)'}, S, 1);
-segments.meta.ref = rmfield(segments.meta.ref, 'type');
-segments.meta.ref = rmfield(segments.meta.ref, 'platform');
 
