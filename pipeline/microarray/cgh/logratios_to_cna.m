@@ -1,37 +1,41 @@
 
-function cna = cgh_logratios_to_cna(logratios, test_meta, ref_meta, varargin)
+function cna = logratios_to_cna(logratios, gender)
 
 global organism;
 
-ploidy = cgh_ploidy(test_meta, ref_meta);
+if ischar(gender)
+	gender = repmat({gender}, 1, length(logratios.meta.sample_id));
+end
 
-[P, S] = size(logratios);
+gender_num = nan(1, length(gender));
+gender_num(rx(gender, '^male')) = 1;
+gender_num(rx(gender, 'female')) = 2;
 
-if isfield(logratios, 'mean')
-	for s = 1:S
-		lr = logratios(:, s);
-		
-		for c = 1:length(organism.Chromosomes.Name)
-			chr_segs = (results.chr == c);
-			seg = struct;
-			
-			if ~isnan(ploidy(c, s))
-				seg.Start = results.segstart(chr_segs);
-				seg.End = results.segend(chr_segs);
-			
-				lr = results.segmean(chr_segs);
-				seg.CNA = ploidy(c, s) * 2.^lr - ploidy(c, s);
-				seg.CNA(seg.CNA < - 2) = -2;
-			end
-			
-			segments.Chromosome{c, s} = seg;
-		end
+ploidy = organism.Chromosomes.Ploidy(:, gender_num);
+
+if rx(logratios.meta.type, 'Gene copy.*log')
+	[P, S] = size(logratios.mean);
+	
+	gidx = gene_idx(logratios.rows.gene_symbol);
+	valid = ~isnan(gidx);
+	if any(~valid)
+		logratios = filter_rows(logratios, valid);
+		gidx = gidx(valid);
+		fprintf('Discarded %d genes with an unknown name.\n', sum(~valid));
 	end
 	
-	
-elseif isfield(logratios, 'chromosome')
-	for s = 1:S
-		
+	chr = organism.Genes.Chromosome(gidx);
+	valid = ~isnan(chr);
+	if any(~valid)
+		logratios = filter_rows(logratios, valid);
+		gidx = gidx(valid);
+		fprintf('Discarded %d genes due to unknown chromosome.\n', sum(~valid));
 	end
+	
+	cna = logratios;
+	cna.mean = ploidy(chr, :) .* 2.^logratios.mean - ploidy(chr, :);
+	cna.mean = max(cna.mean, -ploidy(chr, :));
+else
+	error 'Cannot recognize logratio data format.';
 end
 
