@@ -6,10 +6,10 @@ function [] = annovar(variant_file)
 global organism;
 chromosomes = organism.Chromosomes;
 
-variant_phred_threshold = 30;
+tmp = temporary('annovar');
 
 if rx(variant_file, '^.*\.vcf$')
-	out_prefix = strrep(variant_file, '.vcf', '');
+	out_prefix = [tmp strrep(variant_file, '.vcf', '')];
 	
 	fid = fopen(variant_file);
 	for k = 1:100
@@ -26,15 +26,13 @@ if rx(variant_file, '^.*\.vcf$')
 	% Command used to convert the VCF file into an ANNOVAR compatible format.
 	% Note that the 'sed' command is used to fix a bug in convert2annovar.pl
 	convert_cmd = sprintf(['convert2annovar.pl --format vcf4 --includeinfo ' ...
-		'--allallele --snpqual %d %s | sed "s/\t\t/\t/"'], ...
-		variant_phred_threshold, variant_file);
+		'--allallele %s | sed "s/\t\t/\t/"'], variant_file);
 
 else
 	error 'Only VCF files are currently supported for ANNOVAR analysis.';
-	
 end
 
-humandb_dir = '/home/csbgroup/tools/annovar*/humandb';
+humandb_dir = '~/tools/annovar*/humandb';
 	
 % First we calculate genomic annotations.
 unix(sprintf([ ...
@@ -58,41 +56,31 @@ unix(sprintf([ ...
 	'--dbtype bed -bedfile cosmic_v56.bed <(%s) %s'], ...
 	[out_prefix '.cosmic'], convert_cmd, humandb_dir));
 	
-% Determine which variants are found in DARNED.
-unix(sprintf([ ...
-	'annotate_variation.pl --buildver hg19 --filter --outfile %s ' ...
-	'--dbtype generic --genericdbfile darned_31-12-2011_hg19.annovar.txt ' ...
-	'<(%s) %s'], [out_prefix '.darned'], convert_cmd, humandb_dir));
 	
 
 
 	
 
 % Construct mappings from genomic loci to annotated features.
-[data, headers] = readtable('variants.exonic_variant_function', ...
+[data, headers] = readtable([out_prefix '.exonic_variant_function'], ...
 	'HeaderLines', 0);
 exonic_func_map = containers.Map( ...
 	strcat(data{4},':',data{5},'-',data{6},':',data{7},'>',data{8}), ...
 	strcat(data{2}, {sprintf('\t')}, data{3}));
 
-[data, headers] = readtable('variants.hg19_snp132_dropped', 'HeaderLines', 0);
+[data, headers] = readtable([out_prefix '.hg19_snp132_dropped'], ...
+	'HeaderLines', 0);
 dbsnp_map = containers.Map( ...
 	strcat(data{3},':',data{4},'-',data{5},':',data{6},'>',data{7}), ...
 	data{2});
 
-[data, headers] = readtable('variants.hg19_ALL.sites.2011_05_dropped', ...
+[data, headers] = readtable([out_prefix '.hg19_ALL.sites.2011_05_dropped'], ...
 	'HeaderLines', 0);
 kgenomes_map = containers.Map( ...
 	strcat(data{3},':',data{4},'-',data{5},':',data{6},'>',data{7}), ...
 	data{2});
 	
-%[data, headers] = readtable('variants.darned.hg19_generic_dropped', ...
-%	'HeaderLines', 0);
-%darned_map = containers.Map( ...
-%	strcat(data{3},':',data{4},'-',data{5},':',data{6},'>',data{7}), ...
-%	repmat({'YES'}, 1, length(data{3})));
-	
-[data, headers] = readtable('variants.cosmic.hg19_bed', 'HeaderLines', 0);
+[data, headers] = readtable([out_prefix '.cosmic.hg19_bed'], 'HeaderLines', 0);
 cosmic_map = containers.Map(strcat(data{3},':',data{4},'-',data{5}), ...
 	repmat({'YES'}, 1, length(data{3})));
 
@@ -100,7 +88,7 @@ cosmic_map = containers.Map(strcat(data{3},':',data{4},'-',data{5}), ...
 	
 	
 % Finally, we combine all of the lists into one gigantic pile of variant info.
-[data, headers] = readtable('variants.variant_function');
+[data, headers] = readtable([out_prefix '.variant_function']);
 fid = fopen('variants.vcfa', 'W');
 fprintf(fid, ['CHROMOSOME\tSTART\tEND\tREFERENCE\tOBSERVED\tFLANK_SEQ\t' ...
 	'FUNCTION\tNEARBY_GENES\tSYNONYMOUS\tPROTEIN_EFFECT\t' ...
@@ -117,28 +105,22 @@ exonic_funcs(valid) = exonic_func_map.values(keys(valid));
 valid = dbsnp_map.isKey(keys);
 dbsnps = repmat({'-'}, length(data{1}), 1);
 dbsnps(valid) = dbsnp_map.values(keys(valid));
-fprintf(1, '%d / %d (%.1f%%) variants found in dbSNP v132.\n', ...
+fprintf('%d / %d (%.1f%%) variants found in dbSNP v132.\n', ...
 	sum(valid), length(valid), sum(valid) / length(valid) * 100);
 
 valid = kgenomes_map.isKey(keys);
 kgenomes = repmat({'-'}, length(data{1}), 1);
 kgenomes(valid) = kgenomes_map.values(keys(valid));
-fprintf(1, '%d / %d (%.1f%%) variants found in 1000 Genomes.\n', ...
+fprintf('%d / %d (%.1f%%) variants found in 1000 Genomes.\n', ...
 	sum(valid), length(valid), sum(valid) / length(valid) * 100);
 	
-%valid = darned_map.isKey(keys);
-%darned = repmat({'-'}, length(data{1}), 1);
-%darned(valid) = darned_map.values(keys(valid)),
-%fprintf(1, '%d / %d (%.1%%) variants found in DARNED.\n', ...
-%	sum(valid), length(valid), sum(valid) / length(valid) * 100);
-
 % Region based annotations: nucleotides don't matter, only position does.
 keys = strcat(data{3},':',data{4},'-',data{5});
 
 valid = cosmic_map.isKey(keys);
 cosmic = repmat({'-'}, length(data{1}), 1);
 cosmic(valid) = cosmic_map.values(keys(valid));
-fprintf(1, '%d / %d (%.1f%%) variants found in COSMIC.\n', ...
+fprintf('%d / %d (%.1f%%) variants found in COSMIC.\n', ...
 	sum(valid), length(valid), sum(valid) / length(valid) * 100);
 
 	
@@ -162,10 +144,6 @@ if ~strcmp(data{15}{1}, 'GT:GQ:DP')
 end
 
 for k = 1:length(data{1})
-%	fprintf(fid, '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s', ...
-%		data{3}{k}, data{4}{k}, data{5}{k}, data{6}{k}, data{7}{k}, ...
-%		flank_seq{k}, data{1}{k}, data{2}{k}, exonic_funcs{k}, ...
-%		dbsnps{k},  kgenomes{k}, cosmic{k}, darned{k});
 	fprintf(fid, '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s', ...
 		data{3}{k}, data{4}{k}, data{5}{k}, data{6}{k}, data{7}{k}, ...
 		flank_seq{k}, data{1}{k}, data{2}{k}, exonic_funcs{k}, ...
