@@ -64,7 +64,7 @@ end
 merged = struct;
 
 if collapse
-	merged.Meta = filter_struct(data.Meta, sample_perm);
+	merged.Meta = filter(data.Meta, sample_perm);
 else
 	merged.Meta = data.Meta;
 end

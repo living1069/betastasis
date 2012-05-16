@@ -10,20 +10,20 @@ else
 	error 'filter() must be called with logical or index vector.';
 end
 
-filtered = filter_struct(ds, selected);
+filtered = filter_columns(ds, selected);
 
 
 
 
 
-function s = filter_struct(s, selected)
+function s = filter_columns(s, selected)
 
 fields = fieldnames(s);
 fields = fields(~strcmp(fields, 'rows'));    % Leave this field alone.
 for k = 1:length(fields)
 	f = getfield(s, fields{k});
 	if isstruct(f)
-		s = setfield(s, fields{k}, filter_struct(f, selected));
+		s = setfield(s, fields{k}, filter_columns(f, selected));
 	elseif ischar(f)
 		continue;
 	else
