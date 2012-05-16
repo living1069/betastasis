@@ -7,10 +7,6 @@
 %    specified by the argument DATASET. The microarray platform name PLATFORM
 %    must be specified, and must be one of the microarray names found in
 %    "ontologies.uarray_platforms".
-%
-%    IMPORT_UARRAY_DATA(..., 'SampleMap', SAMPLE_MAP) uses the associative map
-%    SAMPLE_MAP to specify sample IDs for samples based on their filename. The
-%    default is to give no sample IDs for the samples.
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
@@ -31,7 +27,7 @@ metadata.type = 'Microarray probe intensities';
 	
 import_method = '';
 
-fprintf(1, 'Loading microarray probe definitions...\n');
+fprintf('Loading microarray probe definitions...\n');
 
 if strcmpi(platform, 'MDA custom aCGH')
 	import_method = 'agilent_dual';
