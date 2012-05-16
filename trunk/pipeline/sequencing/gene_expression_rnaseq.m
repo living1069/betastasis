@@ -22,24 +22,6 @@ global organism;
 genome = organism.Genes;
 transcriptome = organism.Transcripts;
 
-normalization = 'none';
-
-drop_args = false(length(varargin), 1);
-for k = 1:2:length(varargin)
-	if strcmpi(varargin{k}, 'Normalization')
-		if strcmpi('none', varargin{k+1})
-			normalization = 'None';
-		elseif strcmpi('rpkm', varargin{k+1})
-			normalization = 'RPKM';
-		else
-			error 'Unrecognized normalization option given as a parameter.';
-		end
-		drop_args(k:k+1) = true;
-		continue;
-	end
-end
-varargin = varargin(~drop_args);
-
 S = length(reads.Raw);
 
 expr = struct;
@@ -51,7 +33,6 @@ if isstruct(reads), expr.Meta = reads.Meta; end
 expr.Meta.Type = 'Gene expression';
 expr.Meta.Organism = organism.Name;
 %expr.Meta.OrganismVersion = organism.Version;
-expr.Meta.Normalization = repmat({ normalization }, S, 1);
 expr.Meta.TotalSeqReads = zeros(S, 1);
 
 
@@ -88,26 +69,7 @@ for s = 1:S
 		pos = pos + run_lengths(r);
 	end
 	
-	if regexpi(normalization, 'RPKM')
-		if ~isnan(al.TotalReads)
-			fprintf(1, ['Performing RPKM normalization on transcript ' ...
-						'expression levels...\n']);
-			
-			transcript_kbp = zeros(length(transcriptome.Sequence), 1);
-			for k = 1:length(transcriptome.Sequence)
-				transcript_kbp(k) = length(transcriptome.Sequence{k}) / 1000;
-			end
-			
-			transcript_expr = transcript_expr ./ transcript_kbp / ...
-				(al.TotalReads / 1e6);
-		else
-			fprintf(1, ['Cannot perform RPKM normalization. No total read ' ...
-				'count information available.\n']);
-		end
-	end
-	
-	fprintf(1, ['Summarizing a gene expression profile from transcript ' ...
-	            'expression levels...\n']);
+	fprintf('Summarizing gene expression from transcript expression...\n');
 	transcript_expr = struct('Mean', transcript_expr);
 	gene_expr = gene_expression_from_transcript_expression( ...
 		transcript_expr, 'sum');

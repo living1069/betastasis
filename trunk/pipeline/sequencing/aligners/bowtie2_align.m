@@ -7,7 +7,7 @@ tmp = temporary('bowtie2_align');
 unaligned_tmp = temporary('bowtie2_unaligned');
 
 max_threads = pipeline_config.MaxThreads;
-ignore_pairs = true;
+ignore_pairs = false;
 output = 'BAM';
 
 for k = 1:2:length(varargin)
@@ -113,7 +113,8 @@ for s = 1:S
 	if ~rx(user_flags, '-p\d+')
 		flags = sprintf('%s -p%d', flags, max_threads);
 	end
-
+	
+	flags = [flags ' --no-unal'];
 	flags = [flags ' ' user_flags];
 	
 	fprintf('-> Invoking Bowtie2 with flags "%s"...\n', flags);
@@ -123,28 +124,21 @@ for s = 1:S
 
 	if paired && ignore_pairs == false
 		% The user wishes to perform proper paired end alignment.
-		error 'Proper paired end alignment not supported yet.';
-
+		[status, out] = unix(sprintf( ...
+			'bowtie2 %s -x %s -1 %s -2 %s | samtools view -Sb -o %s -', ...
+			flags, index_name, read_paths{1}, read_paths{2}, output_file));
+		if status ~= 0, error('Bowtie2 read alignment failed:\n%s\n', out); end
+			
 	elseif paired && ignore_pairs == true
-		% THIS IS THE CASE WHERE WE ALIGN LEFT AND RIGHT READS SEPARATELY
-		% AND THROW ALL THE ALIGNMENTS INTO ONE SINGLE FILE.
-		% FIXME: We assume that reads have /1 and /2 suffixes.
-		
 		if ~isempty(unaligned)
 			flags = sprintf('%s --un %s', flags, ...
 				compress_pipe([unaligned.url{s} '.fa.gz']));
 		end
 		
 		[status, out] = unix(sprintf( ...
-			['cat %s %s | bowtie2 %s -x %s - | ' ...
-			'%s/tools/samtools/samtools view -Sb -o %s -'], ...
-			read_paths{1}, read_paths{2}, ...
-			flags, index_name, ppath, output_file));
+			'cat %s %s | bowtie2 %s -x %s - | samtools view -Sb -o %s -', ...
+			read_paths{1}, read_paths{2}, flags, index_name, output_file));
 		if status ~= 0, error('Bowtie2 read alignment failed:\n%s\n', out); end
-			
-		[alignments.total_reads(s), alignments.aligned_reads(s), ...
-			alignments.total_alignments(s)] = parse_bowtie_stats(out);
-		
 	else
 		% Single end read alignment.
 		if ~isempty(unaligned)
@@ -152,14 +146,14 @@ for s = 1:S
 		end
 
 		[status, out] = unix(sprintf( ...
-			['bowtie2 %s -x %s %s | ' ...
-			'%s/tools/samtools/samtools view -Sb -o %s -'], ...
-			flags, index_name, read_paths{1}, ppath, output_file));
+			'bowtie2 %s -x %s %s | samtools view -Sb -o %s -', ...
+			flags, index_name, read_paths{1}, output_file));
 		if status ~= 0, error('Bowtie2 read alignment failed:\n%s\n', out); end
-		
-		[alignments.total_reads(s), alignments.aligned_reads(s), ...
-			alignments.total_alignments(s)] = parse_bowtie_stats(out);
 	end
+	
+	[alignments.total_reads(s), alignments.aligned_reads(s), ...
+		alignments.total_alignments(s)] = parse_bowtie_stats(out);
+
 end
 
 
