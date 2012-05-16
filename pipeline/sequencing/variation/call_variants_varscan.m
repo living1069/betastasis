@@ -4,8 +4,7 @@ global organism;
 chromosomes = organism.Chromosomes;
 
 tmp = temporary('call_variants_varscan');
-
-min_variant_allele_freq = 0.1;
+%tmp = regexprep(out_file, '[^/]*$', '');
 
 S = length(alignments.url);
 
@@ -20,28 +19,32 @@ end
 % -u = Output uncompressed BCF (fast for piping)
 % -B = Disable BAQ (increases sensitivity)
 % -D = Output per-sample read depths (DP)
-mpileup_flags = sprintf( ...
-	'-B -f %s/tools/bowtie/indexes/homo_sapiens/2011/genome.fa', ppath);
+mpileup_flags = '-B -f ~/tools/bowtie2-indexes/homo_sapiens/2009/genome.fa';
 
-varscan_flags = ['--min-coverage 10 --min-reads2 5 --min-var-freq 0.10 ' ...
+varscan_flags = ['--min-coverage 10 --min-reads2 5 --min-var-freq 0.20 ' ...
 	'--min-freq-for-hom 0.80 --variants'];
 	
 % Start multiple VarScan runs, each looking at a different chromosome.
-for c = 1:length(chromosomes.Name)
-	chr_out_prefix = [tmp chromosomes.Name{c}];
-	[status, out] = unix(sprintf(['samtools mpileup %s -r chr%s %s | ' ...
-		'java -jar /home/csbgroup/tools/VarScan.v2.2.10.jar mpileup2cns ' ...
-		'--output-vcf %s > %s.incomplete.vcf && ' ...
-		'mv %s.incomplete.vcf %s.vcf &'], ...
-		mpileup_flags, chromosomes.Name{c}, bam_file_paths, ...
-		varscan_flags, chr_out_prefix, chr_out_prefix, chr_out_prefix));
-	if status ~= 0, error('samtools mpileup | VarScan failed:\n%s', out); end
-end
-
-for c = 1:length(chromosomes.Name)
-	while ~exist([tmp chromosomes.Name{c} '.vcf'])
-		pause(10);
+num_parallel = 8;
+chr_status = zeros(1, length(chromosomes.Name));
+chr_status(:) = 2; chr_status(23) = 0;  % FIXME!!
+while ~all(chr_status == 2)
+	for c = 1:length(chr_status)
+		if chr_status(c) == 0 && sum(chr_status == 1) < num_parallel
+			chr_out_prefix = [tmp chromosomes.Name{c}];
+			unix(sprintf([ ...
+				'samtools mpileup %s -r chr%s %s | ' ...
+				'java -jar ~/tools/VarScan.v2.2.11.jar mpileup2cns ' ...
+				'--output-vcf %s > %s.incomplete.vcf && ' ...
+				'mv %s.incomplete.vcf %s.vcf &'], ...
+				mpileup_flags, chromosomes.Name{c}, bam_file_paths, ...
+				varscan_flags, chr_out_prefix, chr_out_prefix, chr_out_prefix));
+			chr_status(c) = 1;
+		elseif chr_status(c) == 1 && exist([tmp chromosomes.Name{c} '.vcf'])
+			chr_status(c) = 2;
+		end
 	end
+	pause(10);
 end
 
 chr_str = '';
