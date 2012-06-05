@@ -17,6 +17,7 @@ for k = 1:2:length(varargin)
 end
 
 files = find_files('\.bam$');
+if ~recursive, files = files(~rx(files, './.*/')); end
 files = sort_nat(files);
 
 S = length(files);   % Number of sequence samples found.

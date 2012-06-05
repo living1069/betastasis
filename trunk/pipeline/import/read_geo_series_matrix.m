@@ -1,3 +1,10 @@
+
+% READ_GEO_SERIES_MATRIX      Reads data from a GEO series matrix
+%
+%   [GEO, INFO] = READ_GEO_SERIES_MATRIX(PATH)
+
+% Author: Matti Annala <matti.annala@tut.fi>
+
 function [geo, info] = read_geo_series_matrix(filepath, varargin)
 
 read_data = false;
