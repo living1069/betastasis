@@ -37,8 +37,15 @@ end
 if any(rx(headers, 'PROTEIN.*EFFECT'))
 	variants.rows.protein_effect = data{rx(headers, 'PROTEIN.*EFFECT')};
 end
-%variants.rows.kgenomes = ~strcmpi(data{rx(headers, '1000GENOMES')}, '-');
-%variants.rows.cosmic = ~strcmpi(data{rx(headers, 'COSMIC')}, '-');
+if any(rx(headers, 'DBSNP'))
+	variants.rows.dbsnp = data{rx(headers, 'DBSNP')};
+end
+if any(rx(headers, '1000GENOMES'))
+	variants.rows.kgenomes = str2double(data{rx(headers, '1000GENOMES')});
+end
+if any(rx(headers, 'COSMIC'))
+	variants.rows.cosmic = ~strcmpi(data{rx(headers, 'COSMIC')}, '-');
+end
 
 variants.genotype = nan(V, S);
 variants.genotype_quality = nan(V, S);
@@ -50,6 +57,6 @@ for s = 1:S
 		'ReturnOnError', false);
 	
 	variants.genotype(:, s) = sum(char(sdata{1}) == '1', 2);
-	variants.genotype_quality(:, s) = max(sdata{2}, sdata{3});
+	variants.genotype_quality(:, s) = median([sdata{2:4}], 2);
 end
 

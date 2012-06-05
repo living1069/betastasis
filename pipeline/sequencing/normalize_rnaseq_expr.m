@@ -32,6 +32,15 @@ if rx(method, 'PKM')
 		norm.mean(:, s) = expr.mean(:, s) ./ (gene_tx_len / 1000) / ...
 			(total_aligned / 1e6);
 	end
+	
+elseif rx(method, 'RPM')
+	norm.meta.expr_normalization = repmat({ 'RPM' }, 1, S);
+	
+	for s = 1:S
+		total_aligned = nansum(expr.mean(:, s));
+		norm.mean(:, s) = expr.mean(:, s) ./ (total_aligned / 1e6);
+	end
+
 else
 	error 'Unsupported normalization method requested.';
 end

@@ -1,9 +1,10 @@
 
 function [] = filter_vcfa(vcfa_file, out_file, varargin)
 
-%min_reads = 5;
-discard_silent = false;
+global organism;
+
 %strand_bias_threshold = 0.001;
+min_genotype_qual = 30;
 abs_negative_groups = [];
 sample_map = [];
 
@@ -16,24 +17,33 @@ ranksum_min_significance = 0.50;     % P-value lower or variant is discarded
 
 cosmic_score = 2;
 kgenomes_score = -1;
+silent_score = -Inf;
 
 for k = 1:2:length(varargin)
 	if rx(varargin{k}, 'sample.*map')
 		sample_map = varargin{k+1}; continue;
 	end
 	
+	if rx(varargin{k}, 'geno.*qual')
+		min_genotype_qual = varargin{k+1}; continue;
+	end
+	
+	if rx(varargin{k}, 'silent.*score')
+		silent_score = varargin{k+1}; continue;
+	end
 	if rx(varargin{k}, 'cosmic.*score')
 		cosmic_score = varargin{k+1}; continue;
 	end
-	
 	if rx(varargin{k}, 'kgenome.*score')
 		kgenomes_score = varargin{k+1}; continue;
 	end
 	
+	if rx(varargin{k}, 'abs.*neg')
+		abs_negative_groups = varargin{k+1}; continue;
+	end
 	if rx(varargin{k}, 'ranksum.*group')
 		ranksum_groups = varargin{k+1}; continue;
 	end
-	
 	if rx(varargin{k}, 'ranksum.*signif')
 		ranksum_min_significance = varargin{k+1}; continue;
 	end
@@ -52,41 +62,22 @@ for k = 1:2:length(varargin)
 		continue;
 	end
 	
-	%if regexpi(varargin{k}, 'min.*reads')
-%		min_reads = varargin{k+1}; continue;
-%	end
-	
-	if regexpi(varargin{k}, 'discard.*silent')
-		discard_silent = varargin{k+1}; continue;
-	end
-	
-	if rx(varargin{k}, 'abs.*neg')
-		abs_negative_groups = varargin{k+1}; continue;
-	end
-	
 	error('Unrecognized option "%s".', varargin{k});
 end
 
-[data, headers] = readtable(vcfa_file);
-if any(rx(headers, 'HOM/HET'))
-	error 'File has already been filtered!';
-end
+variants = read_vcf(vcfa_file)
 
-first_sample_col = find(rx(headers, 'COSMIC'))+1;
-S = length(headers) - first_sample_col + 1;
-V = length(data{1});
-
-samples = headers(first_sample_col:end);
-%samples = regexprep(samples, '.*/', '');
-%samples = regexprep(samples, '\.bam$', '');
+S = length(variants.meta.sample_id);
+V = size(variants.genotype, 1);
 
 % Relabel the samples.
 if ~isempty(sample_map)
 	if strcmp(class(sample_map), 'containers.Map')
-		valid = sample_map.isKey(samples);
-		samples(valid) = sample_map.values(samples(valid));
-	elseif iscellstr(sample_map) && length(sample_map) == length(samples)
-		samples = sample_map;
+		valid = sample_map.isKey(variants.meta.sample_id);
+		variants.meta.sample_id(valid) = ...
+			sample_map.values(variants.meta.sample_id(valid));
+	elseif iscellstr(sample_map) && length(sample_map) == S
+		variants.meta.sample_id = sample_map;
 	else
 		error 'Invalid sample map format.';
 	end
@@ -102,53 +93,32 @@ if ~isempty(groups)
 		groups{g+1} = (1:length(gsamples))+length(sample_order);
 		sample_order = [sample_order gsamples];
 	end
-	if length(sample_order) ~= length(samples)
-		error 'Specified groups do not cover all samples.';
+	if length(sample_order) ~= S
+		error 'User specified groups do not cover all samples.';
 	end
-	samples = samples(sample_order);
-	headers(first_sample_col:end) = samples;
-	data(first_sample_col:end) = data(sample_order+first_sample_col-1);
+	variants = filter(variants, sample_order);
 end
 
 
 
 
 
-% Construct numeric matrices out of the variant-sample spreadsheet.
-consequences = data{rx(headers, 'SYNONYMOUS')};
-total_reads = nan(V, S);
-genotype = nan(V, S);
-kgenomes = ~strcmpi(data{rx(headers, '1000GENOMES')}, '-');
-cosmic = ~strcmpi(data{rx(headers, 'COSMIC')}, '-');
-
-for s = 1:S
-	info = data{first_sample_col + s - 1};
-	tokens = regexp(info, '(.+?):.+?:(\d+)', 'tokens');
-	for v = 1:length(tokens)
-		token = tokens{v}{1};
-		if strcmp(token{1}, './.')
-			genotype(v, s) = NaN;
-		else
-			genotype(v, s) = sum(token{1} == '1');
-		end
-		total_reads(v, s) = str2double(token{2});
-	end
-end
-
-
+% Set genotypes to unknown if their quality is not sufficient.
+variants.genotype(~(variants.genotype_quality >= min_genotype_qual)) = NaN;
+silent = rx(variants.rows.synonymous, '^(synonymous|unknown|-)');
 
 
 
 keep = true(V, 1);
 
-% Filter out silent variants.
-if discard_silent
-	keep = keep & ~rx(consequences, '^(synonymous|unknown|-)');
+% Filter out silent variants if bonus for coding variants is infinite.
+if silent_score == -Inf
+	keep = keep & ~silent;
 end
 
 if ~isempty(abs_negative_groups)
 	abs_negative_samples = unique([groups{abs_negative_groups*2}])
-	keep = keep & ~any(genotype(:, abs_negative_samples) > 0, 2);
+	keep = keep & ~any(variants.genotype(:, abs_negative_samples) > 0, 2);
 end
 
 if ~isempty(ranksum_groups)
@@ -157,7 +127,7 @@ if ~isempty(ranksum_groups)
 	test_samples = unique([groups{ranksum_groups{1}*2}]);
 	ref_samples = unique([groups{ranksum_groups{2}*2}]);
 	
-	mutated = genotype;
+	mutated = variants.genotype;
 	mutated(mutated == 2) = 1;
 	
 	[~, p] = ttest2(mutated(:, test_samples)', mutated(:, ref_samples)', ...
@@ -168,15 +138,18 @@ if ~isempty(ranksum_groups)
 
 else
 	% Just score the variants based on frequency.
-	score = nansum(genotype / 2, 2) / size(genotype, 2);
+	score = nansum(variants.genotype / 2, 2) / size(variants.genotype, 2);
 end
 
 
 
 % Adjust the scoring based on whether the variant is reported by the COSMIC
 % and 1000 Genomes projects.
-score(cosmic) = score(cosmic) + cosmic_score;
-score(kgenomes) = score(kgenomes) + kgenomes_score;
+if isfinite(silent_score)
+	score = score + silent_score * silent;
+end
+score = score + cosmic_score * variants.rows.cosmic;
+score = score + kgenomes_score * ~strcmp(variants.rows.kgenomes, '-');
 
 
 
@@ -192,42 +165,57 @@ order = order(keep(order));
 
 % Figure out where we need to insert the homozygous/heterozygous counts.
 fid = fopen(out_file, 'W');
-fprintf(fid, '%s\t', headers{1:(first_sample_col-1)});
+fprintf(fid, ['CHROMOSOME\tPOSITION\tREFERENCE\tOBSERVED\tFUNCTION\t' ...
+	'NEARBY_GENES\tSYNONYMOUS\tPROTEIN_EFFECT\tDBSNP\t1000GENOMES\tCOSMIC']);
 
 % Print headers for heterozygous/homozygous totals
 if isempty(groups)
-	fprintf(fid, 'HOM/HET');
+	fprintf(fid, '\tHOM/HET/TOT');
 else
 	for g = 1:2:length(groups)
-		fprintf(fid, '%s HOM/HET\t', upper(groups{g}));
+		fprintf(fid, '\t%s HOM/HET/TOT', upper(groups{g}));
 	end
 end
 
-fprintf(fid, '%s\t', headers{first_sample_col:end-1});
-fprintf(fid, '%s\n', headers{end});
+fprintf(fid, '\t%s', variants.meta.sample_id{:});
+fprintf(fid, '\n');
 
-genotype_strs = { '0/0', '0/1', '1/1' };
+chr_names = organism.Chromosomes.Name;
+r = variants.rows;
+
+genotype_str = { '0/0', '0/1', '1/1' };
+
+kgenome_str = {''; 'YES'};
+kgenome_str = kgenome_str((r.kgenomes >= 0) + 1);
+
+cosmic_str = {''; 'YES'};
+cosmic_str = cosmic_str(r.cosmic + 1);
 
 for k = order'
-	for c = 1:(first_sample_col-1)
-		fprintf(fid, '%s\t', data{c}{k});
-	end
-	
+	fprintf(fid, 'chr%s\t%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t', ...
+		chr_names{r.chromosome(k)}, r.position(k), r.ref_allele{k}, ...
+		r.alt_allele{k}, r.function{k}, r.nearby_genes{k}, r.synonymous{k}, ...
+		r.protein_effect{k}, r.dbsnp{k}, kgenome_str{k}, cosmic_str{k});
+
 	if isempty(groups)
-		fprintf(fid, '%d / %d', sum(genotype(k, :) == 2), ...
-			sum(genotype(k, :) > 0));
+		fprintf(fid, '%d / %d / %d', sum(variants.genotype(k, :) == 2), ...
+			sum(variants.genotype(k, :) > 0), ...
+			sum(~isnan(variants.genotype(k, :))));
 	else
 		for g = 1:2:length(groups)
-			fprintf(fid, '%d / %d', sum(genotype(k, groups{g+1}) == 2), ...
-				sum(genotype(k, groups{g+1}) > 0));
+			fprintf(fid, '%d / %d / %d', ...
+				sum(variants.genotype(k, groups{g+1}) == 2), ...
+				sum(variants.genotype(k, groups{g+1}) > 0), ...
+				sum(~isnan(variants.genotype(k, groups{g+1}))));
 			if g < length(groups) - 1, fprintf(fid, '\t'); end
 		end
 	end
-		
-	for s = 1:size(genotype, 2)
-		if ~isnan(genotype(k, s))
-			fprintf(fid, '\t%s (%d)', genotype_strs{genotype(k, s)+1}, ...
-				total_reads(k, s));
+	
+	for s = 1:S
+		if ~isnan(variants.genotype(k, s))
+			fprintf(fid, '\t%s (%d)', ...
+				genotype_str{variants.genotype(k,s)+1}, ...
+				variants.genotype_quality(k, s));
 		else
 			fprintf(fid, '\t');
 		end
