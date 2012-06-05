@@ -6,31 +6,21 @@ function [] = annovar(variant_file)
 global organism;
 chromosomes = organism.Chromosomes;
 
-tmp = temporary('annovar');
-
-if rx(variant_file, '^.*\.vcf$')
-	out_prefix = [tmp strrep(variant_file, '.vcf', '')];
-	
-	fid = fopen(variant_file);
-	for k = 1:100
-		line = fgetl(fid);
-		if k == 100, error 'Cannot find VCF header line.'; end
-		
-		if strcmp(line(1:6), '#CHROM')
-			samples = line(strfind(line, 'FORMAT')+6:end);
-			break;
-		end
-	end
-	fclose(fid);
-
-	% Command used to convert the VCF file into an ANNOVAR compatible format.
-	% Note that the 'sed' command is used to fix a bug in convert2annovar.pl
-	convert_cmd = sprintf(['convert2annovar.pl --format vcf4 --includeinfo ' ...
-		'--allallele %s | sed "s/\t\t/\t/"'], variant_file);
-
-else
-	error 'Only VCF files are currently supported for ANNOVAR analysis.';
+if ~rx(variant_file, '\.vcf')
+	error 'Only VCF files are currently supported.';
 end
+
+tmp = temporary('annovar');
+out_prefix = [tmp 'variants'];
+	
+[~, headers] = readtable(variant_file, 'Comment', '^##', 'NumLines', 0);
+samples = headers((find(strcmp(headers, 'FORMAT'))+1):end);
+samples = regexprep(samples, '.*/', '');
+
+% Command used to convert the VCF file into an ANNOVAR compatible format.
+% Note that the 'sed' command is used to fix a bug in convert2annovar.pl
+convert_cmd = sprintf(['convert2annovar.pl --format vcf4 --includeinfo ' ...
+	'--allallele <(gunzip -c %s) | sed "s/\t\t/\t/"'], variant_file);
 
 humandb_dir = '~/tools/annovar*/humandb';
 	
@@ -56,44 +46,48 @@ unix(sprintf([ ...
 	'--dbtype bed -bedfile cosmic_v56.bed <(%s) %s'], ...
 	[out_prefix '.cosmic'], convert_cmd, humandb_dir));
 	
-	
 
 
 	
 
 % Construct mappings from genomic loci to annotated features.
-[data, headers] = readtable([out_prefix '.exonic_variant_function'], ...
-	'HeaderLines', 0);
+data = readtable([out_prefix '.exonic_variant_function'], ...
+	'Header', false, 'Ignore', [1 9:1000]);
 exonic_func_map = containers.Map( ...
-	strcat(data{4},':',data{5},'-',data{6},':',data{7},'>',data{8}), ...
-	strcat(data{2}, {sprintf('\t')}, data{3}));
+	strcat(data{3},':',data{4},'-',data{5},':',data{6},'>',data{7}), ...
+	strcat(data{1}, {sprintf('\t')}, data{2}));
 
-[data, headers] = readtable([out_prefix '.hg19_snp132_dropped'], ...
-	'HeaderLines', 0);
+data = readtable([out_prefix '.hg19_snp132_dropped'], ...
+	'Header', false, 'Ignore', [1 8:1000]);
 dbsnp_map = containers.Map( ...
-	strcat(data{3},':',data{4},'-',data{5},':',data{6},'>',data{7}), ...
-	data{2});
+	strcat(data{2},':',data{3},'-',data{4},':',data{5},'>',data{6}), ...
+	data{1});
 
-[data, headers] = readtable([out_prefix '.hg19_ALL.sites.2011_05_dropped'], ...
-	'HeaderLines', 0);
+data = readtable([out_prefix '.hg19_ALL.sites.2011_05_dropped'], ...
+	'Header', false, 'Ignore', [1 8:1000]);
 kgenomes_map = containers.Map( ...
-	strcat(data{3},':',data{4},'-',data{5},':',data{6},'>',data{7}), ...
-	data{2});
+	strcat(data{2},':',data{3},'-',data{4},':',data{5},'>',data{6}), ...
+	data{1});
 	
-[data, headers] = readtable([out_prefix '.cosmic.hg19_bed'], 'HeaderLines', 0);
-cosmic_map = containers.Map(strcat(data{3},':',data{4},'-',data{5}), ...
-	repmat({'YES'}, 1, length(data{3})));
+data = readtable([out_prefix '.cosmic.hg19_bed'], 'Header', false, ...
+	'Ignore', [1 2 6:1000]);
+cosmic_map = containers.Map(strcat(data{1},':',data{2},'-',data{3}), ...
+	repmat({'YES'}, 1, length(data{1})));
 
-
+	
+	
+	
+	
+	
 	
 	
 % Finally, we combine all of the lists into one gigantic pile of variant info.
-[data, headers] = readtable([out_prefix '.variant_function']);
+data = readtable([out_prefix '.variant_function']);
 fid = fopen('variants.vcfa', 'W');
-fprintf(fid, ['CHROMOSOME\tSTART\tEND\tREFERENCE\tOBSERVED\tFLANK_SEQ\t' ...
+fprintf(fid, ['CHROMOSOME\tSTART\tEND\tREFERENCE\tOBSERVED\t' ...
 	'FUNCTION\tNEARBY_GENES\tSYNONYMOUS\tPROTEIN_EFFECT\t' ...
 	'DBSNP\t1000GENOMES\tCOSMIC']);
-fprintf(fid, '%s', samples);
+fprintf(fid, '\t%s', samples{:});
 fprintf(fid, '\n');
 	
 keys = strcat(data{3},':',data{4},'-',data{5},':',data{6},'>',data{7});
@@ -125,31 +119,37 @@ fprintf('%d / %d (%.1f%%) variants found in COSMIC.\n', ...
 
 	
 % Now we calculate the reference sequence surrounding the variant site.
-chr = chromosome_sym2num(data{3});
-pos = [str2double(data{4}), str2double(data{5})];
-flank_seq = cell(length(chr), 1);
-for k = 1:length(flank_seq)
-	flank_seq{k} = lower(chromosomes.Sequence{chr(k)}(pos(k,1)-30:pos(k,2)+30));
-	if strcmp(data{6}{k}, '-')
-		flank_seq{k} = [flank_seq{k}(2:31) '-' flank_seq{k}(32:end)];
-	else
-		flank_seq{k}(31:31+pos(k,2)-pos(k,1)) = ...
-			upper(flank_seq{k}(31:31+pos(k,2)-pos(k,1)));
+%chr = chromosome_sym2num(data{3});
+%pos = [str2double(data{4}), str2double(data{5})];
+%flank_seq = cell(length(chr), 1);
+%for k = 1:length(flank_seq)
+%	flank_seq{k} = lower(chromosomes.Sequence{chr(k)}(pos(k,1)-30:pos(k,2)+30));
+%	if strcmp(data{6}{k}, '-')
+%		flank_seq{k} = [flank_seq{k}(2:31) '-' flank_seq{k}(32:end)];
+%	else
+%		flank_seq{k}(31:31+pos(k,2)-pos(k,1)) = ...
+%			upper(flank_seq{k}(31:31+pos(k,2)-pos(k,1)));
+%	end
+%end
+
+% Double check that we are picking the sample data from the right column.
+for k = 1:length(data)
+	if rx(data{k}{1}, '[01]/[01]:.*:')
+		sample_col = k; break;
 	end
 end
 
-% Double check that we are picking the sample data from the right column.
-if ~strcmp(data{15}{1}, 'GT:GQ:DP')
-	error 'Column 15 does not contain FORMAT data!';
-end
-
 for k = 1:length(data{1})
-	fprintf(fid, '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s', ...
+	%fprintf(fid, '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s', ...
+	%	data{3}{k}, data{4}{k}, data{5}{k}, data{6}{k}, data{7}{k}, ...
+	%	flank_seq{k}, data{1}{k}, data{2}{k}, exonic_funcs{k}, ...
+	%	dbsnps{k},  kgenomes{k}, cosmic{k});
+	fprintf(fid, '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s', ...
 		data{3}{k}, data{4}{k}, data{5}{k}, data{6}{k}, data{7}{k}, ...
-		flank_seq{k}, data{1}{k}, data{2}{k}, exonic_funcs{k}, ...
-		dbsnps{k},  kgenomes{k}, cosmic{k});
+		data{1}{k}, data{2}{k}, exonic_funcs{k}, dbsnps{k}, kgenomes{k}, ...
+		cosmic{k});
 
-	for c = [16:length(data)]
+	for c = [sample_col:length(data)]
 		fprintf(fid, '\t%s', data{c}{k});
 	end
 	fprintf(fid, '\n');
