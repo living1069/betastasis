@@ -4,7 +4,8 @@ meta.sample_id = map_sample_ids(meta.sample_id);
 
 % First we check if the sample codes are in the latest format.
 % If not, we convert them.
-meta = meta_tabular('~/datasets/tampere_pca/tampere_pca_clinical.txt', meta);
+meta = meta_tabular( ...
+	'/data/csb/datasets/tampere_pca/tampere_pca_clinical.txt', meta);
 
 
 
