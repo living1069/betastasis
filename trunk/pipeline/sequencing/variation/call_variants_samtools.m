@@ -23,9 +23,9 @@ S = length(alignments.url);
 tmp = temporary('call_variants_samtools');
 
 if use_chr_prefix
-	ref_genome = '~/tools/bowtie2-indexes/homo_sapiens/2009/genome.fa';
+	ref_genome = '/data/csb/tools/bowtie2-indexes/homo_sapiens/2009/genome.fa';
 else
-	ref_genome = ['~/tools/bowtie2-indexes/homo_sapiens/2009/' ...
+	ref_genome = ['/data/csb/tools/bowtie2-indexes/homo_sapiens/2009/' ...
 		'genome_no_chr_prefix.fa'];
 end
 
