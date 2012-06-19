@@ -10,14 +10,14 @@ if length(samples) ~= length(unique(samples))
 end
 
 valid = find(~any(isnan(expr.mean), 2));
-expr = filter_rows(expr, valid);
 
 S = length(expr.meta.sample_id);
 F = length(valid);
 
 fmatrix.samples = expr.meta.sample_id;
-fmatrix.features = strcat('N:EXPR:', expr.rows.gene_symbol);
-fmatrix.data = log2(expr.mean);
+fmatrix.features = strcat('N:EXPR:', expr.rows.gene_symbol, ...
+	repmat({' ('}, F, 1), expr.rows.transcript, repmat({'):'}, F, 1));
+fmatrix.data = log2(expr.mean(valid, :));
 
-fprintf('%d gene expression features.\n', F);
+fprintf('%d transcript expression features.\n', F);
 

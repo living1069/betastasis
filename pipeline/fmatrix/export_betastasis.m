@@ -13,6 +13,8 @@ for f = 1:length(fmatrix.features)
 	if isempty(tokens{f}), continue, end
 	
 	name = tokens{f}{1}{1};
+	if rx(name, '/'), continue, end
+	
 	expr_names{end+1, 1} = name;
 	
 	dir = [path '/expr/' lower(name(1))];
