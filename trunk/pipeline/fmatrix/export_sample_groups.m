@@ -1,7 +1,6 @@
 function [] = export_sample_groups(path, varargin)
 
-[~, dir] = path_strip_dir(path);
-[~, ~] = mkdir(dir);
+[~, ~] = mkdir(dirname(path));
 
 fid = fopen(path, 'W');
 fprintf(fid, '{\n');
