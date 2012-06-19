@@ -3,9 +3,10 @@ function features = liftover(features, direction)
 global organism;
 chromosomes = organism.Chromosomes;
 
-old_file = ptemp;
-new_file = ptemp;
-unmapped_file = ptemp
+tmp = temporary('liftover');
+old_file = [tmp 'old.bed'];
+new_file = [tmp 'new.bed'];
+unmapped_file = [tmp 'unmapped.bed'];
 fid = fopen(old_file, 'W');
 for k = 1:length(features.chromosome)
 	fprintf(fid, '%s\t%d\t%d\n', ...
@@ -16,15 +17,15 @@ fclose(fid);
 
 chain_file = '';
 if regexpi(direction, 'hg18\s*->\s*hg19')
-	chain_file = sprintf('%s/tools/liftover/hg18ToHg19.over.chain', ppath);
+	chain_file = sprintf('/data/csb/tools/liftover/hg18ToHg19.over.chain', ppath);
 elseif regexpi(direction, 'hg19\s*->\s*hg18')
-	chain_file = sprintf('%s/tools/liftover/hg19ToHg18.over.chain', ppath);
+	chain_file = sprintf('/data/csb/tools/liftover/hg19ToHg18.over.chain', ppath);
 else
 	error 'Unknown chain.';
 end
 
-status = unix(sprintf('%s/tools/liftover/liftOver %s %s %s %s', ...
-	ppath, old_file, chain_file, new_file, unmapped_file));
+status = unix(sprintf('liftOver %s %s %s %s', ...
+	old_file, chain_file, new_file, unmapped_file));
 if status ~= 0, error 'Liftover failed.'; end
 
 fid = fopen(new_file);
@@ -57,8 +58,4 @@ features.position(~unmapped) = data{3};
 
 features.chromosome(unmapped) = NaN;
 features.position(unmapped) = NaN;
-
-safe_delete(old_file);
-safe_delete(new_file);
-safe_delete(unmapped_file);
 
