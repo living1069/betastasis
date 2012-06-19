@@ -5,6 +5,7 @@ function survival_genes = survival_associated_genes(expr, varargin)
 
 global organism;
 
+discard_sex_chromosomes = false;
 genes_to_report = 100;
 
 log_expr = log2(expr.mean);
@@ -28,23 +29,25 @@ else
 	error 'Expression dataset is of unrecognized type.';
 end
 
-check = 'hsa-miR-21$';
-fprintf('At position %d.\n', find(rx(features, check)));
+%check = 'hsa-miR-21$';
+%fprintf('At position %d.\n', find(rx(features, check)));
 
 valid = valid & all(~isnan(log_expr), 2);
 fprintf('%d / %d (%.1f%%) features with expression for all samples.\n', ...
 	sum(valid), length(valid), sum(valid) / length(valid) * 100);
-fprintf('Present after validation: %d\n', valid(rx(features, check)));
+%fprintf('Present after validation: %d\n', valid(rx(features, check)));
 
 valid = valid & mad(log_expr, 1, 2) > 0.2;
 fprintf('%d / %d (%.1f%%) features after discarding low variance features.\n',...
 	sum(valid), length(valid), sum(valid) / length(valid) * 100);
-fprintf('Present after validation: %d\n', valid(rx(features, check)));
+%fprintf('Present after validation: %d\n', valid(rx(features, check)));
 
-valid = valid & feature_chr <= 22;
-fprintf('%d / %d (%.1f%%) features after discarding sex chromosomes.\n', ...
-	sum(valid), length(valid), sum(valid) / length(valid) * 100);
-fprintf('Present after validation: %d\n', valid(rx(features, check)));
+if discard_sex_chromosomes
+	valid = valid & feature_chr <= 22;
+	fprintf('%d / %d (%.1f%%) features after discarding sex chromosomes.\n', ...
+		sum(valid), length(valid), sum(valid) / length(valid) * 100);
+	%fprintf('Present after validation: %d\n', valid(rx(features, check)));
+end
 	
 valid = find(valid);
 
