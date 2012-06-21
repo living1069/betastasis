@@ -85,8 +85,12 @@ else
 end
 
 numeric = false(length(headers), 1);
-for r = 1:length(num_fields)
-	numeric = numeric | rx(headers, num_fields{r});
+if isnumeric(num_fields) || islogical(num_fields)
+	numeric(num_fields) = true;
+else
+	for r = 1:length(num_fields)
+		numeric = numeric | rx(headers, num_fields{r});
+	end
 end
 
 ignore = false(length(headers), 1);

@@ -7,9 +7,5 @@
 function m = rx(x, regex)
 
 if ischar(x), x = { x }; end
-
-m = false(size(x));
-for k = 1:numel(x)
-	if regexpi(x{k}, regex), m(k) = true; end
-end
+m = ~cellfun(@isempty, regexpi(x, regex));
 
