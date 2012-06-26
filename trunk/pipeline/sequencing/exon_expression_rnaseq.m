@@ -30,6 +30,10 @@ if rx(annotations, '.*\.gtf')
 	expr.rows.transcript = data{9};
 	expr.rows.chromosome = chromosome_sym2num(data{1});
 	expr.rows.position = [str2double(data{4}), str2double(data{5})];
+elseif rx(annotations, '.*\.bed')
+	expr.rows.gene = data{4};
+	expr.rows.chromosome = chromosome_sym2num(data{1});
+	expr.rows.position = [str2double(data{2}), str2double(data{3})];
 end
 
 expr.mean = nan(length(data{1}), S);
