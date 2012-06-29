@@ -62,6 +62,3 @@ merged = filter_rows(merged, ~isnan(merged.chromosome));
 % SOME BASH CODE FOR CONVERTING ENSEMBL GTF TO A SUITABLE BED FILE
 %grep '\sexon\s' Homo_sapiens.GRCh37.67.gtf | cut -f 1,4,5,9 | sed 's/gene_id "\([^\s]*\)".*/\1/'
 
-% UNRELATED
-%paste <(gunzip -c variants.vcfa.gz | tail -n +2 | cut -f 1-8)
-%<(gunzip -c variants.vcfa.gz | tail -n +2 | cut -f 9-)
