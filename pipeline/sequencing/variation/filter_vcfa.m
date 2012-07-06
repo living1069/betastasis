@@ -3,8 +3,8 @@ function [] = filter_vcfa(vcfa_file, out_file, varargin)
 
 global organism;
 
-%strand_bias_threshold = 0.001;
-min_genotype_qual = 30;
+min_genotype_qual = 100;
+min_mutated_control_genotype_qual = min_genotype_qual;
 abs_negative_groups = [];
 sample_map = [];
 
@@ -19,9 +19,15 @@ cosmic_score = 2;
 kgenomes_score = -1;
 silent_score = -Inf;
 
+tail_distance_bias_threshold = 0;
+
 for k = 1:2:length(varargin)
 	if rx(varargin{k}, 'sample.*map')
 		sample_map = varargin{k+1}; continue;
+	end
+	
+	if rx(varargin{k}, '(ref|control).*(geno)?.*qual')
+		min_mutated_control_genotype_qual = varargin{k+1}; continue;
 	end
 	
 	if rx(varargin{k}, 'geno.*qual')
@@ -103,23 +109,49 @@ end
 
 
 
-% Set genotypes to unknown if their quality is not sufficient.
-variants.genotype(~(variants.genotype_quality >= min_genotype_qual)) = NaN;
+if min_genotype_qual == min_mutated_control_genotype_qual || ...
+	isempty(ranksum_groups)
+	% Simple case, just filter using 'min_genotype_qual'
+	variants.genotype(~(variants.genotype_quality >= min_genotype_qual)) = NaN;
+else
+	% Complex case, use a different minimum quality for mutated controls
+	ref_samples = unique([groups{ranksum_groups{2}*2}]);
+	test_samples = setdiff(1:S, ref_samples);
+	
+	test_gt = variants.genotype(:, test_samples);
+	test_gt(~(variants.genotype_quality(:, test_samples) >= ...
+		min_genotype_qual)) = NaN;
+	variants.genotype(:, test_samples) = test_gt;
+	
+	ref_gt = variants.genotype(:, ref_samples);
+	ref_gt_qual = variants.genotype_quality(:, ref_samples);
+	ref_gt(ref_gt == 0 & ~(ref_gt_qual >= min_genotype_qual)) = NaN;
+	ref_gt(ref_gt>0 & ~(ref_gt_qual >= min_mutated_control_genotype_qual)) =NaN;
+	variants.genotype(:, ref_samples) = ref_gt;
+end
+
 silent = rx(variants.rows.synonymous, '^(synonymous|unknown|-)');
 
 
 
-keep = true(V, 1);
+score = zeros(V, 1);
 
-% Filter out silent variants if bonus for coding variants is infinite.
-if silent_score == -Inf
-	keep = keep & ~silent;
+% Filter out variants with a tail distance bias p-value below the threhold.
+if tail_distance_bias_threshold > 0
+	score(variants.rows.tail_distance_bias < tail_distance_bias_threshold)=-Inf;
 end
 
+% Filter out variants that show up in the absolute negative groups.
 if ~isempty(abs_negative_groups)
 	abs_negative_samples = unique([groups{abs_negative_groups*2}])
-	keep = keep & ~any(variants.genotype(:, abs_negative_samples) > 0, 2);
+	score(any(variants.genotype(:, abs_negative_samples) > 0, 2)) = -Inf;
 end
+
+% Provide an initial scoring for the variants.
+score(silent) = score(silent) + silent_score;
+score(variants.rows.cosmic) = score(variants.rows.cosmic) + cosmic_score;
+score(variants.rows.kgenomes > 0) = ...
+	score(variants.rows.kgenomes > 0) + kgenomes_score;
 
 if ~isempty(ranksum_groups)
 	% Score the variants by t-testing for difference between test and
@@ -133,26 +165,16 @@ if ~isempty(ranksum_groups)
 	[~, p] = ttest2(mutated(:, test_samples)', mutated(:, ref_samples)', ...
 		0.05, 'right');
 	
-	score = (1 - p)';
-	keep = keep & (p <= ranksum_min_significance)';
+	score = score + (1 - p)';
+	score(p > ranksum_min_significance) = -Inf;
 
 else
 	% Just score the variants based on frequency.
-	score = nansum(variants.genotype / 2, 2) / size(variants.genotype, 2);
+	score = score + nansum(variants.genotype / 2, 2) / ...
+		size(variants.genotype, 2);
 end
 
-
-
-% Adjust the scoring based on whether the variant is reported by the COSMIC
-% and 1000 Genomes projects.
-if isfinite(silent_score)
-	score = score + silent_score * silent;
-end
-score = score + cosmic_score * variants.rows.cosmic;
-score = score + kgenomes_score * ~strcmp(variants.rows.kgenomes, '-');
-
-
-
+keep = (score > -Inf);
 [~, order] = sort(score, 'descend');
 order = order(keep(order));
 
@@ -185,8 +207,10 @@ r = variants.rows;
 
 genotype_str = { '0/0', '0/1', '1/1' };
 
-kgenome_str = {''; 'YES'};
-kgenome_str = kgenome_str((r.kgenomes >= 0) + 1);
+kgenome_str = repmat({''}, size(r.kgenomes));
+for k = find(r.kgenomes >= 0)'
+	kgenome_str{k} = sprintf('%.2f', r.kgenomes(k));
+end
 
 cosmic_str = {''; 'YES'};
 cosmic_str = cosmic_str(r.cosmic + 1);
