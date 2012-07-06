@@ -16,7 +16,7 @@ S = length(expr.meta.sample_id);
 F = length(valid);
 
 fmatrix.samples = expr.meta.sample_id;
-fmatrix.features = strcat('N:EXPR:', expr.rows.gene_symbol);
+fmatrix.features = strcat('N:EXPR:', expr.rows.gene);
 fmatrix.data = log2(expr.mean);
 
 fprintf('%d gene expression features.\n', F);
