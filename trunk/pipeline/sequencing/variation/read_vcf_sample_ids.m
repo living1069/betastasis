@@ -10,5 +10,5 @@ for k = 1:length(headers)
 	end
 end
 
-sample_ids = headers(first_sample_col:end);
+sample_ids = headers(first_sample_col:end)';
 
