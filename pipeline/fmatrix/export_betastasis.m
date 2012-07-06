@@ -221,63 +221,9 @@ end
 
 	
 
-
-	
-
-
-dir = [path '/clinical'];
-[~, ~] = mkdir(dir);
-
-featidx = find(rx(fmatrix.features, '.:CLIN:'));
-tmp = fmatrix.data(featidx, :);
-tmp(isnan(tmp)) = -1;
-fmatrix.data(featidx, :) = tmp;
-
-clinical_features = {};
-tokens = regexpi(fmatrix.features, 'N:CLIN:(.+)', 'tokens');
-for f = 1:length(fmatrix.features)
-	if isempty(tokens{f}), continue, end
-	
-	name = tokens{f}{1}{1};
-	clinical_features{end+1, 1} = name;
-	
-	export_json([dir '/' name '.json'], 'data', fmatrix.data(f, :));
-end
-
-tokens = regexpi(fmatrix.features, 'C:CLIN:([^:]+):(.+)', 'tokens');
-for f = 1:length(fmatrix.features)
-	if isempty(tokens{f}), continue, end
-		
-	cat_names = textscan(tokens{f}{1}{2}, '%s', 'Delimiter', ';');
-	cat_names = cat_names{1};
-	
-	name = tokens{f}{1}{1};
-	clinical_features{end+1, 1} = name;
-	
-	export_json([dir '/' name '.json'], 'data', cat_names(fmatrix.data(f, :)));
-end
-
-
-if ~isempty(clinical_features)
-	export_json([path '/clinical/features.json'], ...
-		'features', clinical_features);
-end
-
-export_json([path '/clinical/sample_id.json'], ...
-	'data', fmatrix.samples);
-
-	
-	
-	
-	
-	
-	
-	
-	
 	
 	
 % WRITE THE NEW-STYLE CLINICAL DATA
-	
 featidx = find(rx(fmatrix.features, '.:CLIN:'));
 tmp = fmatrix.data(featidx, :);
 tmp(isnan(tmp)) = -1;

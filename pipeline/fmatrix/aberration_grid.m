@@ -3,7 +3,7 @@ function order = aberration_grid(aberrations, image_file, color_method)
 barh = 15;
 gaph = 5;
 
-if nargin < 3, color_method = 'green-black-red'; end
+if nargin < 3, color_method = 'red-gray-blue'; end
 
 [F, S] = size(aberrations);
 
@@ -18,7 +18,7 @@ for f = 1:F
 			im(pixels, val == k, 2) = color_method(k,2);
 			im(pixels, val == k, 3) = color_method(k,3);
 		end
-		im(pixels, isnan(val), :) = 0.9;
+		im(pixels, isnan(val), :) = 1;
 		imwrite(im, image_file);
 	end
 end

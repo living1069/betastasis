@@ -14,6 +14,16 @@ if isfield(meta, 'sample_type')
 		categorical('sample_type', meta.sample_type);
 end
 
+if isfield(meta, 'survival_time')
+	fmatrix.features{end+1, 1} = 'N:CLIN:survival_time';
+	fmatrix.data(end+1, :) = meta.survival_time;
+end
+
+if isfield(meta, 'survival_time_censored')
+	fmatrix.features{end+1, 1} = 'N:CLIN:survival_censored';
+	fmatrix.data(end+1, :) = meta.survival_time_censored;
+end
+
 if isfield(meta, 'progression_time')
 	fmatrix.features{end+1, 1} = 'N:CLIN:progression_time';
 	fmatrix.data(end+1, :) = meta.progression_time;
