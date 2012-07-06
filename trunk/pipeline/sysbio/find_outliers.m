@@ -1,13 +1,12 @@
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
-function aberrated = find_outliers(test, ref, ...
+function aberrated = find_outliers(test, ref, ref_percentile, ...
 	logratio_thresholds, abs_thresholds)
 
-ref_percentile = 1.0;
-
-if nargin < 3, logratio_thresholds = [-3 -2 -1 1 2 3]; end
-if nargin < 4, abs_thresholds = [0 0 0 0 0 0]; end
+if nargin < 3, ref_percentile = 0.5; end
+if nargin < 4, logratio_thresholds = [-3 -2 -1 1 2 3]; end
+if nargin < 5, abs_thresholds = [0 0 0 0 0 0]; end
 	
 if any(logratio_thresholds(1:3) > 0)
 	error 'The three first logratio thresholds should be negative.';
@@ -25,8 +24,6 @@ log_ref = log2(ref.mean + 1);
 
 ref_min = quantile(log_ref, 1-ref_percentile, 2);
 ref_max = quantile(log_ref, ref_percentile, 2);
-%ref_min = min(log_ref, [], 2);
-%ref_max = max(log_ref, [], 2);
 
 aberrated = zeros(size(test.mean));
 for k = 1:3
