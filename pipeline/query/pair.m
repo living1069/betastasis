@@ -1,72 +1,68 @@
 
-% PAIR    Constructs samples pairs based on two input query sets
+% PAIR      Associate the columns of two or more datasets
 %
-%    [PA, PB] = PAIRED_SAMPLES(A, B, KEY) takes two query sets as input and
-%    constructs a list of sample pairs according to a user defined criterion
-%    specified in the argument KEY. The function returns two new query sets
-%    PA and PB (of equal size) where the first sample in PA matches with the
-%    first sample in PB, and so forth for all samples.
-%    
+%    [PA, PB] = PAIR(A, B, KEY) prepares two datasets A and B for integrative
+%    analysis, returning two new datasets PA and PB with an equal number of
+%    columns. The columns in PA and PB are ordered according to the meta
+%    field KEY, and any columns not shared by both datasets A and B are
+%    discarded.
+%
 %    This function is useful in experiments where multiple test samples need to
 %    be compared with their respective reference samples in a pairwise fashion.
 %
-%    Supported values for argument KEY:
-%    - 'Patient': Pair samples based on patient ID
-%    - 'Sample': Pair samples based on sample ID
-%    - 'Filename': Pair samples based on original filename
-%                  (useful for 2-channel microarrays)
-%
 %    Example:
-%    We have a query set A of three tumor samples from patients A23, A54 and A12
-%    (in that order). We also have a query set B of two adjacent normal samples
-%    from patients A12 and A54. We then run
+%    We have a dataset A containing three tumor samples from patients
+%    A23, A54 and A12. We also have a dataset B containing two adjacent normal
+%    samples from patients A12 and A54. We run
 %    
-%        [PA, PB] = PAIRED_SAMPLES(A, B, 'Patient')
+%        [PA, PB] = PAIR(A, B, 'patient_id')
 %    
-%    to build two new query sets PA and PB where the samples are paired
-%    according to the patient ID. The patient IDs for samples in the new query
-%    set PA are now A54, A12 (in that order). And for the new query set PB,
-%    the patient IDs are also A54, A12, since we paired the samples. Note that
-%    the tumor sample for patient A23 was discarded altogether, since no
-%    matching reference sample was found in query set B.
+%    to build two new datasets PA and PB where the samples are paired
+%    according to patient ID. The columns in datasets PA and PB now correspond
+%    to patients A12 and A54 (note that the original order was lost).
+%    The tumor sample for patient A23 was discarded, since no
+%    matching reference sample was found in dataset B.
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
-function [A, B] = pair(A, B, key)
+function varargout = pair(varargin)
 
-eval(['keys_a = A.meta.' key ';']);
-eval(['keys_b = B.meta.' key ';']);
-
-paired_a = true(length(keys_a), 1);
-paired_b = [];
-
-num_ambiguous = 0;
-
-for k = 1:length(keys_a)
-	if any(find(strcmp(keys_a{k}, keys_a)) < k)
-		paired_a(k) = false;
-		continue;
-	end
-	
-	matches = find(strcmp(keys_a{k}, keys_b));
-	if length(matches) ~= 1
-		if length(matches) > 1
-			num_ambiguous = num_ambiguous + 1;
-		end
-		paired_a(k) = false;
-		continue;
-	end
-	
-	paired_b(end + 1) = matches(1);
+method = 'intersect';
+if ischar(varargin{end}) && rx(varargin{end}, 'union')
+	method = 'union';
+	varargin = varargin(1:end-1);
 end
 
-if num_ambiguous > 0
-	fprintf(1, ['WARNING: %d samples were discarded because they had more ' ...
-		'than one matching pair.\n'], num_ambiguous);
+if ~ischar(varargin{end})
+	error 'The last argument must be a string that specifies the join key.';
 end
 
-if isempty(paired_b), error 'WARNING: No paired samples found.'; end
+key = varargin{end};
+for k = 1:length(varargin)-1
+	keys{k} = eval(['varargin{k}.meta.' key ';']);
+	if length(unique(keys{k})) ~= length(keys{k})
+		error('Key in dataset #%d is not one-to-one.', k);
+	end
+end
 
-A = filter(A, paired_a);
-B = filter(B, paired_b);
+if rx(method, 'intersect')
+	uniq = intersect(keys{1}, keys{2});
+	for k = 3:length(keys)
+		uniq = intersect(uniq, keys{k});
+	end
+
+	for k = 1:length(varargin)-1
+		[~, pos] = ismember(uniq, keys{k});
+		varargout{k} = filter(varargin{k}, pos);
+	end
+	
+elseif rx(method, 'union')
+	uniq = unique(horzcat(keys{:}));
+	
+	for k = 1:length(varargin)-1
+		[~, pos] = ismember(uniq, keys{k});
+		pos(pos == 0) = NaN;
+		varargout{k} = nanfilter(varargin{k}, pos);
+	end
+end
 
