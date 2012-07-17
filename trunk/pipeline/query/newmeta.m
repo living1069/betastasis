@@ -13,6 +13,9 @@ if isfield(a, 'Meta')
 	if isfield(a.Meta, 'Type')
 		b.meta.type = a.Meta.Type;
 	end
+	if isfield(a.Meta, 'Platform')
+		b.meta.platform = a.Meta.Platform';
+	end
 	
 	if isfield(a.Meta, 'Sample')
 		if isfield(a.Meta.Sample, 'ID')
