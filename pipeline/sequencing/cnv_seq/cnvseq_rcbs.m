@@ -16,7 +16,7 @@ for k = 1:2:length(varargin)
 	error('Unrecognized option "%s".', varargin{k});
 end
 
-S = size(cnv.logratio, 2);
+S = size(cnv.mean, 2);
 
 tmp = temporary('rcbs');
 r_script = [tmp '.Rscript'];
@@ -32,8 +32,8 @@ fprintf(fid, [ ...
 	'writeMat("' [tmp '.mat'] '", chr = seg.cna$output$chrom, segstart = seg.cna$output$loc.start, segend = seg.cna$output$loc.end, segmean = seg.cna$output$seg.mean)\n']);
 fclose(fid);
 
-chr = cnv.chr;
-offset = cnv.pos;
+chr = cnv.rows.chromosome;
+offset = cnv.rows.position;
 
 segments = struct;
 segments.chromosome = cell(length(organism.Chromosomes.Name), S);
@@ -43,7 +43,7 @@ progress = Progress;
 for s = 1:S
 	fprintf('Performing circular binary segmentation...\n');
 		
-	lr = cnv.logratio(:, s);
+	lr = cnv.mean(:, s);
 	save([tmp '.mat'], 'lr', 'chr', 'offset', '-v6');
 	
 	[status, out] = unix(sprintf('R CMD BATCH %s ~/out.txt', r_script));

@@ -1,7 +1,7 @@
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
-function gene_lr = cnvseq_gene_logratios(cnv, varargin)
+function gene_cna = cnvseq_gene_logratios(cna, varargin)
 
 global organism;
 genes = organism.Genes;
@@ -17,8 +17,12 @@ for k = 1:2:length(varargin)
 	error('Unrecognized option "%s".', varargin{k});
 end
 
-S = size(cnv.logratio, 2);
-gene_lr = nan(length(genes.Name), S);
+S = size(cna.mean, 2);
+gene_cna = struct;
+gene_cna.meta = cna.meta;
+gene_cna.rows = struct;
+gene_cna.rows.gene = genes.Name;
+gene_cna.mean = nan(length(genes.Name), S);
 
 for g = 1:length(genes.Name)
 	if any(isnan(genes.Position(g, :))), continue, end
@@ -31,10 +35,10 @@ for g = 1:length(genes.Name)
 	end
 	
 	% Find all windows that target the gene we're interested in.
-	idx = find(cnv.chr == genes.Chromosome(g) & cnv.pos >= gene_span(1) & ...
-		cnv.pos <= gene_span(2));
+	idx = find(cna.rows.chromosome == genes.Chromosome(g) & ...
+		cna.rows.position >= gene_span(1) & cna.rows.position <= gene_span(2));
 	if isempty(idx), continue, end
-	
-	gene_lr(g, :) = median(cnv.logratio(idx, :), 1);
+		
+	gene_cna.mean(g, :) = nanmedian(cna.mean(idx, :), 1);
 end
 
