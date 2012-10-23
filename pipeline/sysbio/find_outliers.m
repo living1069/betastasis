@@ -9,10 +9,10 @@ if nargin < 4, logratio_thresholds = [-2 -1 1 2]; end
 if nargin < 5, abs_thresholds = [0 0 0 0]; end
 	
 if any(logratio_thresholds(1:2) > 0)
-	error 'The three first logratio thresholds should be negative.';
+	error 'The two first logratio thresholds should be negative.';
 end
 if any(abs_thresholds(1:2) > 0)
-	error 'The three first absolute thresholds should be negative.';
+	error 'The two first absolute thresholds should be negative.';
 end
 
 valid = all(~isnan(test.mean), 2) & all(~isnan(ref.mean), 2);
