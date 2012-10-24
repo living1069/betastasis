@@ -2,6 +2,13 @@ function [] = export_betastasis(fmatrix, path)
 
 global organism;
 
+[~, order] = sort(fmatrix.features);
+fmatrix.features = fmatrix.features(order);
+fmatrix.data = fmatrix.data(order, :);
+
+
+
+
 featidx = find(rx(fmatrix.features, 'N:EXPR:'));
 tmp = fmatrix.data(featidx, :);
 tmp(isnan(tmp)) = 0;   % FIXME: Maybe use something else?

@@ -1,25 +1,40 @@
 function order = aberration_grid(aberrations, image_file, color_method)
 
-barh = 15;
-gaph = 5;
-
-if nargin < 3, color_method = 'red-gray-blue'; end
-
 [F, S] = size(aberrations);
 
-im = ones(F * (barh+gaph), S, 3);
+boxw = round((400 - S) / S);
+boxh = 14;
+gap = 1;
+
+% Initialize the bitmap with a light gray background...
+im = ones(F * (boxh+gap) + gap, S * (boxw+gap) + gap, 3) * 0.95;
+
+% A black border...
+for f = 1:F-1, im(gap + f * (boxh+gap), :, :) = 1; end
+for s = 1:S-1, im(:, gap + s * (boxw+gap), :) = 1; end
+
+% And a grid of white lines.
+im(1, :, :) = 0;
+im(end, :, :) = 0;
+im(:, 1, :) = 0;
+im(:, end, :) = 0;
 
 for f = 1:F
-	if isnumeric(color_method)
-		val = aberrations(f, :);
-		pixels = (1:barh) + (f-1) * (barh+gaph);
-		for k = 1:max(val)
-			im(pixels, val == k, 1) = color_method(k,1);
-			im(pixels, val == k, 2) = color_method(k,2);
-			im(pixels, val == k, 3) = color_method(k,3);
+	val = aberrations(f, :);
+		
+	ypixels = (1:boxh) + (f-1) * (boxh+gap) + gap;
+	
+	for s = 1:S
+		xpixels = (1:boxw) + (s-1) * (boxw+gap) + gap;
+		if isnan(val(s))
+			im(ypixels, xpixels, :) = 1;
+		else
+			im(ypixels, xpixels, 1) = color_method(val(s), 1);
+			im(ypixels, xpixels, 2) = color_method(val(s), 2);
+			im(ypixels, xpixels, 3) = color_method(val(s), 3);
 		end
-		im(pixels, isnan(val), :) = 1;
-		imwrite(im, image_file);
 	end
+	
+	imwrite(im, image_file);
 end
 
