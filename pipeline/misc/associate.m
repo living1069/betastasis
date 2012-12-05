@@ -5,19 +5,25 @@
 %    to calculate p-values for the co-occurrence or mutual exclusivity of 
 %    events described in the logical column vector Y and the events described
 %    in each column of logical matrix X.
+%    
+%    NaN values are treated as missing values.
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
 function [pval, positive] = associate(X, y)
 
-M = length(y);
-K = sum(X, 1);
-N = sum(y);
+M = sum(~isnan(X), 1);   % How many patients in total?
+K = nansum(X, 1);        % How many mutation positive patients?
 
-x = sum(X & repmat(y, 1, size(X, 2)), 1);
+% How many tumor patients?
+N = nansum(~isnan(X) & repmat(y, 1, size(X, 2)), 1);
+
+% How many mutation positive tumor patients?
+x = nansum((X > 0) & repmat(y, 1, size(X, 2)), 1);  
+
 p_exclusive = hygecdf(x, M, K, N);
 
-x = sum(X & repmat(y, 1, size(X, 2)), 1) - 1;
+x = nansum((X > 0) & repmat(y, 1, size(X, 2)), 1) - 1;
 p_mutual = 1 - hygecdf(x, M, K, N);
 
 pval = nan(1, size(X, 2));

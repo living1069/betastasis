@@ -77,7 +77,12 @@ if ~isempty(comment_regex)
 	while ischar(line) && rx(line, comment_regex), line = fgetl(fid); end
 end
 
-cols = textscan(line, '%s', 'Delimiter', '\t'); cols = cols{1};
+cols = textscan(sprintf('%s\n', line), '%s', 'Delimiter', '\t'); cols = cols{1};
+
+% Workaround for the fact that textscan(sprintf('1\t'), '%s') returns only one
+% column.
+if line(end) == sprintf('\t'), cols{end+1} = ''; end
+	
 if has_header
 	headers = cols;
 else
@@ -105,38 +110,33 @@ end
 
 format_str = '';
 for k = 1:length(headers)
-	if numeric(k)
-		format_str = [format_str '%f'];
-	elseif ignore(k)
+	if ignore(k)
 		format_str = [format_str '%*s'];
+	elseif numeric(k)
+		format_str = [format_str '%f'];
 	else
 		format_str = [format_str '%s'];
 	end
 end
 
-format_str = [format_str '%*s'];
+format_str = [format_str '%*[^\n]'];  % Ensure that extra cruft won't matter
 
 if num_lines < Inf
 	data = textscan(fid, format_str, num_lines, ...
-		'Delimiter', '\t', 'BufSize', 16384, 'ReturnOnError', false);
+		'Delimiter', '\t', 'BufSize', 1e6, 'ReturnOnError', false);
 else
 	data = textscan(fid, format_str, ...
-		'Delimiter', '\t', 'BufSize', 16384, 'ReturnOnError', false);
+		'Delimiter', '\t', 'BufSize', 1e6, 'ReturnOnError', false);
 end
 
 headers = headers(~ignore);
-numeric = numeric(~ignore);
 
 % If there was no header, then the first row of data is still stored in the
 % variable "cols", and we need to add it to the textscan() parsed data.
 if ~has_header
-	for k = 1:length(headers)
-		if numeric(k)
-			data{k} = [str2double(cols{k}); data{k}];
-		else
-			data{k} = [cols(k); data{k}];
-		end
-	end
+	pre_data = textscan(line, format_str, 'Delimiter', '\t', ...
+		'BufSize', 16384, 'ReturnOnError', false);
+	for k = 1:length(data), data{k} = [pre_data{k}; data{k}]; end
 end
 
 if ischar(file), fclose(fid); end
