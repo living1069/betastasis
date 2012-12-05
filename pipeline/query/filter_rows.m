@@ -9,7 +9,7 @@ for k = 1:length(fields)
 	f = getfield(s, fields{k});
 	if isstruct(f)
 		s = setfield(s, fields{k}, filter_rows(f, selected));
-	elseif ischar(f)
+	elseif ischar(f) && size(f, 1) <= 1
 		continue;
 	else
 		s = setfield(s, fields{k}, f(selected, :));

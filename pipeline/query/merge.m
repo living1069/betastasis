@@ -12,10 +12,6 @@
 %    merge a gene expression query set with a microRNA expression query set.
 %    As an additional constraint, raw microarray probe intensity query sets can
 %    only be merged if all samples come from the same platform.
-%
-%    If the input query sets contain samples with identical resource IDs,
-%    duplicate samples are discarded so that only one instance of every
-%    resource ID is present in the merged query set.
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
@@ -27,32 +23,38 @@ if length(varargin) < 2
 	error 'merge() requires at least two input arguments.';
 end
 
-type = varargin{1}.meta.type;
-for k = 2:length(varargin)
-	if ~strcmp(type, varargin{k}.meta.type)
-		error 'Datasets must be of the same type.';
+merged.rows = varargin{1}.rows;   % FIXME: Merge and reorder rows appropriately
+merged.meta = struct;
+
+% Recursively figure out all the fields present in each struct.
+fields = {};
+ds = varargin{1};
+fstack = {''};
+while ~isempty(fstack)
+	fnames = eval(sprintf('fieldnames(ds%s)', fstack{1}));
+	for f = 1:length(fnames)
+		nf = [fstack{1} '.' fnames{f}];
+		is_struct = eval(sprintf('isstruct(ds%s);', nf));
+		if is_struct
+			if strcmp(nf, '.rows'), continue, end
+			fstack{end+1} = nf;
+		else
+			fields{end+1} = nf;
+		end
 	end
+	fstack = fstack(2:end);
 end
 
-% Figure out what kind of a dataset we are dealing with and perform
-% necessary tasks.
-if rx(type, 'gene expression')
-	for d = 1:length(varargin), labels{d} = varargin{d}.rows.gene_symbol; end
-	for d = 1:length(varargin), matrices{d} = varargin{d}.mean; end
-	[merged.rows.gene_symbol, merged.mean] = join_matrices(labels, matrices);
-elseif rx(type, 'fusion genes')
-	for d = 1:length(varargin), fusions{d} = varargin{d}.fusions; end
-	for d = 1:length(varargin), ptl{d} = varargin{d}.paired_tag_length; end
-	merged.fusions = cat(2, fusions{:});
-	merged.paired_tag_length = cat(2, ptl{:});
-else
-	error 'Dataset is of unsupported type.';
+fields = fields(~strcmp('.meta.type', fields))
+
+for f = 1:length(fields)
+	to_merge = {};
+	for d = 1:length(varargin)
+		to_merge{d} = eval(sprintf('varargin{d}%s', fields{f}));
+	end
+	eval(sprintf('merged%s = horzcat(to_merge{:});', fields{f}));
 end
 
-metas = cell(1, length(varargin));
-for d = 1:length(varargin), metas{d} = varargin{d}.meta; end
-
-merged.meta = hcat_structs(metas{:});
 
 
 
