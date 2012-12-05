@@ -1,19 +1,18 @@
-function [] = survival_plot(survtimes, censored)
+function [] = survival_plot(survival, censored)
 
 if nargin == 1
-	if isfield(survtimes, 'Meta') && isfield(survtimes.Meta, 'Patient')
-		patient = survtimes.Meta.Patient;
-	elseif isfield(survtimes, 'Patient')
-		patient = survtimes.Patient;
+	if isfield(survival, 'meta') && isfield(survival.meta, 'survival_time')
+		censored = survival.meta.survival_time_censored;
+		survival = survival.meta.survival_time;
+	elseif isfield(survival, 'survival_time')
+		censored = survival.survival_time_censored;
+		survival = survival.survival_time;
 	else
 		error 'No survival time metadata available.';
 	end
-	
-	survtimes = patient.SurvivalTime;
-	censored = patient.Censored;
 end
 
-[f, x, flo, fup] = ecdf(survtimes, 'censoring', censored, ...
+[f, x, flo, fup] = ecdf(survival, 'censoring', censored, ...
 	'function', 'survivor');
 
 hold all;

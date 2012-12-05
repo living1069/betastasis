@@ -59,47 +59,26 @@ end
 
 
 
+im = data;
+if isempty(clim), clim = [nanmin(data(:)), nanmax(data(:))]; end
+if length(clim) == 1, clim = [-clim 0 clim];
+elseif length(clim) == 2, clim = [clim(1) (clim(1)+clim(2))/2 clim(2)];
+end
 
 
-
-% Render the clustered heatmap.
-
-%[~, order] = sort(data(:));
-%rank = 1:length(order);
-%rank(order) = rank;
-%data(:) = rank;
-
-%range = max(-min(min(data)), max(max(data)))
-%whos data
-%data = round((data + range) / (2*range) * 255);
-%expand = 2;
-
-%min(min(data))
-%max(max(data))
-
-%imwrite(data / numel(data) * 255, jet, '~/cluster.png', 'png');
-
-figure; colormap(color_map);
-if isempty(clim)
-	imagesc(data);
+if size(color_map, 1) == 256
+	fprintf('Colormap contains 256 colors. Interpolating data values...');
+	im(:) = interp1(clim, [1 128 256], im(:), 'linear', 'extrap');
+	im(im < 1) = 1;
+	im(im > 256) = 256;
+elseif all(all(round(im) == im | isnan(im))) && nanmin(im(:)) > 0
+	fprintf('Data values are indices. Indexing into specified color map...');
+	color_map(end+1, :) = [1 1 1]; nan_idx = length(color_map);
+	im(isnan(im)) = nan_idx;
 else
-	imagesc(data, clim);
+	error('ERROR: Not sure how to render colors.');
 end
-set(gca, 'Visible', 'off');
-saveas(gcf, '~/cluster_heatmap.png');
 
+imwrite(im, color_map, '~/cluster_heatmap.png');
 
-
-
-
-
-
-
-
-function [] = binarize()
-
-for g = 1:size(b, 1)
-	binary = kmeans(b(g, :)', 2, 'Start', [min(b(g, :)); max(b(g, :))]);
-	b(g, :) = binary' - 1;
-end
 
