@@ -2,7 +2,7 @@
 function variants = read_vcf(vcf_file)
 
 [data, headers] = readtable(vcf_file, 'Comment', '^##', ...
-	'Ignore', '^(ID|QUAL|FILTER|FORMAT)$', 'Numeric', '^(START|POS)$');
+	'Ignore', '^(ID|QUAL|FILTER|INFO|FORMAT)$', 'Numeric', '^(START|POS)$');
 
 if any(rx(headers, 'HOM/HET/TOT'))    % Genotype style = 0 / 1 (255)
 	first_sample_col = find(rx(headers, 'HOM/HET/TOT'), 1, 'last') + 1
@@ -21,7 +21,7 @@ V = length(data{1});
 
 variants = struct;
 variants.meta.sample_id = headers(first_sample_col:end)';
-variants.rows.chromosome = chromosome_sym2num(data{rx(headers, '^#?CHR')});
+variants.rows.chromosome = chromosome_sym2num(data{rx(headers, '^#*CHR')});
 variants.rows.position = data{rx(headers, '^(START|POS|POSITION)$')};
 variants.rows.ref_allele = data{rx(headers, '^(REFERENCE|REF)$')};
 variants.rows.alt_allele = data{rx(headers, '^(OBSERVED|OBS|ALT)$')};
@@ -53,10 +53,6 @@ if any(rx(headers, '1000GENOMES'))
 end
 if any(rx(headers, 'COSMIC'))
 	variants.rows.cosmic = ~strcmpi(data{rx(headers, 'COSMIC')}, '-');
-end
-if any(rx(headers, 'DETAILS'))
-	variants.rows.tail_distance_bias = str2double(regexprep( ...
-		data{strcmp(headers, 'DETAILS')}, '.*PV4=.*,.*,.*,(\S+)', '$1'));
 end
 
 variants.genotype = nan(V, S);

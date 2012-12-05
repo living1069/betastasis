@@ -6,12 +6,9 @@ global organism;
 min_genotype_qual = 100;
 min_mutated_control_genotype_qual = min_genotype_qual;
 abs_negative_groups = [];
-sample_map = [];
 
 groups = {};
 
-% Use a scoring system based on a ranksum test on the phred-scaled
-% genotype likelihoods.
 ranksum_groups = [];
 ranksum_min_significance = 0.50;     % P-value lower or variant is discarded
 
@@ -22,10 +19,6 @@ silent_score = -Inf;
 tail_distance_bias_threshold = 0;
 
 for k = 1:2:length(varargin)
-	if rx(varargin{k}, 'sample.*map')
-		sample_map = varargin{k+1}; continue;
-	end
-	
 	if rx(varargin{k}, '(ref|control).*(geno)?.*qual')
 		min_mutated_control_genotype_qual = varargin{k+1}; continue;
 	end
@@ -75,19 +68,6 @@ variants = read_vcf(vcfa_file)
 
 S = length(variants.meta.sample_id);
 V = size(variants.genotype, 1);
-
-% Relabel the samples.
-if ~isempty(sample_map)
-	if strcmp(class(sample_map), 'containers.Map')
-		valid = sample_map.isKey(variants.meta.sample_id);
-		variants.meta.sample_id(valid) = ...
-			sample_map.values(variants.meta.sample_id(valid));
-	elseif iscellstr(sample_map) && length(sample_map) == S
-		variants.meta.sample_id = sample_map;
-	else
-		error 'Invalid sample map format.';
-	end
-end
 
 % Permute the samples if the user has specified groups.
 if ~isempty(groups)
@@ -187,7 +167,7 @@ order = order(keep(order));
 
 % Figure out where we need to insert the homozygous/heterozygous counts.
 fid = fopen(out_file, 'W');
-fprintf(fid, ['CHROMOSOME\tPOSITION\tREFERENCE\tOBSERVED\tFUNCTION\t' ...
+fprintf(fid, ['CHROM\tPOSITION\tREFERENCE\tOBSERVED\tFUNCTION\t' ...
 	'NEARBY_GENES\tSYNONYMOUS\tPROTEIN_EFFECT\tDBSNP\t1000GENOMES\tCOSMIC']);
 
 % Print headers for heterozygous/homozygous totals
