@@ -9,29 +9,20 @@
 
 % Author: Matti Annala <matti.annala@tut.fi>
 
-function gene_cna = gene_cna(segments, varargin)
+function gene_cna = gene_cna(segments, probesets, varargin)
 
 global organism;
 genes = organism.Genes;
 
-probesets = [];
 min_region = 0;
 
 for k = 1:2:length(varargin)
-	if strcmpi(varargin{k}, 'Probesets')
-		probesets = varargin{k+1}; continue;
-	end
-	
 	if strcmpi(varargin{k}, 'MinRegion')
 		min_region = varargin{k+1};
 		continue;
 	end
 	
 	error('Unrecognized option "%s".', varargin{k});
-end
-
-if isempty(probesets) && isfield(segments, 'Meta')
-	probesets = platform(segments.Meta.Platform{1}, 'cgh_probesets');
 end
 
 cna = cn_seg_expand(segments, probesets);

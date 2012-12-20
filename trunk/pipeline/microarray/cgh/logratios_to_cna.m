@@ -13,7 +13,22 @@ gender_num(rx(gender, 'female')) = 2;
 
 ploidy = organism.Chromosomes.Ploidy(:, gender_num);
 
-if rx(logratios.meta.type, 'Gene copy.*log')
+if isfield(logratios, 'rows') && isfield(logratios.rows, 'chromosome')
+	
+	chr = logratios.rows.chromosome;
+	valid = ~isnan(chr);
+	if any(~valid)
+		logratios = filter_rows(logratios, valid);
+		fprintf('Discarded %d features with unknown chromosome.\n',sum(~valid));
+	end
+
+	cna = logratios;
+	cna.mean = ploidy(chr, :) .* 2.^logratios.mean - ploidy(chr, :);
+	cna.mean = max(cna.mean, -ploidy(chr, :));
+	cna.mean(isnan(logratios.mean)) = NaN;   % max() removes NaNs
+
+elseif rx(logratios.meta.type, 'Gene copy.*log')
+	
 	[P, S] = size(logratios.mean);
 	
 	gidx = gene_idx(logratios.rows.gene_symbol);
@@ -35,6 +50,8 @@ if rx(logratios.meta.type, 'Gene copy.*log')
 	cna = logratios;
 	cna.mean = ploidy(chr, :) .* 2.^logratios.mean - ploidy(chr, :);
 	cna.mean = max(cna.mean, -ploidy(chr, :));
+	cna.mean(isnan(logratios.mean)) = NaN;
+	
 else
 	error 'Cannot recognize logratio data format.';
 end

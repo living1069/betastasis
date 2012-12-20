@@ -33,7 +33,7 @@ genes = organism.Genes;
 min_region = 0;
 
 for k = 1:2:length(varargin)
-	if strcmpi(varargin{k}, 'MinRegion')
+	if rx(varargin{k}, 'min.*region')
 		min_region = varargin{k+1};
 		continue;
 	end
