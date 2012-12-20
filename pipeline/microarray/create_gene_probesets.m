@@ -43,8 +43,8 @@ genes = organism.Genes;
 transcripts = organism.Transcripts;
 
 include_genes = true(length(genes.Name), 1);
-require_every_transcript = true;
-min_probes_per_probeset = 4;
+require_every_transcript = false;
+min_probes_per_probeset = 1;
 max_mismatches = 0;
 allow_nonspecific_hits = false;
 report_dir = '';
@@ -85,15 +85,18 @@ for k = 1:2:length(varargin)
 	error('Unrecognized option "%s".', varargin{k});
 end
 
-fprintf(1, 'Writing probe sequences to a temporary file...\n');
-probes_fasta_tmp = ptemp;
-write_seq_fasta(probes, probes_fasta_tmp);
+fprintf('Writing probe sequences to a temporary file...\n');
+probes_fasta_file = ptemp;
+write_seq_fasta(probes, probes_fasta_file);
 
-fprintf(1, 'Aligning probes to transcripts using Bowtie...\n');
-[alignments_tmp, ~] = bowtie_align(probes_fasta_tmp, 'transcripts', ...
-	sprintf('-p4 -B1 -v%d -y --all --suppress 5,6,7,8', max_mismatches));
+fprintf('Aligning probes to transcripts using Bowtie...\n');
+alignments_file = ptemp;
+index = '/data/csb/tools/bowtie-indexes/homo_sapiens/transcripts.refseq_38';
+unix( ...
+	sprintf('/data/csb/tools/bowtie-0.12.8/bowtie -p4 -f -B1 -v%d -y --all --suppress 5,6,7,8 %s %s > %s', ...
+	max_mismatches, index, probes_fasta_file, alignments_file));
 
-fprintf(1, 'Constructing gene expression probesets based on alignments...\n');
+fprintf('Constructing gene expression probesets based on alignments...\n');
 
 transcript_map = containers.Map(transcripts.Name, ...
 	num2cell(1:length(transcripts.Name)));
@@ -104,9 +107,9 @@ probesets.probecount = zeros(length(genes.Name), 1);
 probesets.probes = zeros(length(genes.Name), 1);
 
 % Read the Bowtie alignments into Matlab.
-alignments_file = fopen(alignments_tmp);
-data = textscan(alignments_file, '%d %*s %s %d');
-fclose(alignments_file);
+alignments = fopen(alignments_file);
+data = textscan(alignments, '%d %*s %s %d');
+fclose(alignments);
 
 probe_indices = data{1};
 tx_id = data{2};
@@ -203,8 +206,8 @@ if any(~include_genes)
 	probesets.probecount(~include_genes) = 0;
 end
 
-if min_probes_per_probeset > 0
-	fprintf(1, 'Filtering out probesets with less than %d probes...\n', ...
+if min_probes_per_probeset > 1
+	fprintf('Filtering out probesets with less than %d probes...\n', ...
 		min_probes_per_probeset);
 	probesets.probecount(probesets.probecount < min_probes_per_probeset) = 0;
 	probesets.probes(probesets.probecount < min_probes_per_probeset, :) = 0;
@@ -214,8 +217,8 @@ probesets.type = 'Gene expression';
 probesets.organism = organism.Name;
 
 % Remove temporary files.
-safe_delete(probes_fasta_tmp);
-safe_delete(alignments_tmp);
+safe_delete(probes_fasta_file);
+safe_delete(alignments_file);
 
 % Finally we write a report about the generated probesets.
 if ~isempty(report_dir)

@@ -42,7 +42,7 @@ end
 
 if ~background_adjustment && isfield(samples.meta, 'platform') && ...
 	any(rx(samples.meta.platform, 'affy'))
-	fprintf(1, ['WARNING: Affymetrix array detected but no background ' ...
+	fprintf(['WARNING: Affymetrix array detected but no background ' ...
 		'adjustment requested.\n']);
 end
 
@@ -52,7 +52,7 @@ S = size(samples.mean, 2);
 	
 	
 if any(any(samples.mean <= 0))
-	fprintf(1, ['Data contains zero or negative intensities. ' ...
+	fprintf(['Data contains zero or negative intensities. ' ...
 		'Replacing with the lowest positive intensity...\n']);
 	samples.mean(samples.mean <= 0) = Inf;
 	samples.mean(samples.mean == Inf) = min(min(samples.mean));
@@ -66,7 +66,7 @@ end
 	
 	
 if background_adjustment
-	fprintf(1, 'Performing RMA background adjustment on samples...\n');
+	fprintf('Performing RMA background adjustment on samples...\n');
 	samples.mean = rmabackadj(samples.mean);
 	
 	% Sometimes RMA background adjustment introduces Inf or NaN values in data.
@@ -110,10 +110,10 @@ end
 
 
 
-fprintf(1, 'Summarizing expression data using RMA summarization...\n');
+fprintf('Summarizing expression data using RMA summarization...\n');
 
 expr = struct;
-expr.mean = zeros(length(probesets.ProbeCount), size(samples.mean, 2));
+expr.mean = zeros(length(probesets.probecount), size(samples.mean, 2));
 
 % Reorder the probes so that the probes of each probeset are placed contiguously
 % in the vector. The probe index vector therefore has the following form:
@@ -123,12 +123,12 @@ expr.mean = zeros(length(probesets.ProbeCount), size(samples.mean, 2));
 % In the example index vector above, we have three probesets with 3, 2 and
 % 7 probes, respectively.
 
-probe_reordering = zeros(sum(probesets.ProbeCount), 1);
-probe_indices = zeros(sum(probesets.ProbeCount), 1);
+probe_reordering = zeros(sum(probesets.probecount), 1);
+probe_indices = zeros(sum(probesets.probecount), 1);
 k = 1;
-for ps = 1:length(probesets.ProbeCount)
-	pc = probesets.ProbeCount(ps);
-	probe_reordering(k:k+pc-1) = probesets.Probes(ps, 1:pc);
+for ps = 1:length(probesets.probecount)
+	pc = probesets.probecount(ps);
+	probe_reordering(k:k+pc-1) = probesets.probes(ps, 1:pc);
 	probe_indices(k:k+pc-1) = 0:pc-1;
 	k = k + pc;
 end
@@ -139,11 +139,10 @@ summary = rmasummary(probe_indices, rma_ordered_sample_data, ...
 	
 % Set the expression of empty probesets to NaN.
 expr.mean(:, :) = NaN;
-expr.mean(find(probesets.ProbeCount ~= 0), :) = summary;
+expr.mean(find(probesets.probecount ~= 0), :) = summary;
 if isfield(samples, 'meta')
 	expr.meta = samples.meta;
-	expr.meta.type = probesets.Type;
-	expr.meta.summarization_method = repmat({'RMA'}, size(samples.mean, 2), 1);
-	expr.meta.organism = probesets.Organism;
+	expr.meta.type = probesets.type;
+	expr.meta.summarization_method = repmat({'RMA'}, 1, size(samples.mean, 2));
 end
 
