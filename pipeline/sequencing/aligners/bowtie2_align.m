@@ -4,7 +4,6 @@ global organism;
 global pipeline_config;
 
 tmp = temporary('bowtie2_align');
-unaligned_tmp = temporary('bowtie2_unaligned');
 
 max_threads = pipeline_config.MaxThreads;
 ignore_pairs = false;
@@ -28,6 +27,7 @@ S = length(reads.url);
 
 unaligned = [];
 if nargout == 2
+	unaligned_tmp = temporary('bowtie2_unaligned');
 	unaligned = reads;
 	unaligned.url = strcat(unaligned_tmp, reads.meta.sample_id);
 	unaligned.format = repmat({ 'FASTA (gzip)' }, 1, S);
@@ -68,13 +68,13 @@ end
 if ischar(index)
 	% If the index name is specified as a relative path, prefix it with the
 	% pipeline directory that holds all Bowtie indices.
-	if index(1) ~= '/'
+	if index(1) ~= '/' && ~strcmp(index(1:2), '~/')
 		index = lower(index);
 		if ~rx(index, '^(genome|transcripts|exons|mirnas|pre_mirnas)$')
 			error('Bowtie2 index "%s" is not supported.', index);
 		end
 
-		index = ['/home/csbgroup/tools/bowtie2-indexes/' ...
+		index = ['/data/csb/tools/bowtie2-indexes/' ...
 			flatten_str(organism.Name) '/' ...
 			flatten_str(organism.Version) '/' index];
 	end
@@ -124,10 +124,9 @@ for s = 1:S
 
 	if paired && ignore_pairs == false
 		% The user wishes to perform proper paired end alignment.
-		[status, out] = unix(sprintf( ...
+		unix(sprintf( ...
 			'bowtie2 %s -x %s -1 %s -2 %s | samtools view -Sb -o %s -', ...
 			flags, index_name, read_paths{1}, read_paths{2}, output_file));
-		if status ~= 0, error('Bowtie2 read alignment failed:\n%s\n', out); end
 			
 	elseif paired && ignore_pairs == true
 		if ~isempty(unaligned)
@@ -135,57 +134,19 @@ for s = 1:S
 				compress_pipe([unaligned.url{s} '.fa.gz']));
 		end
 		
-		[status, out] = unix(sprintf( ...
+		unix(sprintf( ...
 			'cat %s %s | bowtie2 %s -x %s - | samtools view -Sb -o %s -', ...
 			read_paths{1}, read_paths{2}, flags, index_name, output_file));
-		if status ~= 0, error('Bowtie2 read alignment failed:\n%s\n', out); end
 	else
 		% Single end read alignment.
 		if ~isempty(unaligned)
 			flags = sprintf('%s --un %s', flags, [unaligned.url{s} '.fa']);
 		end
 
-		[status, out] = unix(sprintf( ...
+		unix(sprintf( ...
 			'bowtie2 %s -x %s %s | samtools view -Sb -o %s -', ...
 			flags, index_name, read_paths{1}, output_file));
-		if status ~= 0, error('Bowtie2 read alignment failed:\n%s\n', out); end
 	end
-	
-	[alignments.total_reads(s), alignments.aligned_reads(s), ...
-		alignments.total_alignments(s)] = parse_bowtie_stats(out);
-
-end
-
-
-
-
-
-
-
-function [total, aligned, alignments] = parse_bowtie_stats(out)
-
-total = NaN;
-aligned = 0;
-alignments = 0;
-
-out = strread(out, '%s', 'delimiter', '\n');
-for k = 1:length(out)
-	match = regexp(out{k}, '(\d+) reads; of these:', 'tokens');
-	if length(match) == 1
-		tmp = match{1}; total = str2double(tmp{1});
-		continue;
-	end
-	
-	match = regexp(out{k}, '(\d+) .* aligned 0 times', 'tokens');
-	if length(match) == 1
-		tmp = match{1}; aligned = total - str2double(tmp{1});
-		continue;
-	end
-end
-
-if ~isnan(total) && ~isnan(aligned)
-	fprintf(1, '-> %d / %d (%.1f%%) reads with at least one alignment\n', ...
-		aligned, total, aligned / total * 100);
 end
 
 
