@@ -1,6 +1,6 @@
 = Pipeline startup and basics =
 
-You can start the pipeline by running Matlab, and then executing the script "sources/pipeline.m", stored in the pipeline root. You might also want to see the installation tutorial for a way to create a quick shortcut for starting the pipeline.
+On servers where the pipeline is installed, you can start it with the command "pipeline". This command starts a customized Matlab instance with access to functions for the analysis of biological data.
 
 On startup, the pipeline automatically loads into memory some genetic information for Homo sapiens. This species specific information is necessary for running computational analyses. If you're interested in running analyses for some other organism, you can change the currently selected organism by typing:
 {{{
@@ -26,14 +26,15 @@ You can see genetic information about the currently selected organism by accessi
     >> organism
     organism =
                  Name: 'Homo sapiens'
-        GenomeVersion: 'RefSeq 38'
-         miRNAVersion: 'miRBase 14'
+              Version: '2009'
           Chromosomes: [1x1 struct]
                 Genes: [1x1 struct]
           Transcripts: [1x1 struct]
                 Exons: [1x1 struct]
                 miRNA: [1x1 struct]
             pre_miRNA: [1x1 struct]
+                 SNPs: [1x1 struct]
+           Ontologies: [1x1 struct]
 }}}
 
 This global variable is also used by many of the pipeline's internal components. This is why it is important to make sure that you have the correct organism selected when performing data analysis. Having said that, the pipeline does perform some sanity checks and will try to notify the user if the current organism does not seem to match with the data.
