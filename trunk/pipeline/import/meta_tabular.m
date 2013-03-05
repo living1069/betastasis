@@ -21,7 +21,7 @@ for k = 1:2:length(varargin)
 end
 
 
-if rx(filepath, '\.(txt|csv)$')
+if rx(filepath, '\.(txt|csv|tsv)$')
 	[data, headers] = readtable(filepath);
 	
 	% Remove columns without a proper header.
@@ -40,33 +40,6 @@ if rx(filepath, '\.(txt|csv)$')
 		end
 	end
 
-	
-elseif rx(filepath, '\.xls$')
-	[~, ~, raw] = xlsread(filepath);
-	
-	headers = raw(1, :)';
-	raw = raw(2:end, :);
-	
-	% Remove columns without a proper header.
-	bad_cols = find(~cellfun(@ischar, headers));
-	if ~isempty(bad_cols), bad_cols, end
-	headers(bad_cols) = [];
-	raw(:, bad_cols) = [];
-	
-	for k = 1:size(raw, 2)
-		if ~all(cellfun(@isnumeric, raw(:, k)))
-			for s = find(cellfun(@isnumeric, raw(:, k)))'
-				if isnan(raw{s, k})
-					raw{s, k} = '';
-				else
-					raw{s, k} = num2str(raw{s, k});
-				end
-			end
-			data{k} = raw(:, k);
-		else
-			data{k} = cell2mat(raw(:, k));
-		end
-	end
 else
 	error 'Unsupported metadata format.';
 end

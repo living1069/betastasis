@@ -1,14 +1,7 @@
 function meta = meta_tcga_clinical(meta, clin_dir)
 
 clin = read_tcga_clinical_data(clin_dir);
-
 meta = tcga_metadata(meta, clin);
-%if isfield(meta, 'ref')
-%	meta.ref = tcga_metadata(meta.Ref, tcga_patients, tcga_samples, ...
-%		tcga_clinical);
-%end
-
-
 
 
 
@@ -20,36 +13,40 @@ meta = tcga_metadata(meta, clin);
 
 function meta = tcga_metadata(meta, clinical)
 
-id_to_index = containers.Map(clinical.patient_id, ...
-	num2cell(1:length(clinical.patient_id)));
+if strcmp(meta.sample_id{1}(1:4), 'TCGA')
+	patient_ids = meta.sample_id;
+	for k = 1:length(patient_ids)
+		if length(patient_ids{k}) < 12
+			patient_ids{k} = '';
+		else
+			patient_ids{k} = patient_ids{k}(1:12);
+		end
+	end
+	
+	[~, pos] = ismember(patient_ids, clinical.patient_id);
+else
+	clinical.bcr_patient_uuid(1:10)
+	[~, pos] = ismember(meta.sample_id, clinical.bcr_patient_uuid);
+end
 
-patient_ids = meta.sample_id;
-for k = 1:length(patient_ids)
-	if length(patient_ids{k}) < 12 || ~strcmp(patient_ids{k}(1:4), 'TCGA')
-		patient_ids{k} = '-';
-	else
-		patient_ids{k} = patient_ids{k}(1:12);
+for k = find(pos == 0)
+	fprintf('Records for sample %s were not found.\n', meta.sample_id{k});
+end
+
+pos_fake = pos;
+pos_fake(pos_fake == 0) = 1;
+clinical = filter_rows(clinical, pos_fake);
+
+% Now we empty out all the metadata for missing patients.
+fields = fieldnames(clinical);
+for k = 1:length(fields)
+	if isnumeric(getfield(clinical, fields{k}))
+		eval(['clinical.' fields{k} '(pos == 0) = NaN;']);
+	elseif iscellstr(getfield(clinical, fields{k}))
+		eval(['clinical.' fields{k} '(pos == 0) = ' ...
+			'repmat({''''}, 1, sum(pos == 0));']);
 	end
 end
-
-missing = ~id_to_index.isKey(patient_ids);
-indices = zeros(length(patient_ids), 1);
-
-indices(~missing) = cell2mat(id_to_index.values(patient_ids(~missing)));
-indices(missing) = NaN;
-
-missing = find(missing);
-for k = 1:length(missing)
-	if strcmp(patient_ids{missing(k)}, '-'), continue, end
-	fprintf('Records for patient %s were not found.\n', ...
-		patient_ids{missing(k)});
-end
-
-clinical = permute_struct_fields(clinical, indices);
-
-% The patient IDs for missing patient records need to be returned
-% back to their original states.
-clinical.patient_id(missing) = patient_ids(missing);
 
 fields = fieldnames(clinical);
 for k = 1:length(fields)
@@ -367,7 +364,7 @@ end
 function cellstr = replace_nulls(cellstr)
 for k = 1:length(cellstr)
 	if strcmp(cellstr{k}, 'null')
-		cellstr{k} = '-';
+		cellstr{k} = '';
 	end
 end
 
