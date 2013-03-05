@@ -105,7 +105,7 @@ S = 0;   % Number of sequence samples found.
 for k = 1:size(paired_files, 1)	
 	
 	first_full = absolutepath(paired_files{k, 1});
-	first = path_strip_dir(paired_files{k, 1});
+	first = basename(paired_files{k, 1});
 	
 	paired_end_rx = '^(.+)_.\.(fa|fasta|csfasta|fq|fastq)($|\..+)';
 	if ~rx(first, paired_end_rx)
@@ -137,7 +137,7 @@ end
 for k = 1:length(single_files)
 	
 	full_path = absolutepath(single_files{k});
-	filename = path_strip_dir(full_path);
+	filename = basename(full_path);
 	
 	single_end_rx = '^(.+)\.(fa|fasta|csfasta|fq|fastq)($|\.).*';
 	if ~rx(filename, single_end_rx)
