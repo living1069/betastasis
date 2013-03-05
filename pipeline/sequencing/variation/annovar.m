@@ -107,34 +107,34 @@ data = data(3:end);
 	
 keys = strcat(data{1},':',data{2},':',data{3},'>',data{4});
 
-valid = ismember(keys, exonic_func_keys);
+[valid, pos] = ismember(keys, exonic_func_keys);
 exonic_funcs = repmat({sprintf('-\t-')}, length(keys), 1);
-exonic_funcs(valid) = exonic_func_values;
+exonic_funcs(valid) = exonic_func_values(pos(valid));
 
-valid = ismember(keys, dbsnp_keys);
+[valid, pos] = ismember(keys, dbsnp_keys);
 dbsnps = repmat({'-'}, length(data{1}), 1);
-dbsnps(valid) = dbsnp_values;
+dbsnps(valid) = dbsnp_values(pos(valid));
 fprintf('%d / %d (%.1f%%) variants found in dbSNP v132.\n', ...
 	sum(valid), length(valid), sum(valid) / length(valid) * 100);
 
-valid = ismember(keys, kgenomes_keys);
+[valid, pos] = ismember(keys, kgenomes_keys);
 kgenomes = repmat({'-'}, length(data{1}), 1);
-kgenomes(valid) = kgenomes_values;
+kgenomes(valid) = kgenomes_values(pos(valid));
 fprintf('%d / %d (%.1f%%) variants found in 1000 Genomes.\n', ...
 	sum(valid), length(valid), sum(valid) / length(valid) * 100);
 	
-valid = ismember(keys, esp6500_keys);
+[valid, pos] = ismember(keys, esp6500_keys);
 esp6500 = repmat({'-'}, length(data{1}), 1);
-esp6500(valid) = esp6500_values;
+esp6500(valid) = esp6500_values(pos(valid));
 fprintf('%d / %d (%.1f%%) variants found in ESP6500.\n', ...
 	sum(valid), length(valid), sum(valid) / length(valid) * 100);
 	
 % Region based annotations: nucleotides don't matter, only position does.
 keys = strcat(data{1},':',data{2});
 
-valid = ismember(keys, cosmic_keys);
+[valid, pos] = ismember(keys, cosmic_keys);
 cosmic = repmat({'-'}, length(data{1}), 1);
-cosmic(valid) = cosmic_values;
+cosmic(valid) = cosmic_values(pos(valid));
 fprintf('%d / %d (%.1f%%) variants found in COSMIC.\n', ...
 	sum(valid), length(valid), sum(valid) / length(valid) * 100);
 
