@@ -1,5 +1,5 @@
 
-function [] = variant_stats(variants, varargin)
+function total_mutations = variant_stats(variants, varargin)
 
 % Calculate a substitution matrix
 sub_matrix = zeros(4, 4);

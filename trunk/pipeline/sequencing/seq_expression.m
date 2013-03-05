@@ -17,11 +17,11 @@ end
 S = length(reads.url);
 F = length(features.sequence);
 
-coverage.Reads = cell(F, S);
-coverage.ReadCount = zeros(F, S);
+coverage.reads = cell(F, S);
+coverage.readcou = zeros(F, S);
 
 for s = 1:S
-	alignments = bowtie_align(filter(reads, s), features, ...
+	alignments = bowtie2_align(filter(reads, s), features, ...
 		sprintf('-v%d -k10 -m10', max_mismatches));
 		
 	al = all_alignments(alignments);
