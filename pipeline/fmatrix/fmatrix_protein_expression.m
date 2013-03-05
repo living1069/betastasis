@@ -1,6 +1,7 @@
-function fmatrix = fmatrix_diff_expression(test, ref, varargin)
+function fmatrix = fmatrix_protein_expression(expr, varargin)
 
 global organism;
+chromosomes = organism.Chromosomes;
 genes = organism.Genes;
 
 samples = expr.meta.sample_id;
@@ -15,8 +16,8 @@ S = length(expr.meta.sample_id);
 F = length(valid);
 
 fmatrix.samples = expr.meta.sample_id;
-fmatrix.features = strcat('N:EXPR:', expr.rows.gene);
-fmatrix.data = log2(expr.mean);
+fmatrix.features = strcat('N:EXPR:', expr.rows.protein);
+fmatrix.data = expr.mean;
 
-fprintf('%d differential gene expression features.\n', F);
+fprintf('%d protein expression features.\n', F);
 
