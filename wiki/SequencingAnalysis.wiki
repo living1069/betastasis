@@ -1,19 +1,20 @@
 = High throughput sequencing data analysis =
 
-== Transcriptome sequencing ==
+== Calculating gene expression ==
 
-For Agilent gene expression microarrays:
+Align transcriptome sequencing reads against the reference genome using Tophat:
 {{{
-    gene_expr = read_agilent_gene_arrays(find_files('.*\.txt'));
-    gene_expr.mean = normalize_quantiles(gene_expr.mean);
-    gene_expr = pset_summary_median_polish(gene_expr);
+    cd reads
+    mkdir ../tophat_alignments
+    echo *_1.fq.gz | parallel -n3 -c8 -m20 -J bova_rnaseq 'tophat2 -p8 -o ../tophat_alignments/${x%_1.fq.gz} --transcriptome-index ~/tools/tophat-indexes/homo_sapiens/iGenome_37.2_NCBI ~/tools/bowtie2-indexes/homo_sapiens/hg19 $x ${x%_1.fq.gz}_2.fq.gz'
+
+cd ~/datasets/bova_metastasis/rna-seq/tophat_alignments
+for x in *_L1; do mv $x/unmapped.bam unmapped/${x/_L1/}.bam; done
+for x in *_L1; do mv $x/accepted_hits.bam ${x/_L1/}.bam; done
 }}}
 
 Using custom probesets:
 {{{
-    >> load /worktmp/pipeline/platforms/affy_ht_hg_u133a/gene_probesets
-    >> expr = uarray_expression_rma(data, affy_ht_hg_u133a_gene_probesets)
-    expr =
-        mean: [29595x191 double]
-        meta: [1x1 struct]
+cd ~/datasets/bova_metastasis/rna-seq/tophat_alignments
+sam count -b ~/organisms/homo_sapiens/ensembl_68/exons.composite.with_chr.bed *.bam
 }}}
