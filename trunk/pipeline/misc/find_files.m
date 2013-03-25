@@ -9,5 +9,6 @@ data = textscan(out, '%s', 'Delimiter', '\n');
 files = data{1};
 
 files = files(rx(files, pattern));
+files = sort_nat(files);
 
 

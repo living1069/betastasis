@@ -108,15 +108,6 @@ if nargin > 2
     end
     horz = ismember(orientation,{'r','l'});
     
-    color = setFlag(2); % threshold argument was given
-    if color
-        if ischar(threshold) && strncmpi(threshold,'default',length(threshold))
-            threshold = 0.7 * max(Z(:,3));
-        elseif ~isnumeric(threshold)
-            error(message('stats:dendrogram:BadThreshold'));
-        end
-    end
-    
     if ~isempty(obslabels)
         if ischar(obslabels)
             obslabels = cellstr(obslabels);
