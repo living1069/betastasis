@@ -1,13 +1,19 @@
-#summary One-sentence summary of this page.
+= High throughput sequencing data analysis =
 
-= Introduction =
+== Transcriptome sequencing ==
 
-Add your content here.
+For Agilent gene expression microarrays:
+{{{
+    gene_expr = read_agilent_gene_arrays(find_files('.*\.txt'));
+    gene_expr.mean = normalize_quantiles(gene_expr.mean);
+    gene_expr = pset_summary_median_polish(gene_expr);
+}}}
 
-
-= Details =
-
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
+Using custom probesets:
+{{{
+    >> load /worktmp/pipeline/platforms/affy_ht_hg_u133a/gene_probesets
+    >> expr = uarray_expression_rma(data, affy_ht_hg_u133a_gene_probesets)
+    expr =
+        mean: [29595x191 double]
+        meta: [1x1 struct]
+}}}
