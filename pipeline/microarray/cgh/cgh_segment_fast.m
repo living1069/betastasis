@@ -97,7 +97,7 @@ cna(cna < -2) = -2;
 
 
 
-fprintf(1, 'Detecting breakpoints with significance threshold %.1x...\n', ...
+fprintf('Detecting breakpoints with significance threshold %.1x...\n', ...
 	significance);
 
 all_bp = false(size(cna));
