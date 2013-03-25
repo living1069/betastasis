@@ -44,7 +44,7 @@ for k = 1:2:length(varargin)
 		continue;
 	end
 	
-	if rx(varargin{k}, 'include.*col')
+	if rx(varargin{k}, 'include')
 		include_cols = varargin{k+1};
 		if ischar(include_cols), include_cols = { include_cols }; end
 		continue;

@@ -1,17 +1,13 @@
 
-function norm = normalize_ratio_medians(expr, detect_threshold)
+function [norm, ratios] = normalize_median_of_ratios(expr, detect_threshold)
 
-norm = expr;
+norm = nan(size(expr));
 
-valid = median(expr.mean, 2) > detect_threshold;
+valid = median(expr, 2) > detect_threshold;
 
 fprintf('Using %d features for median-of-ratios normalization.\n', sum(valid));
 
-ratios = nanmedian(expr.mean(valid, :) ./ ...
-	repmat(expr.mean(valid, 1), 1, size(expr.mean, 2)), 1);
+ratios = nanmedian(expr(valid,:) ./ repmat(expr(valid,1), 1, size(expr,2)), 1);
 ratios = ratios / nanmedian(ratios);
-
-for s = 1:size(norm.mean, 2)
-	norm.mean(:, s) = norm.mean(:, s) / ratios(s);
-end
+for s = 1:size(norm, 2), norm(:, s) = expr(:, s) / ratios(s); end
 

@@ -54,10 +54,5 @@ subplot(223);
 title('Total genotyped');
 pretty_bar(1:S, total_genotyped);
 
-subplot(224);
-title('Total mutations normalized by total genotyped');
-pretty_bar(1:S, total_mutations ./ total_genotyped);
-
-saveas(gcf, '~/mutations_stats.pdf');
 
 

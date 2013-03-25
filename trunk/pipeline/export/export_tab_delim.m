@@ -3,7 +3,7 @@ function [] = export_tab_delim(ds, file_prefix)
 [file_prefix '.txt']
 fid = fopen([file_prefix '.txt'], 'W')
 
-if rx(ds.meta.type, '(gene|mirna) expression')
+if rx(ds.meta.type, '(gene|mirna|protein) expression')
 	
 	fprintf(fid, '\t%s', ds.meta.sample_id{:});
 	fprintf(fid, '\n');
@@ -14,6 +14,8 @@ if rx(ds.meta.type, '(gene|mirna) expression')
 		features = ds.rows.premirna_symbol;
 	elseif rx(ds.meta.type, '^mirna expression')
 		features = ds.rows.mirna_symbol;
+	elseif rx(ds.meta.type, '^protein expression')
+		features = ds.rows.protein;
 	end
 	
 	for g = 1:length(features)
