@@ -45,7 +45,7 @@ The microarray probes will be mapped against the organism's currently selected t
 
 
 
-= CGH microarrays =
+== CGH microarrays ==
 
 Given a probe definition data structure for a microarray platform, you can generate CGH probesets against a given genome version in the following way:
 {{{
