@@ -4,9 +4,8 @@
 
 Align transcriptome sequencing reads against the reference genome using Tophat:
 {{{
-    cd reads
     mkdir ../tophat_alignments
-    echo *_1.fq.gz | parallel -n3 -c8 -m20 -J bova_rnaseq \
+    echo *_1.fq.gz | parallel -n3 -c8 -m20 \
         'tophat2 -p8 -o ../tophat_alignments/${x%_1.fq.gz} --transcriptome-index ~/tools/tophat-indexes/homo_sapiens/iGenome_37.2_NCBI ~/tools/bowtie2-indexes/homo_sapiens/hg19 $x ${x%_1.fq.gz}_2.fq.gz'
 
 cd ~/datasets/bova_metastasis/rna-seq/tophat_alignments
