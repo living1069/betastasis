@@ -26,18 +26,12 @@ function [data, headers] = readtable_tlm(file, varargin)
 has_header = true;
 num_fields = {};
 ignore_fields = {};
+include_cols = {};
 comment_regex = '';
 num_lines = Inf;
+header_regex = '';
 
 for k = 1:2:length(varargin)
-	if rx(varargin{k}, 'header')
-		if varargin{k+1} > 1
-			error 'Field "HeaderLines" is deprecated. Use "Comment" instead.';
-		end
-		has_header = varargin{k+1};
-		continue;
-	end
-	
 	if rx(varargin{k}, 'numeric')
 		num_fields = varargin{k+1};
 		if ischar(num_fields), num_fields = { num_fields }; end
@@ -50,10 +44,21 @@ for k = 1:2:length(varargin)
 		continue;
 	end
 	
+	if rx(varargin{k}, 'include.*col')
+		include_cols = varargin{k+1};
+		if ischar(include_cols), include_cols = { include_cols }; end
+		continue;
+	end
+	
 	if rx(varargin{k}, 'comment')
 		comment_regex = varargin{k+1}; continue;
 	end
-	
+	if rx(varargin{k}, 'header.*regex')
+		header_regex = varargin{k+1}; continue;
+	end
+	if rx(varargin{k}, 'header')
+		has_header = varargin{k+1}; continue;
+	end
 	if rx(varargin{k}, '(num.*lines|lines.*to.*read)')
 		num_lines = varargin{k+1}; continue;
 	end
@@ -75,6 +80,12 @@ end
 line = fgetl(fid);
 if ~isempty(comment_regex)
 	while ischar(line) && rx(line, comment_regex), line = fgetl(fid); end
+end
+if ~isempty(header_regex)
+	while ischar(line)
+		if rx(line, header_regex), break, end
+		line = fgetl(fid);
+	end
 end
 
 cols = textscan(sprintf('%s\n', line), '%s', 'Delimiter', '\t'); cols = cols{1};
@@ -99,14 +110,27 @@ else
 end
 
 ignore = false(length(headers), 1);
-if iscellstr(ignore_fields)
-	for r = 1:length(ignore_fields)
-		ignore = ignore | rx(headers, ignore_fields{r});
+if length(ignore_fields) > 0
+	if iscellstr(ignore_fields)
+		for r = 1:length(ignore_fields)
+			ignore = ignore | rx(headers, ignore_fields{r});
+		end
+	elseif isnumeric(ignore_fields)
+		ignore_fields(ignore_fields > length(ignore)) = [];
+		ignore(ignore_fields) = true;
 	end
-elseif isnumeric(ignore_fields)
-	ignore_fields(ignore_fields > length(ignore)) = [];
-	ignore(ignore_fields) = true;
+elseif length(include_cols) > 0
+	if iscellstr(include_cols)
+		for r = 1:length(include_cols)
+			ignore = ignore | rx(headers, include_cols{r});
+		end
+	elseif isnumeric(include_cols)
+		include_cols(include_cols > length(ignore)) = [];
+		ignore(include_cols) = true;
+	end
+	ignore = ~ignore;
 end
+	
 
 format_str = '';
 for k = 1:length(headers)
