@@ -86,8 +86,7 @@ end
 
 
 if quantile_normalize
-	fprintf(1, ...
-		'Normalizing probe intensities using quantile normalization...\n');
+	fprintf('Normalizing probe intensities using quantile normalization...\n');
 
 	progress = Progress;
 
