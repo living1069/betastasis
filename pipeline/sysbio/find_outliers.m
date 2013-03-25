@@ -15,17 +15,17 @@ if any(abs_thresholds(1:2) > 0)
 	error 'The two first absolute thresholds should be negative.';
 end
 
-valid = all(~isnan(test.mean), 2) & all(~isnan(ref.mean), 2);
-test = filter_rows(test, valid);
-ref = filter_rows(ref, valid);
+valid = all(~isnan(test), 2) & all(~isnan(ref), 2);
+test = test(valid, :);
+ref = ref(valid, :);
 
-log_test = log2(test.mean + 1);
-log_ref = log2(ref.mean + 1);
+log_test = log2(test + 1);
+log_ref = log2(ref + 1);
 
 ref_min = quantile(log_ref, 1-ref_percentile, 2);
 ref_max = quantile(log_ref, ref_percentile, 2);
 
-aberrated = zeros(size(test.mean));
+aberrated = zeros(size(test));
 for k = 1:2
 	aberrated = aberrated - ...
 		(log_test - repmat(ref_min, 1, size(log_test, 2)) < ...

@@ -4,7 +4,8 @@ function expr = pset_summary_median_polish(raw)
 S = size(raw.mean, 2);
 
 field = '';
-if isfield(raw.rows, 'gene'), field = 'gene'; end
+if isfield(raw.ows, 'name'), field = 'name'; end
+if isfield(raw.ows, 'gene'), field = 'gene'; end
 features = eval(sprintf('raw.rows.%s', field));
 
 % Reorder the probes so that probes for each feature are placed contiguously.

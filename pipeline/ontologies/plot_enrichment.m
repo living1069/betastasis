@@ -3,8 +3,6 @@
 
 function pval = plot_enrichment(values, positive, range)
 
-gsea_ylim = [-.3 .3];
-
 if isnumeric(positive)
 	positive = positive(~isnan(positive));
 	tmp = positive;
@@ -36,7 +34,7 @@ figure; subplot('position', [0.05 0.56 0.9 0.3]); hold all;
 %figure; subplot('position', [0.35 0.56 0.3 0.3]); hold all;
 plot(Phit - Pmis);
 line([0 length(hit)], [0 0], 'Color', [0 0 0]);
-ylim(gsea_ylim);
+ylim([min(Phit - Pmis) max(Phit - Pmis)]);
 set(gca, 'XTick', []);
 
 if nargin < 3
@@ -51,31 +49,28 @@ norm(values < range(2)) = -(values(values < range(2)) - range(2)) ./ ...
 norm(norm > 1) = 1;
 norm(norm < -1) = -1;
 
-subplot('position', [0.05 0.5 0.9 0.05]);
-grad = zeros(1, length(Phit), 3);
-for k = 1:length(norm)
-	if hit(k)
-		grad(1, k, :) = [0 0 0];
-	elseif norm(k) >= 0
-		grad(1, k, :) = [1 1-norm(k) 1-norm(k)];
-	else
-		grad(1, k, :) = [1+norm(k) 1+norm(k) 1];
-	end
-end
-
-image(grad);
-lines = line([find(hit)'; find(hit)'], repmat([0; 2], 1, sum(hit)));
-set(lines, 'Color', [0 0 0]);
-set(gca, 'XTick', [], 'YTick', []);
-xlim([0 length(hit)]);
-
 subplot('position', [0.05 0 0.9 0.48]);
-
 bars = area(abs(values)); xlim([0 length(values)]);
 set(bars, 'LineStyle', 'none', 'FaceColor', [.8 .8 .8]);
 set(gca, 'XTick', []);
 
-saveas(gcf, '~/gsea.pdf');
+saveas(gcf, '~/enrichment.pdf');
+
+grad = zeros(10, length(Phit), 3);
+for k = 1:length(norm)
+	if hit(k)
+		grad(:, k, :) = 0;
+	elseif norm(k) >= 0
+		grad(:, k, 1) = 1;
+		grad(:, k, 2:3) = 1-norm(k);
+	else
+		grad(:, k, 1:2) = 1+norm(k);
+		grad(:, k, 3) = 1;
+	end
+end
+
+imwrite(grad, '~/enrichment_bar.png');
+
 
 
 
