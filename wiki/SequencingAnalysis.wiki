@@ -12,12 +12,10 @@ Align transcriptome sequencing reads against the reference genome using Tophat:
 
     cd ../tophat_alignments
     echo * | parallel -n4 \
-        'samtools cat $x/{accepted_hits,unmapped}.bam > $x.bam &&
-         rm $x/{accepted_hits,unmapped}.bam'
+        'samtools cat $x/{accepted_hits,unmapped}.bam > $x.bam && rm $x/{accepted_hits,unmapped}.bam'
 }}}
 
-Using custom probesets:
+Count the number of reads that aligned to the exons of each gene:
 {{{
-    cd ~/datasets/bova_metastasis/rna-seq/tophat_alignments
     sam count -b ~/organisms/homo_sapiens/ensembl_68/exons.composite.with_chr.bed *.bam
 }}}
