@@ -28,20 +28,6 @@ From the resulting data structure, you can see that the raw probe intensities we
   		     EntrezID: [29595x1 double]
 }}}
 
-In this example, we used RMA summarization to calculate the gene expression levels from the raw probe intensities. The used summarization method and other details are automatically documented in the metadata:
-{{{
-    >> expr.Meta
-    ans = 
-                     Type: 'Gene expression'
-                 Platform: {191x1 cell}
-                   Sample: {191x1 cell}
-                  Patient: [1x1 struct]
-                     Misc: [1x1 struct]
-      SummarizationMethod: 'RMA'
-                 Organism: 'Homo sapiens'
-                  Version: 'RefSeq 38'
-}}}
-
 If a suitable probeset is not available for the genome build that you have selected, you can always build a new probeset. To do this, first load the microarray's probe information into the pipeline:
 {{{
     >> load /worktmp/pipeline/platforms/affy_ht_hg_u133a/probes
@@ -59,7 +45,7 @@ The microarray probes will be mapped against the organism's currently selected t
 
 
 
-= MICROARRAY ANALYSIS - ARRAY CGH =
+= CGH microarrays =
 
 Given a probe definition data structure for a microarray platform, you can generate CGH probesets against a given genome version in the following way:
 {{{
@@ -130,7 +116,7 @@ If you're more interested in the percentage-wise recurrence of copy number alter
 
 
 
-= MICROARRAY ANALYSIS - MICRORNA EXPRESSION =
+== MicroRNA expression microarrays ==
 
 Given a probe definition data structure for a microarray platform, you can generate microRNA probesets against the currently selected microRNA annotations (see `organism.miRNA`) in the following manner:
 {{{
@@ -163,7 +149,7 @@ The rows of the `mirna_expr.Mean` matrix represent different mature miRNAs annot
 
 
 
-= MICROARRAY ANALYSIS - MISCELLANEOUS =
+== Quality control ==
 
 You can visualize the spatial distribution of probe intensities on the microarray slide by using the function render_uarray_intensities():
 {{{
@@ -196,4 +182,3 @@ Or you can compare the probe composition of two microarray platforms:
     - 4067 probes removed
     - 7013 probes changed position
 }}}
-
