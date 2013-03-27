@@ -27,3 +27,4 @@ Count the number of reads that aligned to the exons of each gene:
     echo *.bam | parallel -n4 'sam coverage cds $x     
         ~/organisms/homo_sapiens/ensembl_68/Homo_sapiens.GRCh37.68.with_chr.gtf 
         ~/organisms/homo_sapiens/hg19.chrom.sizes > ../cds_coverages/${x%.bam}.coverage'
+}}}
