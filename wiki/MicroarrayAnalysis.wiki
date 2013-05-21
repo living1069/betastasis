@@ -2,6 +2,13 @@
 
 == Gene expression microarrays ==
 
+For Affymetrix gene expression microarrays:
+{{{
+    cd /some/directory/with/microarrays
+    raw = read_affy_gene_arrays('.CEL.gz', '/data/csb/pipeline/platforms/affy_hg_u133_plus_2');
+    raw.mean = normalize_quantiles(raw.mean);
+}}}
+
 For Agilent gene expression microarrays:
 {{{
     gene_expr = read_agilent_gene_arrays(find_files('.*\.txt'));
