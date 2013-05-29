@@ -6,17 +6,22 @@ S = size(raw.mean, 2);
 field = '';
 if isfield(raw.rows, 'name'), field = 'name'; end
 if isfield(raw.rows, 'gene'), field = 'gene'; end
-features = eval(sprintf('raw.rows.%s', field));
+targets = eval(sprintf('raw.rows.%s', field));
+
+% Throw away all rows that do not correspond to any targets.
+valid = ~strcmp(targets, '');
+raw = filter_rows(raw, valid);
+targets = targets(valid);
 
 % Reorder the probes so that probes for each feature are placed contiguously.
-[features, order] = sort(features);
+[targets, order] = sort(targets);
 raw = filter_rows(raw, order);
 
-run_ends = [find(~strcmp(features(1:end-1), features(2:end)));length(features)];
+run_ends = [find(~strcmp(targets(1:end-1), targets(2:end)));length(targets)];
 run_lengths = diff([0; run_ends]);
 
 expr = raw;
-eval(sprintf('expr.rows.%s = features(run_ends);', field));
+eval(sprintf('expr.rows.%s = targets(run_ends);', field));
 expr.rows.num_probes = run_lengths;
 
 probe_indices = zeros(size(raw.mean, 1), 1);
