@@ -5,6 +5,7 @@ S = size(raw.mean, 2);
 
 field = '';
 if isfield(raw.rows, 'gene'), field = 'gene'; end
+if isfield(raw.rows, 'target'), field = 'target'; end
 features = eval(sprintf('raw.rows.%s', field));
 
 [features, order] = sort(features);
