@@ -12,7 +12,7 @@ For Affymetrix gene expression microarrays:
 
 For Agilent gene expression microarrays:
 {{{
-    raw = read_agilent_gene_arrays(find_files('.*\.txt'));
+    raw = read_agilent_gene_arrays(find_files('.txt'));
     raw.mean = normalize_quantiles(raw.mean);
     gene_expr = pset_summary_median_polish(raw);
 }}}
