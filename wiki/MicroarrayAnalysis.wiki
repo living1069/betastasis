@@ -6,6 +6,7 @@ For Affymetrix gene expression microarrays:
 {{{
     cd /some/directory/with/microarrays
     raw = read_affy_gene_arrays('.CEL.gz', '/data/csb/pipeline/platforms/affy_hg_u133_plus_2/probes');
+    raw.mean = rmabackadj(raw.mean);
     raw.mean = normalize_quantiles(raw.mean);
     gene_expr = pset_summary_median_polish(raw);
 }}}
