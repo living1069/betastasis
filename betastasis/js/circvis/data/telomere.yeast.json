@@ -1,0 +1,128 @@
+var teloband = [
+    {
+        "chr": "I",
+        "end": 80000,
+        "options": "label=telo1,type=gneg",
+        "start": 337,
+        "value": "#fffff"
+    },
+    {
+        "chr": "I",
+        "end": 229401,
+        "options": "label=nontelo,type=gpos25",
+        "start": 802,
+        "value": "#c8c8c8"
+    },
+    {
+        "chr": "I",
+        "end": 229861,
+        "options": "label=telo2,type=gneg",
+        "start": 229402,
+        "value": "#ffffff"
+    },
+    {
+        "chr": "II",
+        "end": 1,
+        "options": "label=telo2,type=gneg",
+        "start": 229402,
+        "value": "#ffffff"
+    },
+    {
+        "chr": "III",
+        "end": 1,
+        "options": "label=telo2,type=gneg",
+        "start": 229402,
+        "value": "#ffffff"
+    },
+    {
+        "chr": "IV",
+        "end": 1,
+        "options": "label=telo2,type=gneg",
+        "start": 229402,
+        "value": "#ffffff"
+    },
+    {
+        "chr": "V",
+        "end": 1,
+        "options": "label=telo2,type=gneg",
+        "start": 229402,
+        "value": "#ffffff"
+    },
+    {
+        "chr": "VI",
+        "end": 1,
+        "options": "label=telo2,type=gneg",
+        "start": 229402,
+        "value": "#ffffff"
+    },
+    {
+        "chr": "VII",
+        "end": 1,
+        "options": "label=telo2,type=gneg",
+        "start": 229402,
+        "value": "#ffffff"
+    },
+    {
+        "chr": "VIII",
+        "end": 1,
+        "options": "label=telo2,type=gneg",
+        "start": 229402,
+        "value": "#ffffff"
+    },
+    {
+        "chr": "IX",
+        "end": 1,
+        "options": "label=telo2,type=gneg",
+        "start": 229402,
+        "value": "#ffffff"
+    },
+    {
+        "chr": "X",
+        "end": 1,
+        "options": "label=telo2,type=gneg",
+        "start": 229402,
+        "value": "#ffffff"
+    },
+    {
+        "chr": "XI",
+        "end": 1,
+        "options": "label=telo2,type=gneg",
+        "start": 229402,
+        "value": "#ffffff"
+    },
+    {
+        "chr": "XII",
+        "end": 1,
+        "options": "label=telo2,type=gneg",
+        "start": 229402,
+        "value": "#ffffff"
+    },
+    {
+        "chr": "XIII",
+        "end": 1,
+        "options": "label=telo2,type=gneg",
+        "start": 229402,
+        "value": "#ffffff"
+    },
+    {
+        "chr": "XIV",
+        "end": 1,
+        "options": "label=telo2,type=gneg",
+        "start": 229402,
+        "value": "#ffffff"
+    },
+    {
+        "chr": "XV",
+        "end": 1,
+        "options": "label=telo2,type=gneg",
+        "start": 229402,
+        "value": "#ffffff"
+    },
+    {
+        "chr": "XVI",
+        "end": 1,
+        "options": "label=telo2,type=gneg",
+        "start": 229402,
+        "value": "#ffffff"
+    }
+];

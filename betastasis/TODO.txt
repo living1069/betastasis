@@ -1,0 +1,47 @@
+TODO:
+- Visualization of chromosomal rearrangements:
+  * CIRCOS style plot, adapt Jake's code
+  * Hover over edge shows rearrangement evidence (reads that overlap breakpoint)
+  * List allows selecting sample for which rearrangements are visualized
+  * Visualization of recurrent rearrangements in sample cohorts (e.g. CRPC)
+  * Own data can be uploaded and visualized under "Tools > Circvis"
+- SVG export currently only works on Chrome, make it work on other browsers too:
+  * Must be implemented 100% client-side
+  * Current implementation is 100% client-side, but only works on Chrome
+- Improve visual style of Betastasis start page:
+  * Multi-column listing of cancers and datasets
+  * Right edge panel should move dynamically but not overlap with visualizations
+  * Graphical human figure with lines pointing to different cancers???
+- Improvements to feature matrix support:
+  * Refactor data representation to support:
+    * Gene expression, miRNA expression, exon expression
+	* Karyotypic alterations (chromosome arm loss/amplification, aneuploidy)
+	* Mutations (non-synonymous, 5/3'-UTR, frameshift indel, etc.)
+	* Chromosomal rearrangements (chimeric protein, promoter swap, disruption)
+	* Gene methylation (quantifiable hypermethylation/hypomethylation)
+	* Clinical parameters (Gleason score, age, gender, treatment, tumor subtype)
+  * Add sliders that allow customizing thresholds for significance:
+    * For instance, copy number logratios < -0.5 indicate deletions
+	* Should the sliders be global per data-type or per-column?
+  * Co-occurrence / complementarity analysis for the feature matrix:
+    * Click button to calculate association p-values between two columns
+    * Or maybe always calculate them on the fly between each column pair, like
+      in the parallel coordinates visualization
+- Clinical metadata view with which new sample groups can be defined:
+  * First just a simple table with row selection holding Ctrl/Shift
+    (see DataTables for jQuery, already used in alt splicing toplists)
+  * Later perhaps show histograms, pie charts and other visualizations rather
+    than just a table
+  * Allow user to e.g. click on one slice of pie chart to define a sub-cohort
+  * Remember sub-cohorts and allow users to filter data in other visualizations
+    to only show samples in one of their defined sub-cohorts
+- Pathway visualizations:
+  * Dynamic diagrams showing pathway genes and alterations occurring in them
+  * Comparison of pathway alterations between two cancers or sample sets
+- Improve website performance:
+  * Reduce storage requirements by using gzipped TSV format and less files
+  * Migrate data from intianjora to the Google Cloud Storage (or other CDN?)
+  * Consider use of a build system that would automatically compress Javascript
+  * If build system is in place, also consider a switch to Coffeescript
+
+
