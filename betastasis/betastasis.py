@@ -49,21 +49,21 @@ def cdna_uarray_probes(name, **kwargs):
 def igv_track(name, **kwargs): btemplate('igv_track', name, **kwargs)
 def circvis(name, **kwargs): btemplate('circvis', name, **kwargs)
 
-@route('/js/:filename#.+#')
+@route('/js/<filename:path>')
 def get_script(filename):
 	return static_file(filename, root='js')
 
-@route('/style/:filename#.+#')
+@route('/style/<filename:path>')
 def get_style(filename):
 	return static_file(filename, root='style')
 
-@route('/images/:filename#.+#')
+@route('/images/<filename:path>')
 def get_image(filename):
 	return static_file(filename, root='images')
 
-@route('/data/:filename#.+#')
+@route('/data/<filename:path>')
 def redirect_data(filename):
-	return static_file(filename, root='/home/csbgroup/public_htmlhttp://betastasis.cs.tut.fi/betadata')
+	return static_file(filename, root='data')
 
 @route('/')
 def index():
@@ -140,7 +140,7 @@ dataset('Bladder cancer > Scaravilli (2012)',
 
 expr_barplot('Bladder cancer > Scaravilli (2012) > Gene expression barplot',
 	category='Gene expression microarrays', gene='TP53',
-	data='http://betastasis.cs.tut.fi/betadata/bladder_cancer/scaravilli_2012/gene_expression',
+	data='/data/bladder_cancer/scaravilli_2012/gene_expression',
 	platform='Agilent Whole Human Genome 4x44K')
 
 
@@ -153,7 +153,7 @@ dataset('Bladder cancer > TCGA BLCA',
 
 expr_barplot('Bladder cancer > TCGA BLCA > Gene expression barplot',
 	category='Whole transcriptome sequencing', gene='TP53',
-	data='http://betastasis.cs.tut.fi/betadata/bladder_cancer/tcga_prad',
+	data='/data/bladder_cancer/tcga_prad',
 	platform='Illumina HiSeq 2000')
 
 
@@ -183,29 +183,29 @@ dataset('Breast cancer > TCGA BRCA',
 
 gene_boxplot('Breast cancer > TCGA BRCA > Gene expression box plot',
 	category='Gene-level views', gene='TP53',
-	data='http://betastasis.cs.tut.fi/betadata/breast_cancer/tcga_expr',
-	groups='http://betastasis.cs.tut.fi/betadata/breast_cancer/tcga_groups/t_stage_boxplot.json',
+	data='/data/breast_cancer/tcga_expr',
+	groups='/data/breast_cancer/tcga_groups/t_stage_boxplot.json',
 	platform='<a href="/platforms/cdna_microarrays/agilent_244k_tcga_custom_3">Agilent 244K TCGA custom 3</a>')
 
 feature_matrix('Breast cancer > TCGA BRCA > Feature matrix',
-	category='Gene-level views', data_root='http://betastasis.cs.tut.fi/betadata/breast_cancer/tcga_cna', groups='http://betastasis.cs.tut.fi/betadata/breast_cancer/tcga_groups/t_stage.json', platform='Affymetrix GW SNP 6.0', sample_labelsize='70', default_features='TP53 (CNA),PTEN (CNA),MYC (CNA),MIIP (CNA),ERBB2 (CNA),RB1 (CNA),MDM2 (CNA),NCOA2 (CNA),AKT1 (CNA)')
+	category='Gene-level views', data_root='/data/breast_cancer/tcga_cna', groups='/data/breast_cancer/tcga_groups/t_stage.json', platform='Affymetrix GW SNP 6.0', sample_labelsize='70', default_features='TP53 (CNA),PTEN (CNA),MYC (CNA),MIIP (CNA),ERBB2 (CNA),RB1 (CNA),MDM2 (CNA),NCOA2 (CNA),AKT1 (CNA)')
 
 kaplan_meier('Breast cancer > TCGA BRCA > Kaplan-Meier survival plot',
 	category='Gene-level views',
-	data='http://betastasis.cs.tut.fi/betadata/breast_cancer/tcga_expr',
-	groups='http://betastasis.cs.tut.fi/betadata/breast_cancer/tcga_groups/t_stage.json',
+	data='/data/breast_cancer/tcga_expr',
+	groups='/data/breast_cancer/tcga_groups/t_stage.json',
 	feature='TP53',
 	platform='<a href="/platform/cdna_microarrays/agilent_244k_tcga_custom_3">Agilent 244K TCGA custom 3</a>')
 
 parallel_coordinates('Breast cancer > TCGA BRCA > Parallel coordinates',
-	category='Gene-level views', data='http://betastasis.cs.tut.fi/betadata/breast_cancer/tcga_expr',
-	groups='http://betastasis.cs.tut.fi/betadata/breast_cancer/tcga_groups/t_stage.json',
+	category='Gene-level views', data='/data/breast_cancer/tcga_expr',
+	groups='/data/breast_cancer/tcga_groups/t_stage.json',
 	platform='<a href="/platforms/cdna_microarrays/agilent_244k_tcga_custom_3">Agilent 244K TCGA custom 3</a>',
 	features='["ERBB2", "PTEN", "TP53", "PDGFRA", "BRCA1"]')
 
 igv_track('Breast cancer > TCGA BRCA > All tumors, paired with adjacent normal (Affymetrix GW SNP 6.0)',
 	category='Copy number tracks',
-	data='http://betastasis.cs.tut.fi/betadata/breast_cancer/tcga_tracks/tumors_vs_adj_normal.seg')
+	data='/data/breast_cancer/tcga_tracks/tumors_vs_adj_normal.seg')
 
 
 
@@ -238,13 +238,13 @@ dataset('Colorectal cancer > Veeriah et al. (2009)',
 ''')
 
 feature_matrix('Colorectal cancer > Veeriah et al. (2009) > Feature matrix',
-	category='Gene-level views', data='http://betastasis.cs.tut.fi/betadata/colorectal_cancer/taylor_cna',
-	groups='http://betastasis.cs.tut.fi/betadata/colorectal_cancer/taylor_groups/groups.json',
+	category='Gene-level views', data='/data/colorectal_cancer/taylor_cna',
+	groups='/data/colorectal_cancer/taylor_groups/groups.json',
 	platform='Agilent HG CGH 244A', sample_labelsize='70',
 	default_features='TP53 (CNA),PTEN (CNA),MYC (CNA),MIIP (CNA),RB1 (CNA),MDM2 (CNA),NCOA2 (CNA),AKT1 (CNA)')
 
 igv_track('Colorectal cancer > Veeriah et al. (2009) > All tumors, paired with universal reference DNA',
-	category='Copy number tracks', data='http://betastasis.cs.tut.fi/betadata/crc_taylor_tracks/taylor_crc.seg')
+	category='Copy number tracks', data='/data/crc_taylor_tracks/taylor_crc.seg')
 	
 
 
@@ -260,7 +260,7 @@ dataset('Colorectal cancer > TCGA COAD & READ',
 
 igv_track('Colorectal cancer > TCGA COAD & READ > All COAD tumors, paired with Promega universal reference DNA',
 	category='Copy number tracks',
-	data='http://betastasis.cs.tut.fi/betadata/colorectal_cancer/tcga_coad_tracks/tumor_vs_ref.seg.gz')
+	data='/data/colorectal_cancer/tcga_coad_tracks/tumor_vs_ref.seg.gz')
 
 
 
@@ -283,7 +283,7 @@ dataset('Glioma > Parker et al. (2012)',
 
 expr_barplot('Glioma > Parker et al. (2012) > Gene expression barplot',
 	category='Transcriptomic analysis', gene='TP53',
-	data='http://betastasis.cs.tut.fi/betadata/glioma/parker_et_al_2012',
+	data='/data/glioma/parker_et_al_2012',
 	platform='ABI SOLiD 3', description='''
 <p>10 sample pools were sequenced using the whole transcriptome sequencing protocol of the ABI SOLiD 3 platform. RPKM expression values were calculated from raw read counts aligning to each gene.</p>
 ''')
@@ -302,32 +302,32 @@ dataset('Glioma > REMBRANDT',
 ''')
 
 gene_boxplot('Glioma > REMBRANDT > Gene expression in glioma subtypes',
-	category='Gene-level views', gene='TP53', data='http://betastasis.cs.tut.fi/betadata/rembrandt_foo',
+	category='Gene-level views', gene='TP53', data='/data/rembrandt_foo',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_hg_u133_plus_20/">Affymetrix HG U133 v2.0 Plus</a>')
 
 kaplan_meier('Glioma > REMBRANDT > Kaplan-Meier survival curve',
 	category='Gene-level views',
-	data='http://betastasis.cs.tut.fi/betadata/rembrandt_foo',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/rembrandt_groups/all_groups.json',
+	data='/data/rembrandt_foo',
+	groups='/data/glioma/rembrandt_groups/all_groups.json',
 	feature='EGFR',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_hg_u133_plus_20/">Affymetrix HG U133 v2.0 Plus</a>')
 
 gene_scatter('Glioma > REMBRANDT > Two-gene scatterplot',
 	category='Gene-level views', gene_x='EGFR', gene_y='GRB2',
-	data='http://betastasis.cs.tut.fi/betadata/rembrandt_foo',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/rembrandt_groups/all_groups.json',
+	data='/data/rembrandt_foo',
+	groups='/data/glioma/rembrandt_groups/all_groups.json',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_ht_hg_u133a/">Affymetrix HT HG U133A</a>')
 
 parallel_coordinates('Glioma > REMBRANDT > Parallel coordinates',
-	category='Gene-level views', data='http://betastasis.cs.tut.fi/betadata/rembrandt_foo',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/rembrandt_groups/all_groups.json',
+	category='Gene-level views', data='/data/rembrandt_foo',
+	groups='/data/glioma/rembrandt_groups/all_groups.json',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_hg_u133_plus_20/">Affymetrix HG U133 v2.0 Plus</a>',
 	features='["EGFR", "PTEN", "TP53", "PDGFRA", "IDH1"]')
 
 geneset_correlation('Glioma > REMBRANDT > Gene set correlation',
-	category='Gene-level views', data='http://betastasis.cs.tut.fi/betadata/rembrandt_foo',
+	category='Gene-level views', data='/data/rembrandt_foo',
 	scatter_url='/glioma/rembrandt/gene_scatter',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/rembrandt_groups/all_groups.json',
+	groups='/data/glioma/rembrandt_groups/all_groups.json',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_hg_u133_plus_20/">Affymetrix HG U133 v2.0 Plus</a>',
 	ref_gene='IGFBP2', target_genes='MYC,ITGA5,PTEN,TP53,EGFR,STAT3')
 
@@ -351,105 +351,105 @@ Agilent HG CGH 244A<br>''',
 ''')
 
 gene_boxplot('Glioma > TCGA GBM > Expression box plot (Affymetrix HT HG U133A)',
-	category='Transcriptome analysis', gene='TP53', data='http://betastasis.cs.tut.fi/betadata/tcga_gbm_u133',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_groups/boxplot_groups.json',
+	category='Transcriptome analysis', gene='TP53', data='/data/tcga_gbm_u133',
+	groups='/data/glioma/tcga_gbm_groups/boxplot_groups.json',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_ht_hg_u133a/">Affymetrix HT HG U133A</a>')
 
 gene_boxplot(
 	'Glioma > TCGA GBM > Expression box plot (Affymetrix Human Exon 1.0 ST)',
-	category='Transcriptome analysis', gene='TP53', data='http://betastasis.cs.tut.fi/betadata/tcga_gbm_huex',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_groups/boxplot_groups.json',
+	category='Transcriptome analysis', gene='TP53', data='/data/tcga_gbm_huex',
+	groups='/data/glioma/tcga_gbm_groups/boxplot_groups.json',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_human_exon_10_st/">Affy Human Exon 1.0 ST</a>')
 
 gene_boxplot(
 	'Glioma > TCGA GBM > Expression box plot (Agilent Human miRNA 8x15K)',
 	category='Transcriptome analysis', gene='hsa-miR-21',
-	data='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_mirna_expr',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_groups/boxplot_groups.json',
+	data='/data/glioma/tcga_gbm_mirna_expr',
+	groups='/data/glioma/tcga_gbm_groups/boxplot_groups.json',
 	platform='Agilent Human miRNA 8x15K')
 
 gene_scatter(
 	'Glioma > TCGA GBM > Two-gene scatterplot (Affymetrix HT HG U133A)',
 	category='Transcriptome analysis', gene_x='EGFR', gene_y='GRB2',
-	data='http://betastasis.cs.tut.fi/betadata/tcga_gbm_u133',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_groups/all_groups.json',
+	data='/data/tcga_gbm_u133',
+	groups='/data/glioma/tcga_gbm_groups/all_groups.json',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_ht_hg_u133a/">Affymetrix HT HG U133A</a>')
 
 gene_scatter(
 	'Glioma > TCGA GBM > Two-gene scatterplot (Affymetrix Human Exon 1.0 ST)',
 	category='Transcriptome analysis', gene_x='EGFR', gene_y='GRB2',
-	data='http://betastasis.cs.tut.fi/betadata/tcga_gbm_huex',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_groups/all_groups.json',
+	data='/data/tcga_gbm_huex',
+	groups='/data/glioma/tcga_gbm_groups/all_groups.json',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_human_exon_10_st/">Affymetrix Human Exon 1.0 ST</a>')
 
 geneset_correlation('Glioma > TCGA GBM > Gene set correlation',
-	category='Transcriptome analysis', data='http://betastasis.cs.tut.fi/betadata/tcga_gbm_u133',
+	category='Transcriptome analysis', data='/data/tcga_gbm_u133',
 	scatter_url='/glioma/tcga_gbm/gene_scatter_u133',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_groups/all_groups.json',
+	groups='/data/glioma/tcga_gbm_groups/all_groups.json',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_hg_u133_plus_20/">Affymetrix HG U133 v2.0 Plus</a>',
 	ref_gene='EGFR', target_genes='MYC,ITGA5,PTEN,TP53,STAT3')
 
 feature_matrix('Glioma > TCGA GBM > Feature matrix',
-	category='Integrative analysis', data='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_cna',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_groups/all_groups.json',
+	category='Integrative analysis', data='/data/glioma/tcga_gbm_cna',
+	groups='/data/glioma/tcga_gbm_groups/all_groups.json',
 	platform='Agilent HG CGH 244A', sample_labelsize='100',
 	default_features='EGFR (CNA),PDGFRA (CNA),TP53 (CNA),PTEN (CNA),MIIP (CNA),IGFBP2 (CNA),MTOR (CNA),AKT1 (CNA)')
 
 parallel_coordinates('Glioma > TCGA GBM > Parallel coordinates',
-	category='Integrative analysis', data='http://betastasis.cs.tut.fi/betadata/tcga_gbm_u133',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_groups/all_groups.json',
+	category='Integrative analysis', data='/data/tcga_gbm_u133',
+	groups='/data/glioma/tcga_gbm_groups/all_groups.json',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_ht_hg_u133a/">Affymetrix HT HG U133A</a><br>Agilent Human miRNA 8x15K v1<br>Agilent Human miRNA 8x15K v2',
 	features='["EGFR", "PTEN", "TP53", "PDGFRA", "IDH1"]')
 
 kaplan_meier('Glioma > TCGA GBM > Gene survival association (Affymetrix HT HG U133A',
 	category='Survival analysis',
-	data='http://betastasis.cs.tut.fi/betadata/tcga_gbm_u133',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_groups/all_groups.json',
+	data='/data/tcga_gbm_u133',
+	groups='/data/glioma/tcga_gbm_groups/all_groups.json',
 	feature='EGFR',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_ht_hg_u133a/">Affymetrix HT HG U133A</a>')
 
 kaplan_meier('Glioma > TCGA GBM > Gene survival association (Affymetrix Human Exon 1.0 ST)',
 	category='Survival analysis',
-	data='http://betastasis.cs.tut.fi/betadata/tcga_gbm_huex',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_groups/all_groups.json',
+	data='/data/tcga_gbm_huex',
+	groups='/data/glioma/tcga_gbm_groups/all_groups.json',
 	feature='EGFR',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_human_exon_10_st/">Affy Human Exon 1.0 ST</a>')
 
 kaplan_meier(
 	'Glioma > TCGA GBM > MicroRNA survival association (Agilent Human miRNA 8x15K)',
-	category='Survival analysis', data='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_mirna_expr',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_groups/all_groups.json',
+	category='Survival analysis', data='/data/glioma/tcga_gbm_mirna_expr',
+	groups='/data/glioma/tcga_gbm_groups/all_groups.json',
 	feature='hsa-miR-21', feature_type='miRNA',
 	platform='Agilent Human microRNA 8x15K')
 
 kaplan_meier('Glioma > TCGA GBM > Protein survival association',
 	category='Survival analysis',
-	data='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm/protein_expression',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm/groups/protein_expression.json',
+	data='/data/glioma/tcga_gbm/protein_expression',
+	groups='/data/glioma/tcga_gbm/groups/protein_expression.json',
 	platform='RPPA', feature='Akt_pS473-R-V', feature_type='Protein')
 
 alt_splicing(
 	'Glioma > TCGA GBM > Alternative splicing boxplot (gene)',
 	category='Alternative splicing', gene='PDGFRA',
-	groups='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_groups/all_groups.json',
-	data='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_splice',
+	groups='/data/glioma/tcga_gbm_groups/all_groups.json',
+	data='/data/glioma/tcga_gbm_splice',
 	default_test_group='All tumors', default_ref_group='Normal',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_human_exon_10_st/">Affymetrix Human Exon 1.0 ST</a>')
 
 alt_splicing_exons(
 	'Glioma > TCGA GBM > Alternative splicing boxplot (exon)', 
 	category='Alternative splicing', gene='PDGFRA',
-	data='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_splice',
+	data='/data/glioma/tcga_gbm_splice',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_human_exon_10_st/">Affymetrix Human Exon 1.0 ST</a>')
 
 alt_splicing_survival(
 	'Glioma > TCGA GBM > Alternative splicing survival association',
 	category='Alternative splicing', gene='PDGFRA',
-	data='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_splice',
+	data='/data/glioma/tcga_gbm_splice',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_human_exon_10_st/">Affymetrix Human Exon 1.0 ST</a>')
 
 igv_track('Glioma > TCGA GBM > All tumors, paired with Promega universal reference DNA',
-	category='Copy number tracks', data='http://betastasis.cs.tut.fi/betadata/glioma/tcga_gbm_tracks/agilent_244a_tumor_vs_ref.seg.gz')
+	category='Copy number tracks', data='/data/glioma/tcga_gbm_tracks/agilent_244a_tumor_vs_ref.seg.gz')
 
 
 
@@ -472,26 +472,26 @@ dataset('Pancreatic cancer > Shain et al. (2011)',
 
 expr_barplot('Pancreatic cancer > Shain et al. (2011) > Gene expression barplot',
 	category='Transcriptomic analysis', gene='TP53 (NM_000546)',
-	data='http://betastasis.cs.tut.fi/betadata/pancreatic_cancer/shain_et_al_2011',
+	data='/data/pancreatic_cancer/shain_et_al_2011',
 	platform='Agilent HG 4x44K', description='''
 <p>Barplot of the expression of a single transcript in multiple samples. Pooled RNA from 11 varied cancer cell lines was used as control. Differential gene expression values imported directly from the GEO series matrix. Samples from JH21 to 235 are xenografts, while the samples from HPDE to Panc05.04 are cell lines.</p>
 ''')
 
 gene_scatter('Pancreatic cancer > Shain et al. (2011) > Two-gene scatterplot',
-	category='Transcriptomic analysis', data='http://betastasis.cs.tut.fi/betadata/pancreatic_cancer/shain_et_al_2011',
+	category='Transcriptomic analysis', data='/data/pancreatic_cancer/shain_et_al_2011',
 	gene_x='CDKN2A (NM_058197)', gene_y='CEACAM6 (NM_002483)',
-	groups='http://betastasis.cs.tut.fi/betadata/pancreatic_cancer/shain_et_al_2011/groups/cell_xenograft_groups.json',
+	groups='/data/pancreatic_cancer/shain_et_al_2011/groups/cell_xenograft_groups.json',
 	platform='Agilent HG 4x44K')
 
 #geneset_correlation('Pancreatic cancer > Shain et al. (2011) > Gene set correlation',
-#	category='Transcriptomic analysis', data='http://betastasis.cs.tut.fi/betadata/pancreatic_cancer/shain_et_al_2011',
+#	category='Transcriptomic analysis', data='/data/pancreatic_cancer/shain_et_al_2011',
 #	scatter_url='/pancreatic_cancer/shain_et_al_2011/two-gene_scatterplot',
-#	groups='http://betastasis.cs.tut.fi/betadata/pancreatic_cancer/shain_et_al_2011/groups/cell_xenograft_groups.json',
+#	groups='/data/pancreatic_cancer/shain_et_al_2011/groups/cell_xenograft_groups.json',
 #	platform='Agilent HG 4x44K', ref_gene='CDKN2A (NM_058197)',
 #	target_genes='CEACAM6 (NM_002483)')
 
 igv_track('Pancreatic cancer > Shain et al. (2011) > All tumors, paired with pooled normal genomic DNA from 8 individuals',
-	category='Copy number tracks', data='http://betastasis.cs.tut.fi/betadata/pancreatic_cancer/shain_et_al_2011/acgh_cbs.seg')
+	category='Copy number tracks', data='/data/pancreatic_cancer/shain_et_al_2011/acgh_cbs.seg')
 
 
 
@@ -524,7 +524,7 @@ dataset('Prostate cancer > Bova patient A21',
 
 expr_barplot('Prostate cancer > Bova patient A21 > Gene expression barplot',
 	category='Whole transcriptome analysis', gene='AR',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/bova_patient_a21/rnaseq_gene_expression',
+	data='/data/prostate_cancer/bova_patient_a21/rnaseq_gene_expression',
 	platform='Illumina HiSeq 2000', description='''
 <p>Barplot of the expression of a single gene in multiple individual samples. 58 samples were sequenced using the whole transcriptome protocol of the Illumina HiSeq 2000 platform. Full 90 bp reads were aligned against the GRCh37 reference genome. Reads that aligned to exons annotated in Ensembl 68 were tallied for each gene. Gene expression values were normalized using median-of-ratios normalization.</p>
 ''')
@@ -542,7 +542,7 @@ dataset('Prostate cancer > IGC expO',
 
 expr_barplot('Prostate cancer > IGC expO > Gene expression barplot',
 	category='Transcriptomic analysis', gene='ERG',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/intgen_expo',
+	data='/data/prostate_cancer/intgen_expo',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_hg_u133_plus_20/">Affymetrix HG U133 Plus 2.0</a><br>',
 	description='Probe intensities were summarized into gene expressions using the RMA algorithm.')
 
@@ -561,7 +561,7 @@ dataset('Prostate cancer > Friedlander et al. (2012)',
 igv_track('Prostate cancer > Friedlander et al. (2012) > ' + 
 	'All tumors, paired with pooled gDNA from healthy anonymous donors',
 	category='Copy number tracks',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/friedlander12_cgh_tracks/tumor_vs_ref.seg.gz')
+	data='/data/prostate_cancer/friedlander12_cgh_tracks/tumor_vs_ref.seg.gz')
 
 	
 
@@ -581,13 +581,13 @@ Liu et al. show through a high-resolution genome-wide single nucleotide polymorp
 ''')
 
 feature_matrix('Prostate cancer > Liu et al. (2009) > Feature matrix',
-	category='Gene-level views', data='http://betastasis.cs.tut.fi/betadata/bova_cna',
+	category='Gene-level views', data='/data/bova_cna',
 	platform='Affymetrix Genome Wide SNP 6.0', sample_labelsize='200')
 	
 igv_track('Prostate cancer > Liu et al. (2009) > ' + 
 	'All tumors, paired with averaged non-cancerous samples',
 	category='Copy number tracks',
-	data='http://betastasis.cs.tut.fi/betadata/bova_cgh_tracks/bova_cna.seg')
+	data='/data/bova_cgh_tracks/bova_cna.seg')
 
 
 
@@ -606,7 +606,7 @@ dataset('Prostate cancer > LuCaP xenografts',
 
 expr_barplot('Prostate cancer > LuCaP xenografts > Gene and miRNA expression barplot',
 	category='Visualizations', gene='ERG',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/lucaps_expr',
+	data='/data/prostate_cancer/lucaps_expr',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_hg_u133_plus_20/">Affymetrix HG U133 Plus 2.0</a><br>Agilent Human miRNA 8x15K v2',
 	description='''
 <p>Gene expression was measured for 22 LuCaP xenografts using Affymetrix HG U133 Plus 2.0 microarrays. MicroRNA expression was measured for 15 LuCaP xenografts using Agilent Human miRNA 8x15K v2 microarrays. Gene expression values were quantile normalized across all samples.</p>
@@ -614,8 +614,8 @@ expr_barplot('Prostate cancer > LuCaP xenografts > Gene and miRNA expression bar
 
 gene_boxplot('Prostate cancer > LuCaP xenografts > Gene and miRNA expression boxplot (fusion & AR)',
 	category='Visualizations', gene='ERG',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/lucaps_expr',
-	groups='http://betastasis.cs.tut.fi/betadata/prostate_cancer/lucaps_groups/groups.json',
+	data='/data/prostate_cancer/lucaps_expr',
+	groups='/data/prostate_cancer/lucaps_groups/groups.json',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_hg_u133_plus_20/">Affymetrix HG U133 Plus 2.0</a><br>Agilent Human miRNA 8x15K v2',
 	description='''
 <p>Gene expression was measured for 22 LuCaP xenografts using Affymetrix HG U133 Plus 2.0 microarrays. MicroRNA expression was measured for 15 LuCaP xenografts using Agilent Human miRNA 8x15K v2 microarrays. Gene expression values were quantile normalized across all samples.</p>
@@ -623,14 +623,14 @@ gene_boxplot('Prostate cancer > LuCaP xenografts > Gene and miRNA expression box
 
 feature_matrix('Prostate cancer > LuCaP xenografts > Feature matrix',
 	category='Visualizations',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/lucaps_cna',
-	groups='http://betastasis.cs.tut.fi/betadata/prostate_cancer/lucaps_groups/groups.json',
+	data='/data/prostate_cancer/lucaps_cna',
+	groups='/data/prostate_cancer/lucaps_groups/groups.json',
 	platform='Agilent HG CGH 244A', sample_labelsize='100',
 	default_features='AR (CNA),TP53 (CNA),PTEN (CNA),MYC (CNA),MIIP (CNA),ERBB2 (CNA),RB1 (CNA),MDM2 (CNA),NCOA2 (CNA),AKT1 (CNA)')
 
 igv_track('Prostate cancer > LuCaP xenografts > All xenografts, paired with Cy3 channel reference DNA',
 	category='Copy number tracks',
-	data='http://betastasis.cs.tut.fi/betadata/lucap_cgh_tracks/lucap_xenografts.seg')
+	data='/data/lucap_cgh_tracks/lucap_xenografts.seg')
 
 
 
@@ -658,7 +658,7 @@ dataset('Prostate cancer > Massie et al. (2011)',
 timeseries(
 	'Prostate cancer > Massie et al. (2011) > Gene expression time series',
 	category='Gene expression', gene='AR',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/androgen_exposure',
+	data='/data/prostate_cancer/androgen_exposure',
 	control_group='LNCaP no treatment',
 	platform='Illumina Human 6 v2 BeadArray',
 	description='''
@@ -686,7 +686,7 @@ dataset('Prostate cancer > Prensner et al. (2011)',
 
 expr_barplot('Prostate cancer > Prensner et al. (2011) > Gene expression barplot',
 	category='Transcriptomic analysis', gene='ERG',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/prensner11/gene_expression',
+	data='/data/prostate_cancer/prensner11/gene_expression',
 	platform='Illumina Genome Analyzer<br>Illumina Genome Analyzer II',
 	description='Reads were aligned with Tophat against the GRCh37 genome assembly. Aligned read counts were then calculated against genes from Ensembl release 67. All expression values were quantile normalized.')
 
@@ -713,66 +713,66 @@ Taylor et al. concordantly assessed DNA copy number, exon expression and miRNA e
 ''')
 
 gene_boxplot('Prostate cancer > Taylor et al. (2010) > Gene expression boxplot',
-	category='Gene-level views', data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/taylor_gene_expression',
+	category='Gene-level views', data='/data/prostate_cancer/taylor_gene_expression',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_human_exon_10_st/">Affymetrix Human Exon 1.0 ST</a><br>Agilent Human miRNA 8x15K v2')
 
 kaplan_meier('Prostate cancer > Taylor et al. (2010) > Kaplan-Meier survival plot',
 	category='Gene-level views',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/taylor_gene_expression',
-	groups='http://betastasis.cs.tut.fi/betadata/prostate_cancer/taylor_groups/grade.json',
+	data='/data/prostate_cancer/taylor_gene_expression',
+	groups='/data/prostate_cancer/taylor_groups/grade.json',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_human_exon_10_st/">Affymetrix Human Exon 1.0 ST</a><br>Agilent Human miRNA 8x15K v2',
 	recurrence='yes', feature='AR')
 
 gene_scatter('Prostate cancer > Taylor et al. (2010) > Two-gene scatterplot',
-	category='Gene-level views', data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/taylor_gene_expression',
+	category='Gene-level views', data='/data/prostate_cancer/taylor_gene_expression',
 	gene_x='ETV1', gene_y='ERG',
-	groups='http://betastasis.cs.tut.fi/betadata/prostate_cancer/taylor_gene_expression/groups/groups_new.json',
+	groups='/data/prostate_cancer/taylor_gene_expression/groups/groups_new.json',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_human_exon_10_st/">Affymetrix Human Exon 1.0 ST</a>')
 
 feature_matrix('Prostate cancer > Taylor et al. (2010) > Feature matrix',
 	category='Gene-level views',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/taylor_pca_features',
-	groups='http://betastasis.cs.tut.fi/betadata/prostate_cancer/taylor_groups/grade_trimmed.json',
+	data='/data/prostate_cancer/taylor_pca_features',
+	groups='/data/prostate_cancer/taylor_groups/grade_trimmed.json',
 	platform='Agilent HG CGH 244A<br>Sanger sequencing<br>iPlex Sequenom',
 	sample_labelsize='70',
 	default_features='AR (CNA),AR (MUT),TP53 (CNA),PTEN (CNA),MYC (CNA),MIIP (CNA),RB1 (CNA),MDM2 (CNA),NCOA2 (CNA),AKT1 (CNA)')
 
 parallel_coordinates('Prostate cancer > Taylor et al. (2010) > Parallel coordinates',
-	category='Gene-level views', data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/taylor_gene_expression',
-	groups='http://betastasis.cs.tut.fi/betadata/prostate_cancer/taylor_groups/grade.json',
+	category='Gene-level views', data='/data/prostate_cancer/taylor_gene_expression',
+	groups='/data/prostate_cancer/taylor_groups/grade.json',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_human_exon_10_st/">Affymetrix Human Exon 1.0 ST</a><br>Agilent Human miRNA 8x15K v2',
 	features='["hsa-miR-143", "RB1", "E2F1", "AR", "MYC"]')
 
 geneset_correlation('Prostate cancer > Taylor et al. (2010) > Gene set correlation',
-	category='Gene-level views', data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/taylor_gene_expression',
+	category='Gene-level views', data='/data/prostate_cancer/taylor_gene_expression',
 	scatter_url='/prostate_cancer/taylor_et_al/two-gene_scatterplot',
-	groups='http://betastasis.cs.tut.fi/betadata/prostate_cancer/taylor_gene_expression/groups/groups_new.json',
+	groups='/data/prostate_cancer/taylor_gene_expression/groups/groups_new.json',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_human_exon_10_st/">Affymetrix Human Exon 1.0 ST</a>', ref_gene='AR',
 	target_genes='AURKA,KLK3,ERG,ETV1,ETV4,PTEN,TP53,NCOA2')
 
 alt_splicing(
 	'Prostate cancer > Taylor et al. (2010) > Alternative splicing boxplot (gene)',
 	category='Alternative splicing', gene='AR',
-	groups='http://betastasis.cs.tut.fi/betadata/prostate_cancer/taylor_gene_expression/groups/groups_new.json',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/taylor_splice_new',
+	groups='/data/prostate_cancer/taylor_gene_expression/groups/groups_new.json',
+	data='/data/prostate_cancer/taylor_splice_new',
 	default_test_group='Primary (untreated)',
 	default_ref_group='Normal (BPH)',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_human_exon_10_st/">Affymetrix Human Exon 1.0 ST</a>')
 
 alt_splicing_exons('Prostate cancer > Taylor et al. (2010) > Alternative splicing boxplot (exon)',
 	category='Alternative splicing',
-	gene='AR', data='http://betastasis.cs.tut.fi/betadata/taylor_splice_new',
+	gene='AR', data='/data/taylor_splice_new',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_human_exon_10_st/">Affymetrix Human Exon 1.0 ST</a>')
 
 alt_splicing_survival(
 	'Prostate cancer > Taylor et al. (2010) > Alternative splicing survival association',
 	category='Alternative splicing', gene='AR', recurrence='yes',
-	data='http://betastasis.cs.tut.fi/betadata/taylor_splice_new',
+	data='/data/taylor_splice_new',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_human_exon_10_st/">Affymetrix Human Exon 1.0 ST</a>')
 
 igv_track('Prostate cancer > Taylor et al. (2010) > All tumors, paired with adjacent normal or universal reference DNA',
 	category='Copy number tracks',
-	data='http://betastasis.cs.tut.fi/betadata/taylor_pca_all.seg')
+	data='/data/taylor_pca_all.seg')
 
 
 
@@ -790,7 +790,7 @@ dataset('Prostate cancer > Tamura (2007)',
 
 expr_barplot('Prostate cancer > Tamura (2007) > Gene expression barplot',
 	category='Transcriptomic analysis', gene='ETV4',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/tamura07',
+	data='/data/prostate_cancer/tamura07',
 	platform='Custom cDNA microarray<br>',
 	description='Tumor samples were hybridized onto a custom cDNA microarray. Expression values come directly from the GEO series matrix.')
 
@@ -815,21 +815,21 @@ The TCGA prostate cancer project has currently produced measurements for 130 sam
 
 expr_barplot('Prostate cancer > TCGA PRAD > Gene expression barplot (RNA-seq)',
 	category='Transcriptome sequencing', gene='AR',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/tcga_prad/rnaseq_gene_expression',
+	data='/data/prostate_cancer/tcga_prad/rnaseq_gene_expression',
 	platform='Illumina Genome Analyzer II', description='''
 <p>Quantile normalized expression values for genes annotated in Ensembl release 67.</p>
 ''')
 
 feature_matrix('Prostate cancer > TCGA PRAD > Feature matrix',
-	category='Gene-level views', data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/tcga_prad/features',
-	groups='http://betastasis.cs.tut.fi/betadata/prostate_cancer/tcga_prad/groups/groups.json', 
+	category='Gene-level views', data='/data/prostate_cancer/tcga_prad/features',
+	groups='/data/prostate_cancer/tcga_prad/groups/groups.json', 
 	platform='Affymetrix Genome Wide SNP 6.0', sample_labelsize='100',
 	default_features='AR (CNA),TP53 (CNA),PTEN (CNA),MYC (CNA),MIIP (CNA),RB1 (CNA),MDM2 (CNA),NCOA2 (CNA),AKT1 (CNA)')
 	
 igv_track('Prostate cancer > TCGA PRAD > ' +
 	'All tumors, paired with adjacent normal or universal reference',
 	category='Copy number tracks',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/tcga_prad/tcga_pca_snp6.seg')
+	data='/data/prostate_cancer/tcga_prad/tcga_pca_snp6.seg')
 
 
 
@@ -847,7 +847,7 @@ dataset('Prostate cancer > Tampere PC',
 
 expr_barplot('Prostate cancer > Tampere PC > Gene expression barplot',
 	category='Whole transcriptome analysis', gene='AR',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/tampere_pca/rnaseq_gene_expression',
+	data='/data/prostate_cancer/tampere_pca/rnaseq_gene_expression',
 	platform='Illumina HiSeq 2000', description='''
 <p>53 samples were sequenced using the whole transcriptome protocol of the Illumina HiSeq 2000 platform. Full 90 bp reads were aligned against NCBI RefSeq 38 transcripts sequences. 2 nucleotide mismatches were allowed in alignments. 70-80% of all reads aligned against annotated transcript sequences. Gene expression values were quantile normalized across all 53 samples.
 </p>
@@ -855,15 +855,15 @@ expr_barplot('Prostate cancer > Tampere PC > Gene expression barplot',
 
 expr_barplot('Prostate cancer > Tampere PC > Gene expression barplot (Ensembl 68)',
 	category='Whole transcriptome analysis', gene='AR',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/tampere_pca/gene_expression_ensembl',
+	data='/data/prostate_cancer/tampere_pca/gene_expression_ensembl',
 	platform='Illumina HiSeq 2000', description='''
 <p>53 samples were sequenced using the whole transcriptome protocol of the Illumina HiSeq 2000 platform. Full 90 bp reads were aligned against the GRCh37 genome with Tophat. Gene expression values were calculated using bedtools based on composite gene exon models. Gene expression values were normalized using median-of-ratios normalization.</p>
 ''')
 
 gene_boxplot('Prostate cancer > Tampere PC > Gene expression boxplot',
 	category='Whole transcriptome analysis', gene='AR',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/tampere_pca/rnaseq_gene_expression',
-	groups='http://betastasis.cs.tut.fi/betadata/prostate_cancer/tampere_pca/groups/tumor_grade_groups.json',
+	data='/data/prostate_cancer/tampere_pca/rnaseq_gene_expression',
+	groups='/data/prostate_cancer/tampere_pca/groups/tumor_grade_groups.json',
 	platform='Illumina HiSeq 2000',
 	description='''
 <p>53 prostate cancer samples were sequenced using the whole transcriptome protocol of the Illumina HiSeq 2000 platform. Full 90 bp reads were aligned against NCBI RefSeq 38 transcripts sequences. 2 nucleotide mismatches were allowed in alignments. 70-80% of all reads aligned against annotated transcript sequences.
@@ -871,40 +871,40 @@ gene_boxplot('Prostate cancer > Tampere PC > Gene expression boxplot',
 
 #exon_expr_barplot('Prostate cancer > Tampere PC > Exon expression barplot',
 #	category='Whole transcriptome analysis', gene='AR', exon='1',
-#	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/visakorpi_bgi_exon_expr',
+#	data='/data/prostate_cancer/visakorpi_bgi_exon_expr',
 #	platform='Illumina HiSeq 2000', description='''
 #<p>53 samples were sequenced using the whole transcriptome protocol of the Illumina HiSeq 2000 platform. Full 90 bp reads were aligned against NCBI RefSeq 38 transcripts sequences. 2 nucleotide mismatches were allowed in the alignments. 70-80% of all reads aligned against annotated transcript sequences. The expression of an exon was calculated by summing all reads that overlapped with the exon's sequence within a transcript.Total read counts were quantile normalized across samples.</p>
 #''')
 
 gene_scatter('Prostate cancer > Tampere PC > Two-gene scatterplot',
 	category='Whole transcriptome analysis', gene_x='ERG', gene_y='ETV1',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/tampere_pca/rnaseq_gene_expression',
-	groups='http://betastasis.cs.tut.fi/betadata/prostate_cancer/tampere_pca/groups/tumor_grade_groups.json',
+	data='/data/prostate_cancer/tampere_pca/rnaseq_gene_expression',
+	groups='/data/prostate_cancer/tampere_pca/groups/tumor_grade_groups.json',
 	platform='Illumina HiSeq 2000')
 
 #graph('Prostate cancer > Tampere PC > Outlier association graph',
 #	category='Whole transcriptome analysis',
-#	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/tampere_pca_associations.json')
+#	data='/data/prostate_cancer/tampere_pca_associations.json')
 
 expr_barplot('Prostate cancer > Tampere PC > MicroRNA expression barplot',
 	category='Small RNA analysis', gene='hsa-miR-143-5p',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/tampere_pca/mirna_expression',
+	data='/data/prostate_cancer/tampere_pca/mirna_expression',
 	feature_type='miRNA',
 	platform='Solexa')
 
 #expr_barplot('Prostate cancer > Tampere PC > MicroRNA expression barplot (ProspeR)',
 #	category='Small RNA analysis', gene='hsa-miR-21',
-#	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/visakorpi_mirna_expr',
+#	data='/data/prostate_cancer/visakorpi_mirna_expr',
 #	platform='Solexa')
 
 igv_track('Prostate cancer > Tampere PC > Copy number tracks (IGV)',
 	category='Whole genome sequencing',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/tampere_pca/tampere_pca_cnv_seq_cbs.seg')
+	data='/data/prostate_cancer/tampere_pca/tampere_pca_cnv_seq_cbs.seg')
 
 circvis('Prostate cancer > Tampere PC > Chromosomal rearrangements',
 	category='Whole genome sequencing', gene='', default='PC_6864',
 	title='Chromosomal rearrangements',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/tampere_pca/structural_variants',
+	data='/data/prostate_cancer/tampere_pca/structural_variants',
 	platform='Illumina HiSeq 2000')
 
 igv_track('Prostate cancer > Tampere PC > Methylation tracks (IGV)',
@@ -914,17 +914,17 @@ igv_track('Prostate cancer > Tampere PC > Methylation tracks (IGV)',
 
 #aberrated_scatter('Prostate cancer > Tampere PC > Scatterplot of most aberrated genes (HNPCa vs BPH)',
 #	category='Integrative analysis',
-#	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/top_genes_hnpca_vs_bph.json',
+#	data='/data/prostate_cancer/top_genes_hnpca_vs_bph.json',
 #	platform='Illumina HiSeq 2000')
 
 aberrated_scatter('Prostate cancer > Tampere PC > Scatterplot of most aberrated genes (CRPC vs HNPCa)',
 	category='Integrative analysis',
-	data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/top_genes_crpc_vs_pca.json',
+	data='/data/prostate_cancer/top_genes_crpc_vs_pca.json',
 	platform='Illumina HiSeq 2000')
 
 
 #mutation_list('Prostate cancer > Tampere PC > Mutation list',
-#	category='Mutation analysis', data='http://betastasis.cs.tut.fi/betadata/prostate_cancer/')
+#	category='Mutation analysis', data='/data/prostate_cancer/')
 
 
 
@@ -941,7 +941,7 @@ dataset('Tissues > Affymetrix tissue dataset',
 expr_barplot('Tissues > Affymetrix tissue dataset > ' + 
 	'Gene expression barplot (Affymetrix HG U133 Plus 2.0',
 	category='Gene expression', gene='TP53',
-	data='http://betastasis.cs.tut.fi/betadata/tissues/affy_u133',
+	data='/data/tissues/affy_u133',
 	platform='<a href="/platforms/cdna_microarrays/affymetrix_hg_u133_plus_20/">Affymetrix HG U133 Plus 2.0</a>')
 
 # Applied Biosystems tissue microRNA expression dataset
@@ -951,7 +951,7 @@ dataset('Tissues > ABI tissue microRNA expression',
 expr_barplot('Tissues > ABI tissue microRNA expression > ' + 
 	'MicroRNA expression barplot',
 	category='MicroRNA expression', gene='hsa-miR-21',
-	data='http://betastasis.cs.tut.fi/betadata/tissues/abi_mirna_tissue_expr',
+	data='/data/tissues/abi_mirna_tissue_expr',
 	platform='TaqMan microRNA assays')
 	
 
@@ -970,8 +970,8 @@ dataset('Tissues > Cancer Cell Line Encyclopedia',
 
 expr_barplot('Tissues > Cancer Cell Line Encyclopedia > Gene expression barplot',
 	category='Transcriptomic analysis', gene='TP53',
-	data='http://betastasis.cs.tut.fi/betadata/tissues/ccle/gene_expression',
-	groups='http://betastasis.cs.tut.fi/betadata/tissues/ccle/groups/tissue_groups.json',
+	data='/data/tissues/ccle/gene_expression',
+	groups='/data/tissues/ccle/groups/tissue_groups.json',
 	platform='Affymetrix HG U133 Plus 2.0', description='''
 <p>Gene expression data was downloaded directly from the Cancer Cell Line Encyclopedia website. According to the website, raw Affymetrix CEL files were converted to a single value for each probeset using RMA and quantile normalization. The probeset used was ENTREZG v15 from the BrainArray project.</p>''')
 
@@ -992,26 +992,26 @@ dataset('Platforms > cDNA microarrays',
 	title='cDNA microarrays', stats='Total arrays: 7<br>')
 
 cdna_uarray_probes('Platforms > cDNA microarrays > Affymetrix HG U133 Plus 2.0',
-	data='http://betastasis.cs.tut.fi/betadata/platforms/affymetrix_hg_u133_plus_20')
+	data='/data/platforms/affymetrix_hg_u133_plus_20')
 	
 cdna_uarray_probes('Platforms > cDNA microarrays > Affymetrix HG U133A',
-	data='http://betastasis.cs.tut.fi/betadata/platforms/affymetrix_hg_u133a')
+	data='/data/platforms/affymetrix_hg_u133a')
 
 cdna_uarray_probes('Platforms > cDNA microarrays > Affymetrix HT HG U133A',
-	data='http://betastasis.cs.tut.fi/betadata/platforms/affymetrix_ht_hg_u133a')
+	data='/data/platforms/affymetrix_ht_hg_u133a')
 
 cdna_uarray_probes(
 	'Platforms > cDNA microarrays > Affymetrix Human Exon 1.0 ST',
-	data='http://betastasis.cs.tut.fi/betadata/platforms/affymetrix_human_exon_10_st')
+	data='/data/platforms/affymetrix_human_exon_10_st')
 
 cdna_uarray_probes('Platforms > cDNA microarrays > Agilent 244K TCGA custom #1',
-	data='http://betastasis.cs.tut.fi/betadata/platforms/agilent_244k_tcga_custom_1')
+	data='/data/platforms/agilent_244k_tcga_custom_1')
 
 cdna_uarray_probes('Platforms > cDNA microarrays > Agilent 244K TCGA custom #2',
-	data='http://betastasis.cs.tut.fi/betadata/platforms/agilent_244k_tcga_custom_2')
+	data='/data/platforms/agilent_244k_tcga_custom_2')
 
 cdna_uarray_probes('Platforms > cDNA microarrays > Agilent 244K TCGA custom #3',
-	data='http://betastasis.cs.tut.fi/betadata/platforms/agilent_244k_tcga_custom_3')
+	data='/data/platforms/agilent_244k_tcga_custom_3')
 
 
 
