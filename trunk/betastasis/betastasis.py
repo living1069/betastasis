@@ -2,7 +2,7 @@ from __future__ import print_function
 import os, sys, json
 
 import bottle
-from collections import OrderedDict
+from OrderedDict import OrderedDict
 from bottle import route, template, static_file, abort, redirect
 
 hierarchy = OrderedDict()
