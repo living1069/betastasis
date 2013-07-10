@@ -3,7 +3,7 @@
 
 <div id="side">
 <p><b>Visualization</b><br>
-Platform: {{platform if 'platform' in locals() else '-'}}<br>
+Platform: {{!platform if 'platform' in locals() else '-'}}<br>
 Transcriptome: NCBI RefSeq 38<br><br>
 Gene: <input type="text" id="GeneSelect" value="TP53" />
 </p>

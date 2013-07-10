@@ -26,7 +26,7 @@ Boxplot style:
 <br>
 
 <b>Platforms</b><br>
-{{platform if 'platform' in locals() else '-'}}<br>
+{{!platform if 'platform' in locals() else '-'}}<br>
 </p>
 </div>
 

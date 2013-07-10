@@ -17,7 +17,7 @@ Exon: <span id="exon_select"></span>
 </p><br>
 
 <b>Platforms</b><br>
-{{platform if 'platform' in locals() else '-'}}<br><br>
+{{!platform if 'platform' in locals() else '-'}}<br><br>
 
 <b>Statistics</b><br>
 <div id="stats_div"></div>

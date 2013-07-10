@@ -17,7 +17,7 @@ Censored: <span id="censored_count">-</span><br>
 </p><br>
 
 <b>Platforms</b><br>
-{{platform if 'platform' in locals() else '-'}}<br><br>
+{{!platform if 'platform' in locals() else '-'}}<br><br>
 
 <b>Preset thresholds</b><br>
 <button id="threshold_25th">25%</button>

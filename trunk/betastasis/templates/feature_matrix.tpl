@@ -22,7 +22,7 @@ Samples: <span id="sample_count"></span><br>
 <br></p>
 
 <b>Platforms</b><br>
-{{platform if 'platform' in locals() else '-'}}<br><br>
+{{!platform if 'platform' in locals() else '-'}}<br><br>
 
 <b>Add features</b><br>
 Expression: <input style="float:right; widhth:140px; height:18px" type="text" id="expr_select" value="" /><br>

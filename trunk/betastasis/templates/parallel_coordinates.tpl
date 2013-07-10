@@ -24,7 +24,7 @@ Samples: <span id="sample_count"></span><br>
 
 
 <b>Platforms</b><br>
-{{platform if 'platform' in locals() else '-'}}<br>
+{{!platform if 'platform' in locals() else '-'}}<br>
 
 </div>
 
