@@ -13,7 +13,7 @@
 </p><br>
 
 <b>Platforms</b><br>
-{{platform if 'platform' in locals() else '-'}}
+{{!platform if 'platform' in locals() else '-'}}
 <br><br>
 
 <b>Export</b><br>
