@@ -106,7 +106,7 @@ $(document).ready(function() {
 
 	};
 	
-	var default_features = {{features if 'features' in locals() else '["TP53", "PTEN", "EGFR", "PDGFRA", "MYC"]'}};
+	var default_features = {{!features if 'features' in locals() else '["TP53", "PTEN", "EGFR", "PDGFRA", "MYC"]'}};
 	
 	$('#plot_scale').buttonset();
 	$('#log2_scale').attr('checked', true);
