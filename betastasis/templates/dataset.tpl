@@ -43,12 +43,12 @@ GEO series: <a href="http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={{geo_ser
 Published: {{publication_date}}<br>
 %end
 
-{{get('stats', '')}}
+{{!get('stats', '')}}
 </p>
 	
 %if defined('platform'):
 <p><b>Platforms used</b><br>
-{{get('platform', '')}}
+{{!get('platform', '')}}
 </p>
 %end
 
