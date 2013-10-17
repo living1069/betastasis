@@ -1,12 +1,12 @@
 
-function variants = read_vcf(vcf_file)
+function variants = read_crappy_vcf(vcf_file)
 
 [data, headers] = readtable(vcf_file, 'Comment', '^##', ...
 	'Ignore', '^(ID|QUAL|FILTER|INFO|FORMAT)$', 'Numeric', '^POSITION$');
 
 for k = 1:length(headers)
 	if ~iscellstr(data{k}), continue, end
-	if any(rx(data{k}(1:100), '[01]/[01]:'))
+	if any(rx(data{k}(1:100), '[01]/[01](:| \()'))
 		first_sample_col = k;
 		break;
 	end
@@ -18,7 +18,7 @@ V = length(data{1});
 variants = struct;
 variants.meta.sample_id = headers(first_sample_col:end)';
 variants.rows.chromosome = chromosome_sym2num(data{rx(headers, '^CHROM')});
-variants.rows.position = data{rx(headers, '^(POSITION)$')};
+variants.rows.position = data{rx(headers, '^(POSITION|POS)$')};
 variants.rows.ref_allele = data{rx(headers, '^(REFERENCE|REF)$')};
 variants.rows.alt_allele = data{rx(headers, '^(ALTERNATE|ALT)$')};
 
@@ -56,12 +56,13 @@ for s = 1:S
 	info = data{first_sample_col + s - 1};
 	%if any(info{1} == ':')
 		str = sprintf('%s\n', info{:});
-		sdata = textscan(str, '%s %*d %*d %*[^\n]', 'Delimiter', ':,', ...
-			'ReturnOnError', false);
+		sdata = textscan(str, '%s', 'Delimiter', '\n', 'ReturnOnError', false);
 		gtypes = char(sdata{1});
 		valid = any(gtypes == '/', 2);
-		variants.genotype(valid, s) = sum(gtypes(valid, :) == '1', 2);
+		variants.genotype(valid, s) = sum(gtypes(valid, 1:3) == '1', 2);
 		
+		%if s == 1, str, sdata{1}, gtypes, end
+
 		%variants.genotype_quality(:, s) = max(sdata{2:3});
 	%else
 	%	valid = ~cellfun(@isempty, info);
