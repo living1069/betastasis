@@ -1,5 +1,13 @@
 function [order, sort_score] = hierarchical_sort(varargin)
 
+direction = 'ascend';
+
+descend = strcmpi('descend', varargin);
+if any(descend)
+	direction = 'descend';
+	varargin = varargin(~descend);
+end
+
 sort_score = zeros(1, length(varargin{1}));
 
 for k = 1:length(varargin)
@@ -10,5 +18,5 @@ for k = 1:length(varargin)
 	sort_score = sort_score + tmp;
 end
 
-[~, order] = sort(sort_score);
+[~, order] = sort(sort_score, direction);
 
