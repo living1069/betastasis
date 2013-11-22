@@ -787,7 +787,7 @@ vq.CircVis.prototype._add_network = function () {
             .bottom(network_node_y)
             .left(network_node_x)
             .fillStyle(function(c,d) { return node_colors(c).alpha(0.9); })
-            .strokeStyle(function(c) { return node_stroke(c).alpha(0.9); });
+            .strokeStyle('none');
 
     dataObj.network_panel.node.add(pv.Dot)
             .shape('dot')
