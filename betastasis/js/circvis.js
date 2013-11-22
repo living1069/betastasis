@@ -258,15 +258,16 @@ var data = {
 			},
                 node_fill_style: function(ynode){
                         if (ynode == undefined || ynode.source == undefined){
-                                return "black";
+                                return "blue";
                         }
                         var col = nodeColor[ynode.source];
                         if (col == undefined){
-                                return "black";
+                                return "blue";
                         }else{
                                 return col;
                         }
                 },
+                node_stroke_style: function() { return 'none'; },
                 node_listener : node_tile_listener,
 		//node_stroke_style: function(ynode){
 	        //	return "blue";
