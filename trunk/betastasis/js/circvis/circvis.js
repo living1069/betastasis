@@ -774,13 +774,13 @@ vq.CircVis.prototype._add_network = function () {
             .bottom(network_node_y)
             .left(network_node_x)
             .fillStyle(function(c,d) { 
-		return node_colors(c).alpha(0.9); 
+		return node_colors(c); 
 		});
 
     dataObj.network_panel.node.add(pv.Dot)
             .shape('dot')
             .lineWidth(0)
-            .radius(3.0)
+            .radius(2)
             .angle(node_angle)
             .event('mouseover',node_behavior)
             //.title(dataObj._network.node_tooltipFormat)
