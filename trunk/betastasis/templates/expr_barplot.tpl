@@ -36,7 +36,7 @@ Expression scale:
 
 %if defined('description'):
 <h3>Description</h3>
-{{description}}
+{{!description}}
 %end
 </div>
 
