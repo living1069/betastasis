@@ -267,7 +267,7 @@ var data = {
                                 return col;
                         }
                 },
-                node_stroke_style: function() { return 'none'; },
+                node_stroke_style: function() { return 'blue'; },
                 node_listener : node_tile_listener,
 		//node_stroke_style: function(ynode){
 	        //	return "blue";
