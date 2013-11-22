@@ -775,14 +775,11 @@ vq.CircVis.prototype._add_network = function () {
             .left(network_node_x)
             .fillStyle(function(c,d) { 
 		return node_colors(c).alpha(0.9); 
-		})
-            .strokeStyle(function(c) { 
-		return node_stroke(c).alpha(0.9); 
-		});
+		}));
 
     dataObj.network_panel.node.add(pv.Dot)
             .shape('dot')
-            .lineWidth(1)
+            .lineWidth(0)
             .radius(3.0)
             .angle(node_angle)
             .event('mouseover',node_behavior)
