@@ -93,8 +93,7 @@ if ~isempty(header_regex)
 	end
 end
 
-cols = textscan(sprintf('%s\n', line), '%s', 'Delimiter', '\t', ...
-	'TreatAsEmpty', treat_as_empty);
+cols = textscan(sprintf('%s\n', line), '%s', 'Delimiter', '\t');
 cols = cols{1};
 
 % Workaround for the fact that textscan(sprintf('1\t'), '%s') returns only one
@@ -154,10 +153,12 @@ format_str = [format_str '%*[^\n]'];  % Ensure that extra cruft won't matter
 
 if num_lines < Inf
 	data = textscan(fid, format_str, num_lines, ...
-		'Delimiter', '\t', 'BufSize', 1e6, 'ReturnOnError', false);
+		'Delimiter', '\t', 'BufSize', 1e6, 'ReturnOnError', false, ...
+		'TreatAsEmpty', treat_as_empty);
 else
 	data = textscan(fid, format_str, ...
-		'Delimiter', '\t', 'BufSize', 1e6, 'ReturnOnError', false);
+		'Delimiter', '\t', 'BufSize', 1e6, 'ReturnOnError', false, ...
+		'TreatAsEmpty', treat_as_empty);
 end
 
 headers = headers(~ignore);
