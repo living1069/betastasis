@@ -30,6 +30,7 @@ include_cols = {};
 comment_regex = '';
 num_lines = Inf;
 header_regex = '';
+treat_as_empty = 'NA';
 
 for k = 1:2:length(varargin)
 	if rx(varargin{k}, 'numeric')
@@ -48,6 +49,10 @@ for k = 1:2:length(varargin)
 		include_cols = varargin{k+1};
 		if ischar(include_cols), include_cols = { include_cols }; end
 		continue;
+	end
+
+	if rx(varargin{k}, 'empty')
+		treat_as_empty = varargin{k+1}; continue;
 	end
 	
 	if rx(varargin{k}, 'comment')
@@ -88,7 +93,9 @@ if ~isempty(header_regex)
 	end
 end
 
-cols = textscan(sprintf('%s\n', line), '%s', 'Delimiter', '\t'); cols = cols{1};
+cols = textscan(sprintf('%s\n', line), '%s', 'Delimiter', '\t', ...
+	'TreatAsEmpty', treat_as_empty);
+cols = cols{1};
 
 % Workaround for the fact that textscan(sprintf('1\t'), '%s') returns only one
 % column.
