@@ -2,7 +2,7 @@
 
 <h2>{{get('title', path[path.rfind(' > ')+3:])}}</h2>
 
-{{get('content', '')}}
+{{!get('content', '')}}
 
 %subs = [(k, v) for k,v in hierarchy.iteritems() if k.startswith(url + '/') and not '/' in k[len(url)+1:]]
 
