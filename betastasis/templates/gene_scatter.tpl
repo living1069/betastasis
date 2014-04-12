@@ -28,6 +28,7 @@ Pearson = <span id="pearson"></span><br><br>
 <div id="fit_stats_div"></div><br>
 
 <b>Export</b><br>
+<button id="export_table">Table</button>
 <button id="export_svg">SVG</button><br>
 <br>
 
@@ -123,10 +124,23 @@ $(document).ready(function() {
 		});
 	}
 
+	var export_table = function() {
+		var tabular = 'Sample\t' + data.gene_x + ' (log2)\t' +
+			data.gene_y + ' (log2)\n';
+		for (var k = 0; k < filt.sample_ids.length; k++) {
+			tabular += filt.sample_ids[k] + '\t' + filt.xval[k].toFixed(3)
+				+ '\t' + filt.yval[k].toFixed(3) + '\n';
+		}
+		
+		download_data_uri(tabular, data.gene_x + '_vs_' + data.gene_y + '.txt',
+			'application/octet-stream');
+	}
+
 	$('#plot_scale').buttonset();
 	$('#log2_scale').attr('checked', true);
 	$('#log2_scale').button('refresh');
 	
+	$('#export_table').button().click(export_table);
 	$('#export_svg').button().click(function() {
 		export_svg(data.gene_y + '_vs_' + data.gene_x + '_scatter.svg'); });
 
