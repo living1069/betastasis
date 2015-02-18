@@ -2,6 +2,8 @@ function [row_perm, col_perm] = better_cluster(data, varargin)
 
 cluster_rows = true;
 cluster_columns = true;
+dendro_rows = false;
+dendro_columns = false;
 dist_metric = 'euclidean';
 linkage_method = 'average';
 
@@ -19,27 +21,39 @@ for k = 1:2:length(varargin)
 	if rx(varargin{k}, 'clust.*col')
 		cluster_columns = varargin{k+1}; keep(k:k+1) = false;
 	end
+	if rx(varargin{k}, 'dendro.*row')
+		dendro_rows = varargin{k+1}; keep(k:k+1) = false;
+	end
+	if rx(varargin{k}, 'dendro.*col')
+		dendro_columns = varargin{k+1}; keep(k:k+1) = false;
+	end
 end
 varargin = varargin(keep);
 
-% First we cluster by columns.
 if cluster_columns
-	figure;
+	fprintf('Clustering columns...\n');
 	clust = linkage(pdist(data', dist_metric), linkage_method);
-	col_perm = dendroperm(clust, 0);
+	if dendro_columns
+		figure; [~, ~, col_perm] = dendrogram(clust, 0);
+		saveas(gcf, '~/dendro_column.pdf');
+	else
+		col_perm = dendroperm(clust, 0);
+	end
 	data = data(:, col_perm);
-	saveas(gcf, '~/cluster_column_dendro.pdf');
 else
 	col_perm = 1:size(data, 2);
 end
 
-% Then we cluster by rows.
 if cluster_rows
-	figure;
+	fprintf('Clustering rows...\n');
 	clust = linkage(pdist(data, dist_metric), linkage_method);
-	row_perm = dendroperm(clust, 0);
+	if dendro_rows
+		figure; [~, ~, row_perm] = dendrogram(clust, 0);
+		saveas(gcf, '~/dendro_rows.pdf');
+	else
+		row_perm = dendroperm(clust, 0);
+	end
 	data = data(row_perm, :);
-	saveas(gcf, '~/cluster_row_dendro.pdf');
 else
 	row_perm = 1:size(data, 1);
 end

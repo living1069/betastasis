@@ -37,7 +37,7 @@ end
 
 im(im < domain(1)) = domain(1);
 im(im > domain(end)) = domain(end);
-im = interp1(domain, [1 128 256], im, [], 'extrap');
+im = interp1(domain, [1 128 256], im, 'linear', 'extrap');
 imwrite(im, colormap, filename);
 
 
